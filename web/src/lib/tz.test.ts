@@ -26,6 +26,16 @@ describe("zonedTimeToUtc", () => {
       "2026-01-01T09:00:00.000Z",
     );
   });
+
+  it("uses each date's own DST offset (winter = CET +1, not summer +2)", () => {
+    // Same wall time, two dates: Oslo is +1 in January, +2 in July.
+    expect(zonedTimeToUtc("2026-01-15", "12:00", "Europe/Oslo").toISOString()).toBe(
+      "2026-01-15T11:00:00.000Z",
+    );
+    expect(zonedTimeToUtc("2026-07-15", "12:00", "Europe/Oslo").toISOString()).toBe(
+      "2026-07-15T10:00:00.000Z",
+    );
+  });
 });
 
 describe("partsInTz", () => {
@@ -73,6 +83,26 @@ describe("buildGridView", () => {
     expect(v.keyAt("2026-07-15", "06:30")).toBe("2026-07-15T12:30");
     // a cell with no canonical slot is a gap
     expect(v.keyAt("2026-07-15", "09:00")).toBeNull();
+  });
+
+  it("converts each day with its own DST offset across a poll that spans seasons", () => {
+    // A poll listing a winter and a summer day, viewed from UTC: the SAME poll
+    // wall-time (12:00 Oslo) lands at different UTC times per date — proving the
+    // conversion is per-date DST-aware, not a single fixed shift.
+    const v = buildGridView(
+      ["2026-01-15", "2026-07-15"],
+      "12:00",
+      "12:30",
+      30,
+      "Europe/Oslo",
+      "UTC",
+    );
+    // Jan 12:00 Oslo (CET +1) -> 11:00 UTC; Jul 12:00 Oslo (CEST +2) -> 10:00 UTC
+    expect(v.keyAt("2026-01-15", "11:00")).toBe("2026-01-15T12:00");
+    expect(v.keyAt("2026-07-15", "10:00")).toBe("2026-07-15T12:00");
+    // and not the other way around
+    expect(v.keyAt("2026-01-15", "10:00")).toBeNull();
+    expect(v.keyAt("2026-07-15", "11:00")).toBeNull();
   });
 
   it("pushes slots onto the previous local day when the offset crosses midnight", () => {
