@@ -57,6 +57,13 @@ export function partsInTz(
   return { date: `${m.year}-${m.month}-${m.day}`, time: `${m.hour}:${m.minute}` };
 }
 
+// A wall-clock time exists in `tz` iff it round-trips. It won't when it falls in
+// the gap of a spring-forward transition (e.g. 02:30 when clocks jump 02:00→03:00).
+export function existsInTz(dateISO: string, time: string, tz: string): boolean {
+  const back = partsInTz(zonedTimeToUtc(dateISO, time, tz), tz);
+  return back.date === dateISO && back.time === time;
+}
+
 export interface GridView {
   days: string[]; // viewer-local ISO dates
   times: string[]; // viewer-local HH:MM
@@ -77,7 +84,16 @@ export function buildGridView(
 ): GridView {
   const times = timeSlots(from, to, slot);
   if (pollTz === viewerTz) {
-    return { days, times, keyAt: (d, t) => `${d}T${t}` };
+    // Skip wall times that don't exist (spring-forward gap) on a given date.
+    const valid = new Set<string>();
+    for (const d of days)
+      for (const t of times)
+        if (existsInTz(d, t, pollTz)) valid.add(`${d}T${t}`);
+    return {
+      days,
+      times,
+      keyAt: (d, t) => (valid.has(`${d}T${t}`) ? `${d}T${t}` : null),
+    };
   }
 
   const map = new Map<string, string>();
@@ -85,9 +101,11 @@ export function buildGridView(
   const timeSet = new Set<string>();
   for (const d of days) {
     for (const t of times) {
-      const key = `${d}T${t}`;
-      const local = partsInTz(zonedTimeToUtc(d, t, pollTz), viewerTz);
-      map.set(`${local.date}T${local.time}`, key);
+      const utc = zonedTimeToUtc(d, t, pollTz);
+      const src = partsInTz(utc, pollTz);
+      if (src.date !== d || src.time !== t) continue; // skipped DST gap slot
+      const local = partsInTz(utc, viewerTz);
+      map.set(`${local.date}T${local.time}`, `${d}T${t}`);
       daySet.add(local.date);
       timeSet.add(local.time);
     }

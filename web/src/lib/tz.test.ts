@@ -4,6 +4,7 @@ import {
   partsInTz,
   buildGridView,
   formatSlotLabelInTz,
+  existsInTz,
 } from "./tz";
 
 describe("zonedTimeToUtc", () => {
@@ -105,6 +106,23 @@ describe("buildGridView", () => {
     expect(v.keyAt("2026-07-15", "11:00")).toBeNull();
   });
 
+  it("drops slots that fall in a spring-forward gap (same tz)", () => {
+    // 2026-03-29 Europe/Oslo: clocks jump 02:00 -> 03:00, so 02:00/02:30 vanish.
+    const v = buildGridView(
+      ["2026-03-29"],
+      "01:00",
+      "04:00",
+      30,
+      "Europe/Oslo",
+      "Europe/Oslo",
+    );
+    expect(v.keyAt("2026-03-29", "01:30")).toBe("2026-03-29T01:30");
+    expect(v.keyAt("2026-03-29", "02:00")).toBeNull();
+    expect(v.keyAt("2026-03-29", "02:30")).toBeNull();
+    expect(v.keyAt("2026-03-29", "03:00")).toBe("2026-03-29T03:00");
+    expect(v.keyAt("2026-03-29", "03:30")).toBe("2026-03-29T03:30");
+  });
+
   it("pushes slots onto the previous local day when the offset crosses midnight", () => {
     // 00:00–00:30 Oslo (CEST, +2) == 22:00–22:30 the previous day in UTC
     const v = buildGridView(
@@ -117,6 +135,14 @@ describe("buildGridView", () => {
     );
     expect(v.days).toEqual(["2026-07-14"]);
     expect(v.keyAt("2026-07-14", "22:00")).toBe("2026-07-15T00:00");
+  });
+});
+
+describe("existsInTz", () => {
+  it("is true for a normal wall time and false inside a spring-forward gap", () => {
+    expect(existsInTz("2026-03-29", "01:30", "Europe/Oslo")).toBe(true);
+    expect(existsInTz("2026-03-29", "02:30", "Europe/Oslo")).toBe(false);
+    expect(existsInTz("2026-03-29", "03:30", "Europe/Oslo")).toBe(true);
   });
 });
 
