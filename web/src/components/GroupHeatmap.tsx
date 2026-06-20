@@ -1,24 +1,27 @@
 import { useMemo } from "react";
 import type { Poll } from "../lib/api";
 import { aggregate } from "../lib/heatmap";
-import {
-  timeSlots,
-  slotKey,
-  hourLabel,
-  dayHeader,
-  formatSlotLabel,
-} from "../lib/datetime";
+import { hourLabel, dayHeader } from "../lib/datetime";
+import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
 
 const BEST_SHADOW =
   "0 0 0 2px var(--brand), 0 0 14px color-mix(in oklab, var(--brand) 60%, transparent)";
 
-export function GroupHeatmap({ poll }: { poll: Poll }) {
-  const times = useMemo(
-    () => timeSlots(poll.from, poll.to, poll.slot),
-    [poll.from, poll.to, poll.slot],
+export function GroupHeatmap({
+  poll,
+  viewerTz,
+}: {
+  poll: Poll;
+  viewerTz: string;
+}) {
+  const view = useMemo(
+    () =>
+      buildGridView(poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz),
+    [poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
   );
-  const headers = useMemo(() => poll.days.map((d) => dayHeader(d)), [poll.days]);
+  const headers = useMemo(() => view.days.map((d) => dayHeader(d)), [view]);
   const agg = useMemo(() => aggregate(poll.responses), [poll.responses]);
+  const label = (key: string) => formatSlotLabelInTz(key, poll.tz, viewerTz);
 
   if (agg.total === 0) {
     return (
@@ -64,7 +67,7 @@ export function GroupHeatmap({ poll }: { poll: Poll }) {
         <div>
           <div style={{ display: "flex", gap: 5, marginBottom: 5 }}>
             <div style={{ width: 46, flex: "none" }} />
-            {poll.days.map((d, i) => (
+            {view.days.map((d, i) => (
               <div
                 key={d}
                 style={{
@@ -81,7 +84,7 @@ export function GroupHeatmap({ poll }: { poll: Poll }) {
             ))}
           </div>
 
-          {times.map((t) => (
+          {view.times.map((t) => (
             <div
               key={t}
               style={{ display: "flex", gap: 5, marginBottom: 5, alignItems: "center" }}
@@ -98,20 +101,23 @@ export function GroupHeatmap({ poll }: { poll: Poll }) {
               >
                 {hourLabel(t)}
               </div>
-              {poll.days.map((d) => {
-                const key = slotKey(d, t);
+              {view.days.map((d) => {
+                const key = view.keyAt(d, t);
+                if (key === null) {
+                  return <div key={d} className="heatcell" style={{ visibility: "hidden" }} />;
+                }
                 const cell = agg.cells.get(key);
                 const count = cell?.count ?? 0;
                 const pct = Math.round((count / agg.total) * 100);
                 const isBest = key === agg.bestKey;
                 return (
                   <div
-                    key={key}
+                    key={d}
                     className="heatcell"
                     title={
                       count > 0
-                        ? `${formatSlotLabel(key)} — ${count}/${agg.total} free: ${cell!.names.join(", ")}`
-                        : `${formatSlotLabel(key)} — nobody yet`
+                        ? `${label(key)} — ${count}/${agg.total} free: ${cell!.names.join(", ")}`
+                        : `${label(key)} — nobody yet`
                     }
                     style={{
                       background:
@@ -187,7 +193,7 @@ export function GroupHeatmap({ poll }: { poll: Poll }) {
                 marginTop: 6,
               }}
             >
-              {formatSlotLabel(best.slot)}
+              {label(best.slot)}
             </div>
             <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>
               {best.count} / {agg.total} available
@@ -219,7 +225,7 @@ export function GroupHeatmap({ poll }: { poll: Poll }) {
                       fontSize: 14,
                     }}
                   >
-                    <span>{formatSlotLabel(r.slot)}</span>
+                    <span>{label(r.slot)}</span>
                     <span className="subtle">
                       {r.count}/{agg.total}
                     </span>

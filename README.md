@@ -49,8 +49,14 @@ Cells coloured by how many respondents are free, best slot ringed, best-slot +
 runner-ups panel. Results respect the privacy flag (public, or host with the
 edit token).
 
-**Next slices:** per-viewer timezone conversion; "lock in" the winning slot;
-then the CLI and the Jinx GitHub-bot integration.
+**Slice 4 (done):** per-viewer timezone. Each visitor sees and paints the grid
+(and the heatmap) in their own zone via a timezone selector; slot keys stay
+canonical (in the poll's home tz), so two people in different zones who pick the
+same absolute time land on the same slot. So "14:00 Oslo" is "08:00 New York"
+automatically.
+
+**Next slices:** "lock in" the winning slot; then the CLI and the Jinx
+GitHub-bot integration.
 
 ## API
 

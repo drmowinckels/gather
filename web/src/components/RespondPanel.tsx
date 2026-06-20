@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AvailabilityGrid } from "./AvailabilityGrid";
 import { submitSlots, ApiError, type Poll, type PollResponse } from "../lib/api";
-import { browserTimezone, timeSlots, tzOffsetLabel } from "../lib/datetime";
+import { buildGridView } from "../lib/tz";
 import { getName, saveName, getOwnSlots, saveOwnSlots } from "../lib/storage";
 
 type SaveState =
@@ -12,14 +12,17 @@ type SaveState =
 
 export function RespondPanel({
   poll,
+  viewerTz,
   onSaved,
 }: {
   poll: Poll;
+  viewerTz: string;
   onSaved?: (response: PollResponse) => void;
 }) {
-  const times = useMemo(
-    () => timeSlots(poll.from, poll.to, poll.slot),
-    [poll.from, poll.to, poll.slot],
+  const view = useMemo(
+    () =>
+      buildGridView(poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz),
+    [poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
   );
 
   const initialName = useMemo(() => getName(), []);
@@ -52,7 +55,7 @@ export function RespondPanel({
       const painted = [...slotsRef.current];
       const saved = await submitSlots(poll.id, {
         name: trimmed,
-        tz: browserTimezone(),
+        tz: viewerTz,
         slots: painted,
       });
       saveOwnSlots(poll.id, painted);
@@ -82,28 +85,13 @@ export function RespondPanel({
     saveName(v);
   }
 
-  const offset = tzOffsetLabel(poll.tz);
   const hasName = name.trim().length > 0;
 
   return (
     <div className="card" style={{ padding: 24, margin: "26px 0" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: 12,
-          flexWrap: "wrap",
-        }}
-      >
-        <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
-          Your availability
-        </h2>
-        <span className="subtle" style={{ fontSize: 12 }}>
-          All times in {poll.tz}
-          {offset ? ` (${offset})` : ""}
-        </span>
-      </div>
+      <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
+        Your availability
+      </h2>
       <p className="helper" style={{ margin: "6px 0 18px", fontSize: 14 }}>
         Click and drag to paint when you're free. Drag again to erase.
       </p>
@@ -123,8 +111,7 @@ export function RespondPanel({
       </div>
 
       <AvailabilityGrid
-        days={poll.days}
-        times={times}
+        view={view}
         value={slots}
         onChange={setSlots}
         onCommit={scheduleSave}

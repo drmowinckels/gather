@@ -1,11 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { RespondPanel } from "../components/RespondPanel";
 import { GroupHeatmap } from "../components/GroupHeatmap";
 import { getPoll, ApiError, type Poll, type PollResponse } from "../lib/api";
 import { getEditToken } from "../lib/storage";
-import { formatDayRange, tzOffsetLabel } from "../lib/datetime";
+import {
+  formatDayRange,
+  tzOffsetLabel,
+  browserTimezone,
+  listTimezones,
+} from "../lib/datetime";
 
 type State =
   | { kind: "loading" }
@@ -16,6 +21,15 @@ type State =
 export function PollPage() {
   const { id = "" } = useParams();
   const [state, setState] = useState<State>({ kind: "loading" });
+  const [viewerTz, setViewerTz] = useState(browserTimezone());
+  const tzOptions = useMemo(
+    () =>
+      listTimezones().map((z) => {
+        const o = tzOffsetLabel(z);
+        return { value: z, label: o ? `${z} (${o})` : z };
+      }),
+    [],
+  );
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -121,9 +135,42 @@ export function PollPage() {
         </div>
         <p className="helper">
           {formatDayRange(poll.days)} · {poll.from}–{poll.to} · {poll.slot}-min
-          slots · {poll.tz}
+          slots · home tz {poll.tz}
           {offset ? ` (${offset})` : ""}
         </p>
+
+        <label
+          className="tz-control"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 16,
+            fontSize: 13,
+            color: "var(--fg-muted)",
+            flexWrap: "wrap",
+          }}
+        >
+          <span>Showing times in</span>
+          <select
+            className="input"
+            style={{ width: "auto", maxWidth: "100%" }}
+            value={viewerTz}
+            onChange={(e) => setViewerTz(e.target.value)}
+            aria-label="Show times in timezone"
+          >
+            {tzOptions.map((z) => (
+              <option key={z.value} value={z.value}>
+                {z.label}
+              </option>
+            ))}
+          </select>
+          {viewerTz !== poll.tz && (
+            <span className="subtle" style={{ fontSize: 12 }}>
+              converted from {poll.tz}
+            </span>
+          )}
+        </label>
 
         <div className="card" style={{ padding: 22, margin: "26px 0" }}>
           <span className="fieldlbl">Share this link</span>
@@ -144,10 +191,10 @@ export function PollPage() {
           </p>
         </div>
 
-        <RespondPanel poll={poll} onSaved={mergeResponse} />
+        <RespondPanel poll={poll} viewerTz={viewerTz} onSaved={mergeResponse} />
 
         {poll.public || isHost ? (
-          <GroupHeatmap poll={poll} />
+          <GroupHeatmap poll={poll} viewerTz={viewerTz} />
         ) : (
           <div
             className="card"

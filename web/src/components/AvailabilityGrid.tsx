@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef } from "react";
-import { slotKey, hourLabel, dayHeader } from "../lib/datetime";
+import { hourLabel, dayHeader } from "../lib/datetime";
 import { modeFor, applyPaint, type PaintMode } from "../lib/paint";
+import type { GridView } from "../lib/tz";
 
 interface GridProps {
-  days: string[];
-  times: string[];
+  view: GridView;
   value: Set<string>;
   onChange: (updater: (prev: Set<string>) => Set<string>) => void;
   onCommit?: () => void;
@@ -16,8 +16,7 @@ const FREE_BG =
   "linear-gradient(180deg, var(--brand), color-mix(in oklab, var(--brand) 78%, #000))";
 
 export function AvailabilityGrid({
-  days,
-  times,
+  view,
   value,
   onChange,
   onCommit,
@@ -28,7 +27,7 @@ export function AvailabilityGrid({
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
 
-  const headers = useMemo(() => days.map((d) => dayHeader(d)), [days]);
+  const headers = useMemo(() => view.days.map((d) => dayHeader(d)), [view]);
 
   useEffect(() => {
     const end = () => {
@@ -70,7 +69,7 @@ export function AvailabilityGrid({
     <div style={{ userSelect: "none" }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
         <div style={{ width: GUTTER, flex: "none" }} />
-        {days.map((d, i) => (
+        {view.days.map((d, i) => (
           <div
             key={d}
             style={{
@@ -87,7 +86,7 @@ export function AvailabilityGrid({
         ))}
       </div>
 
-      {times.map((t) => (
+      {view.times.map((t) => (
         <div
           key={t}
           style={{ display: "flex", gap: 6, marginBottom: 6, alignItems: "center" }}
@@ -104,13 +103,17 @@ export function AvailabilityGrid({
           >
             {hourLabel(t)}
           </div>
-          {days.map((d, di) => {
-            const key = slotKey(d, t);
+          {view.days.map((d, di) => {
+            const key = view.keyAt(d, t);
+            if (key === null) {
+              // No canonical slot maps here (timezone-shift gap).
+              return <div key={d} className="gridcell" style={{ visibility: "hidden" }} />;
+            }
             const free = value.has(key);
             const h = headers[di];
             return (
               <button
-                key={key}
+                key={d}
                 type="button"
                 className="gridcell"
                 aria-pressed={free}
