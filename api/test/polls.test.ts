@@ -79,3 +79,68 @@ describe("GET /v1/polls/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("POST /v1/polls/:id/slots", () => {
+  async function newPoll() {
+    return (await (await post(validPoll)).json()) as { id: string };
+  }
+  function submit(id: string, body: unknown) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("saves availability and surfaces it on the poll", async () => {
+    const { id } = await newPoll();
+    const slots = ["2026-07-15T09:00", "2026-07-15T09:30"];
+    const res = await submit(id, { name: "Ada", tz: "Europe/Oslo", slots });
+    expect(res.status).toBe(200);
+    const saved = (await res.json()) as { name: string; slots: string[] };
+    expect(saved.name).toBe("Ada");
+    expect(saved.slots).toEqual(slots);
+
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { responses: Array<{ name: string; slots: string[] }> };
+    expect(poll.responses).toHaveLength(1);
+    expect(poll.responses[0]).toMatchObject({ name: "Ada", slots });
+  });
+
+  it("upserts the same name instead of duplicating", async () => {
+    const { id } = await newPoll();
+    await submit(id, { name: "Ada", tz: "Europe/Oslo", slots: ["2026-07-15T09:00"] });
+    await submit(id, { name: "Ada", tz: "Europe/Oslo", slots: ["2026-07-16T10:00"] });
+
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { responses: Array<{ name: string; slots: string[] }> };
+    expect(poll.responses).toHaveLength(1);
+    expect(poll.responses[0].slots).toEqual(["2026-07-16T10:00"]);
+  });
+
+  it("rejects slots outside the poll's grid", async () => {
+    const { id } = await newPoll();
+    const res = await submit(id, {
+      name: "Ada",
+      tz: "Europe/Oslo",
+      slots: ["2026-07-15T20:00"],
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_slots");
+  });
+
+  it("returns 404 when the poll does not exist", async () => {
+    const res = await submit("nope00", {
+      name: "Ada",
+      tz: "Europe/Oslo",
+      slots: [],
+    });
+    expect(res.status).toBe(404);
+  });
+});

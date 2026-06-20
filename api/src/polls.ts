@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { createPollSchema } from "./schema";
+import { createPollSchema, submitSlotsSchema } from "./schema";
 import { shortId, editToken } from "./id";
+import { validSlotKeys } from "./slots";
 import type { Env } from "./types";
 
 interface PollRow {
@@ -100,3 +101,48 @@ polls.get("/:id", async (c) => {
 
   return c.json(serializePoll(row, responses.results));
 });
+
+polls.post(
+  "/:id/slots",
+  zValidator("json", submitSlotsSchema, (result, c) => {
+    if (!result.success) {
+      return c.json({ error: "invalid_body", issues: result.error.issues }, 400);
+    }
+  }),
+  async (c) => {
+    const id = c.req.param("id");
+    const poll = await c.env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
+      .bind(id)
+      .first<PollRow>();
+    if (!poll) return c.json({ error: "not_found" }, 404);
+
+    const body = c.req.valid("json");
+    const valid = validSlotKeys(
+      JSON.parse(poll.days) as string[],
+      poll.from_time,
+      poll.to_time,
+      poll.slot_minutes,
+    );
+    const invalid = body.slots.filter((s) => !valid.has(s));
+    if (invalid.length > 0) {
+      return c.json({ error: "invalid_slots", invalid: invalid.slice(0, 10) }, 400);
+    }
+
+    const now = new Date().toISOString();
+    await c.env.DB.prepare(
+      `INSERT INTO responses (poll_id, name, tz, slots, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(poll_id, name)
+       DO UPDATE SET tz = excluded.tz, slots = excluded.slots, updated_at = excluded.updated_at`,
+    )
+      .bind(id, body.name, body.tz, JSON.stringify(body.slots), now)
+      .run();
+
+    return c.json({
+      name: body.name,
+      tz: body.tz,
+      slots: body.slots,
+      updatedAt: now,
+    });
+  },
+);

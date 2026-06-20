@@ -74,3 +74,25 @@ export async function getPoll(id: string): Promise<Poll> {
   if (!res.ok) throw await toError(res);
   return (await res.json()) as Poll;
 }
+
+export interface SlotsInput {
+  name: string;
+  tz: string;
+  slots: string[];
+}
+
+export async function submitSlots(
+  id: string,
+  input: SlotsInput,
+): Promise<Response> {
+  const res = await fetch(
+    `${API_BASE}/v1/polls/${encodeURIComponent(id)}/slots`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+  if (!res.ok) throw await toError(res);
+  return (await res.json()) as Response;
+}

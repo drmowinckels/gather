@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Shell } from "../components/Shell";
+import { RespondPanel } from "../components/RespondPanel";
 import { getPoll, ApiError, type Poll } from "../lib/api";
 import { getEditToken } from "../lib/storage";
 import { formatDayRange, tzOffsetLabel } from "../lib/datetime";
@@ -134,23 +135,7 @@ export function PollPage() {
           </p>
         </div>
 
-        <div
-          className="card"
-          style={{
-            padding: "40px 28px",
-            textAlign: "center",
-            background: "var(--bg-tinted)",
-            borderStyle: "dashed",
-          }}
-        >
-          <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
-            Availability painting is coming next
-          </p>
-          <p className="helper" style={{ margin: "8px auto 0", maxWidth: 380 }}>
-            This poll is saved and its link is live. The drag-to-paint grid and
-            the group heatmap land in the next update.
-          </p>
-        </div>
+        <RespondPanel poll={poll} />
       </div>
     </Shell>
   );

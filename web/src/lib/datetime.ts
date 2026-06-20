@@ -67,6 +67,45 @@ export function upcomingDays(count: number, start = new Date()): DayOption[] {
   return out;
 }
 
+function toMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return h * 60 + m;
+}
+
+const pad = (n: number): string => String(n).padStart(2, "0");
+
+// Start times of each slot block within [from, to), stepping by slotMin.
+export function timeSlots(from: string, to: string, slotMin: number): string[] {
+  const start = toMinutes(from);
+  const end = toMinutes(to);
+  const out: string[] = [];
+  for (let t = start; t + slotMin <= end; t += slotMin) {
+    out.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
+  }
+  return out;
+}
+
+export function slotKey(day: string, time: string): string {
+  return `${day}T${time}`;
+}
+
+// Label shown in the time gutter — only on the hour, e.g. "9am", "12pm".
+export function hourLabel(time: string): string {
+  const [h, m] = time.split(":").map(Number);
+  if (m !== 0) return "";
+  const ampm = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}${ampm}`;
+}
+
+export function dayHeader(iso: string): { weekday: string; day: string } {
+  const d = new Date(`${iso}T00:00:00`);
+  return {
+    weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d),
+    day: new Intl.DateTimeFormat("en-US", { day: "numeric" }).format(d),
+  };
+}
+
 export function formatDayRange(days: string[]): string {
   if (days.length === 0) return "No days yet";
   const sorted = [...days].sort();

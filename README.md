@@ -1,6 +1,8 @@
 # gather
 
-Find a time, together. **gather** is an API-first group-availability scheduler —
+Find a time, together.
+
+**gather** is an API-first group-availability scheduler —
 a modern [when2meet](https://www.when2meet.com) alternative. A host creates a
 poll for some days and times, shares one link, respondents paint when they're
 free, and a live heatmap surfaces the slot that works for the most people.
@@ -30,7 +32,7 @@ browser ──fetch──▶  gather-api.<sub>.workers.dev  ──▶  D1 (SQLit
 ## Live
 
 - **App:** https://gather.drmowinckels.io
-- **API:** https://api.gather.drmowinckels.io (also https://gather-api.drmowinckels.workers.dev)
+- **API:** https://api.gather.drmowinckels.io
 
 ## Status
 
@@ -38,21 +40,25 @@ browser ──fetch──▶  gather-api.<sub>.workers.dev  ──▶  D1 (SQLit
 any browser. Landing, create-poll form (with live CLI-equivalent), and a poll
 page with a shareable link.
 
-**Next slices:** the drag-to-paint availability grid (direction B — soft
-columns) + `POST /v1/polls/:id/slots`; the group heatmap + `GET /best`;
-per-viewer timezone conversion; then the CLI and the Jinx GitHub-bot integration.
+**Slice 2 (done):** drag-to-paint availability grid (direction B — soft
+columns) on the poll page, saved via `POST /v1/polls/:id/slots` (upsert by name,
+autosave on drag-end, keyboard toggle for a11y).
+
+**Next slices:** the group heatmap + `GET /best`; per-viewer timezone
+conversion; then the CLI and the Jinx GitHub-bot integration.
 
 ## API
 
 Base: the deployed Worker URL. See [`design/HANDOFF.md`](design/HANDOFF.md) for
 the full contract and visual spec.
 
-| Method | Endpoint        | Body                                          | Returns                     |
-| ------ | --------------- | --------------------------------------------- | --------------------------- |
-| `POST` | `/v1/polls`     | `{title, days[], from, to, slot, tz, public}` | `{id, url, editToken}`      |
-| `GET`  | `/v1/polls/:id` | —                                             | poll + aggregated responses |
+| Method | Endpoint              | Body                                          | Returns                      |
+| ------ | --------------------- | --------------------------------------------- | ---------------------------- |
+| `POST` | `/v1/polls`           | `{title, days[], from, to, slot, tz, public}` | `{id, url, editToken}`       |
+| `GET`  | `/v1/polls/:id`       | —                                             | poll + aggregated responses  |
+| `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[]}`                         | saved `{name, tz, slots, …}` |
 
-`POST /v1/polls/:id/slots` and `GET /v1/polls/:id/best` land in the next slices.
+Slot keys are `YYYY-MM-DDThh:mm` in the poll's canonical timezone. `GET /v1/polls/:id/best` lands in the next slice.
 
 ## Develop
 

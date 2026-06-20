@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { createPoll, getPoll, ApiError, type PollInput } from "./api";
+import {
+  createPoll,
+  getPoll,
+  submitSlots,
+  ApiError,
+  type PollInput,
+} from "./api";
 
 const input: PollInput = {
   title: "Team offsite",
@@ -65,5 +71,33 @@ describe("getPoll", () => {
     const err = await getPoll("nope").catch((e) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(404);
+  });
+});
+
+describe("submitSlots", () => {
+  it("POSTs name, tz and slots to the poll's slots endpoint", async () => {
+    const fn = mockFetch({
+      name: "Ada",
+      tz: "Europe/Oslo",
+      slots: ["2026-07-15T09:00"],
+      updatedAt: "2026-07-01T00:00:00Z",
+    });
+    const saved = await submitSlots("abc123", {
+      name: "Ada",
+      tz: "Europe/Oslo",
+      slots: ["2026-07-15T09:00"],
+    });
+    expect(saved.name).toBe("Ada");
+    const [url, opts] = fn.mock.calls[0];
+    expect(url).toBe("http://localhost:8787/v1/polls/abc123/slots");
+    expect(opts.method).toBe("POST");
+    expect(JSON.parse(opts.body).slots).toEqual(["2026-07-15T09:00"]);
+  });
+
+  it("throws on an invalid_slots rejection", async () => {
+    mockFetch({ error: "invalid_slots" }, { status: 400 });
+    await expect(
+      submitSlots("abc123", { name: "Ada", tz: "UTC", slots: ["x"] }),
+    ).rejects.toMatchObject({ code: "invalid_slots", status: 400 });
   });
 });
