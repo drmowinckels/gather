@@ -59,6 +59,11 @@ automatically.
 (`POST /v1/polls/:id/lock`, edit-token gated). Everyone sees a "Locked in" banner
 and the locked cell is ringed; the host can unlock.
 
+**Slice 6 (done):** polls auto-expire **14 days after their last day**. The
+expiry is stored at creation; expired polls return `410` and a daily Cloudflare
+Cron Trigger deletes them (and their responses), so stale polls don't pile up.
+The poll page shows "Link active until <date>".
+
 **Next slices:** the CLI and the Jinx GitHub-bot integration.
 
 ## API

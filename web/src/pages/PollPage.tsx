@@ -16,6 +16,7 @@ import { formatSlotLabelInTz } from "../lib/tz";
 type State =
   | { kind: "loading" }
   | { kind: "notfound" }
+  | { kind: "expired" }
   | { kind: "error" }
   | { kind: "ready"; poll: Poll };
 
@@ -42,6 +43,8 @@ export function PollPage() {
         if (!active) return;
         if (err instanceof ApiError && err.status === 404) {
           setState({ kind: "notfound" });
+        } else if (err instanceof ApiError && err.status === 410) {
+          setState({ kind: "expired" });
         } else {
           setState({ kind: "error" });
         }
@@ -87,6 +90,23 @@ export function PollPage() {
           <p className="helper" style={{ margin: "10px 0 20px" }}>
             The link may be mistyped, or the poll was never created. Start a
             fresh one and share the new link.
+          </p>
+          <Link to="/new" className="btn btn-primary">
+            Create a poll →
+          </Link>
+        </div>
+      </Shell>
+    );
+  }
+
+  if (state.kind === "expired") {
+    return (
+      <Shell>
+        <div style={{ padding: "64px 0", maxWidth: 460 }}>
+          <h1 className="h2">This poll has expired</h1>
+          <p className="helper" style={{ margin: "10px 0 20px" }}>
+            Polls stay live for 14 days after their last day, then they're
+            cleared. Start a fresh one for your next get-together.
           </p>
           <Link to="/new" className="btn btn-primary">
             Create a poll →
@@ -207,6 +227,18 @@ export function PollPage() {
           </div>
           <p className="subtle" style={{ fontSize: 13, margin: "12px 0 0" }}>
             Anyone with this link can add their availability — no account needed.
+            {poll.expiresAt && (
+              <>
+                {" "}
+                Link active until{" "}
+                {new Intl.DateTimeFormat(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                }).format(new Date(`${poll.expiresAt}T00:00:00`))}
+                .
+              </>
+            )}
           </p>
         </div>
 

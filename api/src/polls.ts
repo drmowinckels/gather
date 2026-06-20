@@ -5,7 +5,10 @@ import { createPollSchema, submitSlotsSchema, lockSchema } from "./schema";
 import { shortId, editToken } from "./id";
 import { validSlotKeys } from "./slots";
 import { rankSlots } from "./aggregate";
+import { expiryDate, isExpired, todayUTC } from "./dates";
 import type { Env } from "./types";
+
+const GRACE_DAYS = 14;
 
 function badRequest(c: Context, issues: unknown) {
   return c.json({ error: "invalid_body", issues }, 400);
@@ -43,6 +46,7 @@ interface PollRow {
   edit_token: string;
   created_at: string;
   locked_slot: string | null;
+  expires_at: string | null;
 }
 
 interface ResponseRow {
@@ -63,6 +67,7 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
     tz: row.tz,
     public: row.is_public === 1,
     lockedSlot: row.locked_slot ?? null,
+    expiresAt: row.expires_at ?? null,
     createdAt: row.created_at,
     responses: responses.map((r) => ({
       name: r.name,
@@ -85,11 +90,12 @@ polls.post(
     const id = shortId();
     const token = editToken();
     const createdAt = new Date().toISOString();
+    const expiresAt = expiryDate(body.days, GRACE_DAYS);
 
     await c.env.DB.prepare(
       `INSERT INTO polls
-         (id, title, days, from_time, to_time, slot_minutes, tz, is_public, edit_token, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, title, days, from_time, to_time, slot_minutes, tz, is_public, edit_token, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -102,6 +108,7 @@ polls.post(
         body.public ? 1 : 0,
         token,
         createdAt,
+        expiresAt,
       )
       .run();
 
@@ -118,6 +125,7 @@ polls.get("/:id", async (c) => {
     .bind(id)
     .first<PollRow>();
   if (!row) return c.json({ error: "not_found" }, 404);
+  if (isExpired(row.expires_at, todayUTC())) return c.json({ error: "expired" }, 410);
 
   let responses: ResponseRow[] = [];
   if (canSeeResults(c, row)) {
@@ -138,6 +146,7 @@ polls.get("/:id/best", async (c) => {
     .bind(id)
     .first<PollRow>();
   if (!row) return c.json({ error: "not_found" }, 404);
+  if (isExpired(row.expires_at, todayUTC())) return c.json({ error: "expired" }, 410);
   if (!canSeeResults(c, row)) return c.json({ error: "forbidden" }, 403);
 
   const limitRaw = c.req.query("limit");
@@ -170,6 +179,9 @@ polls.post(
       .bind(id)
       .first<PollRow>();
     if (!row) return c.json({ error: "not_found" }, 404);
+    if (isExpired(row.expires_at, todayUTC())) {
+      return c.json({ error: "expired" }, 410);
+    }
 
     const token = bearerToken(c);
     if (!token || !constantTimeEqual(token, row.edit_token)) {
@@ -211,6 +223,9 @@ polls.post(
       .bind(id)
       .first<PollRow>();
     if (!poll) return c.json({ error: "not_found" }, 404);
+    if (isExpired(poll.expires_at, todayUTC())) {
+      return c.json({ error: "expired" }, 410);
+    }
 
     const body = c.req.valid("json");
     const slots = [...new Set(body.slots)];

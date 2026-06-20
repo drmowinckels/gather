@@ -1,6 +1,8 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { polls } from "./polls";
+import { deleteExpired } from "./cleanup";
+import { todayUTC } from "./dates";
 import type { Env } from "./types";
 
 const app = new Hono<{ Bindings: Env }>();
@@ -30,4 +32,11 @@ app.onError((err, c) => {
   return c.json({ error: "internal_error" }, 500);
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  // Daily cron: purge polls that expired (last day + grace period).
+  async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext) {
+    const removed = await deleteExpired(env.DB, todayUTC());
+    console.log(`gather cron: removed ${removed} expired poll(s)`);
+  },
+} satisfies ExportedHandler<Env>;

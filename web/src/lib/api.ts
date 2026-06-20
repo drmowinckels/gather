@@ -34,6 +34,7 @@ export interface Poll {
   tz: string;
   public: boolean;
   lockedSlot: string | null;
+  expiresAt: string | null;
   createdAt: string;
   responses: PollResponse[];
 }

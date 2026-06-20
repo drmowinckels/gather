@@ -5,7 +5,7 @@ const ORIGIN = "http://localhost:5173";
 
 const validPoll = {
   title: "Team offsite",
-  days: ["2026-07-15", "2026-07-16", "2026-07-17"],
+  days: ["2099-07-15", "2099-07-16", "2099-07-17"],
   from: "09:00",
   to: "15:00",
   slot: 30,
@@ -78,6 +78,18 @@ describe("GET /v1/polls/:id", () => {
     });
     expect(res.status).toBe(404);
   });
+
+  it("returns 410 for an expired poll", async () => {
+    // last day 2020-01-01 + 14d grace is long past, so the poll is born expired
+    const { id } = (await (
+      await post({ ...validPoll, days: ["2020-01-01"] })
+    ).json()) as { id: string };
+    const res = await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+      headers: { Origin: ORIGIN },
+    });
+    expect(res.status).toBe(410);
+    expect(((await res.json()) as { error: string }).error).toBe("expired");
+  });
 });
 
 describe("GET /v1/polls/:id/best", () => {
@@ -91,8 +103,8 @@ describe("GET /v1/polls/:id/best", () => {
 
   it("returns ranked slots with counts and names (public poll)", async () => {
     const { id } = (await (await post(validPoll)).json()) as { id: string };
-    await submit(id, "Ada", ["2026-07-15T09:00", "2026-07-15T09:30"]);
-    await submit(id, "Kari", ["2026-07-15T09:00"]);
+    await submit(id, "Ada", ["2099-07-15T09:00", "2099-07-15T09:30"]);
+    await submit(id, "Kari", ["2099-07-15T09:00"]);
 
     const res = await SELF.fetch(`https://api.test/v1/polls/${id}/best`, {
       headers: { Origin: ORIGIN },
@@ -104,7 +116,7 @@ describe("GET /v1/polls/:id/best", () => {
     };
     expect(body.total).toBe(2);
     expect(body.results[0]).toEqual({
-      slot: "2026-07-15T09:00",
+      slot: "2099-07-15T09:00",
       count: 2,
       names: ["Ada", "Kari"],
     });
@@ -113,7 +125,7 @@ describe("GET /v1/polls/:id/best", () => {
 
   it("honors ?limit=", async () => {
     const { id } = (await (await post(validPoll)).json()) as { id: string };
-    await submit(id, "Ada", ["2026-07-15T09:00", "2026-07-15T09:30"]);
+    await submit(id, "Ada", ["2099-07-15T09:00", "2099-07-15T09:30"]);
     const res = await SELF.fetch(`https://api.test/v1/polls/${id}/best?limit=1`, {
       headers: { Origin: ORIGIN },
     });
@@ -124,7 +136,7 @@ describe("GET /v1/polls/:id/best", () => {
     const created = (await (
       await post({ ...validPoll, public: false })
     ).json()) as { id: string; editToken: string };
-    await submit(created.id, "Ada", ["2026-07-15T09:00"]);
+    await submit(created.id, "Ada", ["2099-07-15T09:00"]);
 
     const anon = await SELF.fetch(`https://api.test/v1/polls/${created.id}/best`, {
       headers: { Origin: ORIGIN },
@@ -163,7 +175,7 @@ describe("POST /v1/polls/:id/lock", () => {
       id: string;
       editToken: string;
     };
-    const slot = "2026-07-15T09:00";
+    const slot = "2099-07-15T09:00";
 
     const res = await lock(created.id, slot, created.editToken);
     expect(res.status).toBe(200);
@@ -184,8 +196,8 @@ describe("POST /v1/polls/:id/lock", () => {
 
   it("forbids non-hosts (missing or wrong token)", async () => {
     const created = (await (await post(validPoll)).json()) as { id: string };
-    expect((await lock(created.id, "2026-07-15T09:00")).status).toBe(403);
-    expect((await lock(created.id, "2026-07-15T09:00", "nope")).status).toBe(403);
+    expect((await lock(created.id, "2099-07-15T09:00")).status).toBe(403);
+    expect((await lock(created.id, "2099-07-15T09:00", "nope")).status).toBe(403);
   });
 
   it("rejects a slot outside the poll grid", async () => {
@@ -193,7 +205,7 @@ describe("POST /v1/polls/:id/lock", () => {
       id: string;
       editToken: string;
     };
-    expect((await lock(created.id, "2026-07-15T20:00", created.editToken)).status).toBe(
+    expect((await lock(created.id, "2099-07-15T20:00", created.editToken)).status).toBe(
       400,
     );
   });
@@ -213,7 +225,7 @@ describe("private poll results gating", () => {
       body: JSON.stringify({
         name: "Ada",
         tz: "Europe/Oslo",
-        slots: ["2026-07-15T09:00"],
+        slots: ["2099-07-15T09:00"],
       }),
     });
 
@@ -259,7 +271,7 @@ describe("POST /v1/polls/:id/slots", () => {
 
   it("saves availability and surfaces it on the poll", async () => {
     const { id } = await newPoll();
-    const slots = ["2026-07-15T09:00", "2026-07-15T09:30"];
+    const slots = ["2099-07-15T09:00", "2099-07-15T09:30"];
     const res = await submit(id, { name: "Ada", tz: "Europe/Oslo", slots });
     expect(res.status).toBe(200);
     const saved = (await res.json()) as { name: string; slots: string[] };
@@ -277,8 +289,8 @@ describe("POST /v1/polls/:id/slots", () => {
 
   it("upserts the same name instead of duplicating", async () => {
     const { id } = await newPoll();
-    await submit(id, { name: "Ada", tz: "Europe/Oslo", slots: ["2026-07-15T09:00"] });
-    await submit(id, { name: "Ada", tz: "Europe/Oslo", slots: ["2026-07-16T10:00"] });
+    await submit(id, { name: "Ada", tz: "Europe/Oslo", slots: ["2099-07-15T09:00"] });
+    await submit(id, { name: "Ada", tz: "Europe/Oslo", slots: ["2099-07-16T10:00"] });
 
     const poll = (await (
       await SELF.fetch(`https://api.test/v1/polls/${id}`, {
@@ -286,7 +298,7 @@ describe("POST /v1/polls/:id/slots", () => {
       })
     ).json()) as { responses: Array<{ name: string; slots: string[] }> };
     expect(poll.responses).toHaveLength(1);
-    expect(poll.responses[0].slots).toEqual(["2026-07-16T10:00"]);
+    expect(poll.responses[0].slots).toEqual(["2099-07-16T10:00"]);
   });
 
   it("rejects slots outside the poll's grid", async () => {
@@ -294,7 +306,7 @@ describe("POST /v1/polls/:id/slots", () => {
     const res = await submit(id, {
       name: "Ada",
       tz: "Europe/Oslo",
-      slots: ["2026-07-15T20:00"],
+      slots: ["2099-07-15T20:00"],
     });
     expect(res.status).toBe(400);
     expect(((await res.json()) as { error: string }).error).toBe("invalid_slots");

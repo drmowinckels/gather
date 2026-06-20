@@ -14,3 +14,7 @@ binding = "DB"
 database_name = "gather"
 database_id = "cb6ccb98-b67d-4087-9398-4afc97b11a21"
 migrations_dir = "migrations"
+
+# Daily cleanup of expired polls (03:17 UTC).
+[triggers]
+crons = ["17 3 * * *"]
