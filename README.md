@@ -27,6 +27,11 @@ browser ──fetch──▶  gather-api.<sub>.workers.dev  ──▶  D1 (SQLit
 (Pages SPA)                 (Worker, REST)
 ```
 
+## Live
+
+- **App:** https://drmowinckels.io/gather/
+- **API:** https://gather-api.drmowinckels.workers.dev
+
 ## Status
 
 **Slice 1 (done):** create a poll → it persists in D1 → the link reopens it in
@@ -76,6 +81,11 @@ cd web && npm test           # api client + form (vitest + testing-library)
 ```
 
 ## Deploy (one-time setup)
+
+> **Already configured for this repo.** The D1 database, the GitHub Actions
+> secrets/variables, and Pages (custom domain `drmowinckels.io`) are all set up;
+> pushing to `main` deploys both tiers. The steps below document how, for
+> reference or a fresh fork.
 
 The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
 
