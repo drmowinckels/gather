@@ -45,6 +45,20 @@ const ISO = (d: Date): string =>
     d.getDate(),
   ).padStart(2, "0")}`;
 
+// Hoisted: building Intl.DateTimeFormat is expensive; these are reused across
+// renders (the grid re-renders on every paint frame during a drag).
+const WEEKDAY_DAY_FMT = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  day: "numeric",
+});
+const WEEKDAY_FMT = new Intl.DateTimeFormat("en-US", { weekday: "short" });
+const DAY_FMT = new Intl.DateTimeFormat("en-US", { day: "numeric" });
+const RANGE_FMT = new Intl.DateTimeFormat("en-US", {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+});
+
 export interface DayOption {
   iso: string;
   label: string;
@@ -52,17 +66,13 @@ export interface DayOption {
 
 export function upcomingDays(count: number, start = new Date()): DayOption[] {
   const out: DayOption[] = [];
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    day: "numeric",
-  });
   for (let i = 0; i < count; i++) {
     const d = new Date(
       start.getFullYear(),
       start.getMonth(),
       start.getDate() + i,
     );
-    out.push({ iso: ISO(d), label: fmt.format(d) });
+    out.push({ iso: ISO(d), label: WEEKDAY_DAY_FMT.format(d) });
   }
   return out;
 }
@@ -100,21 +110,13 @@ export function hourLabel(time: string): string {
 
 export function dayHeader(iso: string): { weekday: string; day: string } {
   const d = new Date(`${iso}T00:00:00`);
-  return {
-    weekday: new Intl.DateTimeFormat("en-US", { weekday: "short" }).format(d),
-    day: new Intl.DateTimeFormat("en-US", { day: "numeric" }).format(d),
-  };
+  return { weekday: WEEKDAY_FMT.format(d), day: DAY_FMT.format(d) };
 }
 
 export function formatDayRange(days: string[]): string {
   if (days.length === 0) return "No days yet";
   const sorted = [...days].sort();
-  const fmt = new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-  const label = (iso: string) => fmt.format(new Date(`${iso}T00:00:00`));
+  const label = (iso: string) => RANGE_FMT.format(new Date(`${iso}T00:00:00`));
   if (sorted.length === 1) return label(sorted[0]);
   return `${label(sorted[0])} – ${label(sorted[sorted.length - 1])} · ${sorted.length} days`;
 }

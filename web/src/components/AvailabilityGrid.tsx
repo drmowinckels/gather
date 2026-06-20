@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { slotKey, hourLabel, dayHeader } from "../lib/datetime";
 import { modeFor, applyPaint, type PaintMode } from "../lib/paint";
 
@@ -27,6 +27,8 @@ export function AvailabilityGrid({
   const mode = useRef<PaintMode>("fill");
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
+
+  const headers = useMemo(() => days.map((d) => dayHeader(d)), [days]);
 
   useEffect(() => {
     const end = () => {
@@ -68,24 +70,21 @@ export function AvailabilityGrid({
     <div style={{ userSelect: "none" }}>
       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
         <div style={{ width: GUTTER, flex: "none" }} />
-        {days.map((d) => {
-          const h = dayHeader(d);
-          return (
-            <div
-              key={d}
-              style={{
-                flex: 1,
-                minWidth: 44,
-                textAlign: "center",
-                fontSize: 12,
-                fontWeight: 700,
-                color: "var(--fg-muted)",
-              }}
-            >
-              {h.weekday} {h.day}
-            </div>
-          );
-        })}
+        {days.map((d, i) => (
+          <div
+            key={d}
+            style={{
+              flex: 1,
+              minWidth: 44,
+              textAlign: "center",
+              fontSize: 12,
+              fontWeight: 700,
+              color: "var(--fg-muted)",
+            }}
+          >
+            {headers[i].weekday} {headers[i].day}
+          </div>
+        ))}
       </div>
 
       {times.map((t) => (
@@ -105,14 +104,15 @@ export function AvailabilityGrid({
           >
             {hourLabel(t)}
           </div>
-          {days.map((d) => {
+          {days.map((d, di) => {
             const key = slotKey(d, t);
             const free = value.has(key);
-            const h = dayHeader(d);
+            const h = headers[di];
             return (
               <button
                 key={key}
                 type="button"
+                className="gridcell"
                 aria-pressed={free}
                 aria-label={`${h.weekday} ${h.day}, ${t} — ${free ? "free" : "busy"}`}
                 disabled={disabled}
@@ -125,17 +125,8 @@ export function AvailabilityGrid({
                   }
                 }}
                 style={{
-                  flex: 1,
-                  minWidth: 44,
-                  height: 26,
-                  border: "none",
-                  padding: 0,
-                  borderRadius: 8,
-                  cursor: disabled ? "default" : "pointer",
-                  touchAction: "none",
                   background: free ? FREE_BG : "var(--bg-elev-1)",
                   boxShadow: free ? "none" : "inset 0 0 0 1px var(--border-subtle)",
-                  transition: "background 0.08s var(--ease-out)",
                 }}
               />
             );

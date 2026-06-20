@@ -352,6 +352,27 @@ a:hover {
   color: var(--fg-subtle);
 }
 
+.gridcell {
+  flex: 1;
+  min-width: 44px;
+  height: 30px;
+  border: none;
+  padding: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: none;
+  transition: background 0.08s var(--ease-out);
+}
+.gridcell:disabled {
+  cursor: default;
+}
+/* Larger hit area on touch devices (design spec: min 44px touch target). */
+@media (pointer: coarse) {
+  .gridcell {
+    height: 44px;
+  }
+}
+
 .copy-row {
   display: flex;
   gap: 8px;

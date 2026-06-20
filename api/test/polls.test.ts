@@ -80,6 +80,52 @@ describe("GET /v1/polls/:id", () => {
   });
 });
 
+describe("private poll results gating", () => {
+  const privatePoll = { ...validPoll, public: false };
+
+  it("hides responses unless the edit token is presented", async () => {
+    const created = (await (await post(privatePoll)).json()) as {
+      id: string;
+      editToken: string;
+    };
+    await SELF.fetch(`https://api.test/v1/polls/${created.id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({
+        name: "Ada",
+        tz: "Europe/Oslo",
+        slots: ["2026-07-15T09:00"],
+      }),
+    });
+
+    const anon = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${created.id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { public: boolean; responses: unknown[] };
+    expect(anon.public).toBe(false);
+    expect(anon.responses).toEqual([]);
+
+    const host = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${created.id}`, {
+        headers: { Origin: ORIGIN, Authorization: `Bearer ${created.editToken}` },
+      })
+    ).json()) as { responses: Array<{ name: string }> };
+    expect(host.responses).toHaveLength(1);
+    expect(host.responses[0].name).toBe("Ada");
+  });
+
+  it("ignores an incorrect edit token", async () => {
+    const created = (await (await post(privatePoll)).json()) as { id: string };
+    const res = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${created.id}`, {
+        headers: { Origin: ORIGIN, Authorization: "Bearer wrong-token" },
+      })
+    ).json()) as { responses: unknown[] };
+    expect(res.responses).toEqual([]);
+  });
+});
+
 describe("POST /v1/polls/:id/slots", () => {
   async function newPoll() {
     return (await (await post(validPoll)).json()) as { id: string };

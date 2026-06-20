@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AvailabilityGrid } from "./AvailabilityGrid";
 import { submitSlots, ApiError, type Poll } from "../lib/api";
 import { browserTimezone, timeSlots, tzOffsetLabel } from "../lib/datetime";
-
-const NAME_KEY = "gather:name";
+import { getName, saveName, getOwnSlots, saveOwnSlots } from "../lib/storage";
 
 type SaveState =
   | { kind: "idle" }
@@ -17,24 +16,21 @@ export function RespondPanel({ poll }: { poll: Poll }) {
     [poll.from, poll.to, poll.slot],
   );
 
-  const initialName = useMemo(() => {
-    try {
-      return localStorage.getItem(NAME_KEY) ?? "";
-    } catch {
-      return "";
-    }
-  }, []);
+  const initialName = useMemo(() => getName(), []);
 
   const [name, setName] = useState(initialName);
   const [slots, setSlots] = useState<Set<string>>(new Set());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
 
-  // Load this person's existing availability once, if their saved name matches.
+  // Restore this person's availability once: from the server (their saved name
+  // matches a response), else from the local cache (private polls hide others).
   useEffect(() => {
-    if (!initialName) return;
-    const mine = poll.responses.find((r) => r.name === initialName);
-    if (mine) setSlots(new Set(mine.slots));
-  }, [initialName, poll.responses]);
+    const mine = initialName
+      ? poll.responses.find((r) => r.name === initialName)
+      : undefined;
+    const restored = mine?.slots ?? getOwnSlots(poll.id);
+    if (restored) setSlots(new Set(restored));
+  }, [initialName, poll.id, poll.responses]);
 
   const nameRef = useRef(name);
   nameRef.current = name;
@@ -47,11 +43,13 @@ export function RespondPanel({ poll }: { poll: Poll }) {
     if (!trimmed) return;
     setSave({ kind: "saving" });
     try {
+      const painted = [...slotsRef.current];
       await submitSlots(poll.id, {
         name: trimmed,
         tz: browserTimezone(),
-        slots: [...slotsRef.current],
+        slots: painted,
       });
+      saveOwnSlots(poll.id, painted);
       setSave({ kind: "saved" });
     } catch (err) {
       setSave({
@@ -74,11 +72,7 @@ export function RespondPanel({ poll }: { poll: Poll }) {
 
   function onName(v: string) {
     setName(v);
-    try {
-      localStorage.setItem(NAME_KEY, v);
-    } catch {
-      // ignore
-    }
+    saveName(v);
   }
 
   const offset = tzOffsetLabel(poll.tz);

@@ -72,6 +72,20 @@ describe("getPoll", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(404);
   });
+
+  it("sends the edit token as a Bearer header when provided", async () => {
+    const fn = mockFetch({ id: "abc123", responses: [] });
+    await getPoll("abc123", "secret-token");
+    const [, opts] = fn.mock.calls[0];
+    expect(opts.headers).toEqual({ Authorization: "Bearer secret-token" });
+  });
+
+  it("omits the Authorization header when no token is given", async () => {
+    const fn = mockFetch({ id: "abc123", responses: [] });
+    await getPoll("abc123");
+    const [, opts] = fn.mock.calls[0];
+    expect(opts.headers).toBeUndefined();
+  });
 });
 
 describe("submitSlots", () => {

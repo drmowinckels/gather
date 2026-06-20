@@ -1,9 +1,26 @@
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
 import { createPollSchema, submitSlotsSchema } from "./schema";
 import { shortId, editToken } from "./id";
 import { validSlotKeys } from "./slots";
 import type { Env } from "./types";
+
+function badRequest(c: Context, issues: unknown) {
+  return c.json({ error: "invalid_body", issues }, 400);
+}
+
+function bearerToken(c: Context): string | null {
+  const header = c.req.header("Authorization") ?? "";
+  return header.startsWith("Bearer ") ? header.slice(7) : null;
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
 
 interface PollRow {
   id: string;
@@ -50,9 +67,7 @@ export const polls = new Hono<{ Bindings: Env }>();
 polls.post(
   "/",
   zValidator("json", createPollSchema, (result, c) => {
-    if (!result.success) {
-      return c.json({ error: "invalid_body", issues: result.error.issues }, 400);
-    }
+    if (!result.success) return badRequest(c, result.error.issues);
   }),
   async (c) => {
     const body = c.req.valid("json");
@@ -93,21 +108,29 @@ polls.get("/:id", async (c) => {
     .first<PollRow>();
   if (!row) return c.json({ error: "not_found" }, 404);
 
-  const responses = await c.env.DB.prepare(
-    `SELECT name, tz, slots, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
-  )
-    .bind(id)
-    .all<ResponseRow>();
+  // Responses are visible when the poll is public, or to the host (edit token).
+  const token = bearerToken(c);
+  const canSeeResponses =
+    row.is_public === 1 ||
+    (token !== null && constantTimeEqual(token, row.edit_token));
 
-  return c.json(serializePoll(row, responses.results));
+  let responses: ResponseRow[] = [];
+  if (canSeeResponses) {
+    const result = await c.env.DB.prepare(
+      `SELECT name, tz, slots, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+    )
+      .bind(id)
+      .all<ResponseRow>();
+    responses = result.results;
+  }
+
+  return c.json(serializePoll(row, responses));
 });
 
 polls.post(
   "/:id/slots",
   zValidator("json", submitSlotsSchema, (result, c) => {
-    if (!result.success) {
-      return c.json({ error: "invalid_body", issues: result.error.issues }, 400);
-    }
+    if (!result.success) return badRequest(c, result.error.issues);
   }),
   async (c) => {
     const id = c.req.param("id");
@@ -117,13 +140,14 @@ polls.post(
     if (!poll) return c.json({ error: "not_found" }, 404);
 
     const body = c.req.valid("json");
+    const slots = [...new Set(body.slots)];
     const valid = validSlotKeys(
       JSON.parse(poll.days) as string[],
       poll.from_time,
       poll.to_time,
       poll.slot_minutes,
     );
-    const invalid = body.slots.filter((s) => !valid.has(s));
+    const invalid = slots.filter((s) => !valid.has(s));
     if (invalid.length > 0) {
       return c.json({ error: "invalid_slots", invalid: invalid.slice(0, 10) }, 400);
     }
@@ -135,14 +159,9 @@ polls.post(
        ON CONFLICT(poll_id, name)
        DO UPDATE SET tz = excluded.tz, slots = excluded.slots, updated_at = excluded.updated_at`,
     )
-      .bind(id, body.name, body.tz, JSON.stringify(body.slots), now)
+      .bind(id, body.name, body.tz, JSON.stringify(slots), now)
       .run();
 
-    return c.json({
-      name: body.name,
-      tz: body.tz,
-      slots: body.slots,
-      updatedAt: now,
-    });
+    return c.json({ name: body.name, tz: body.tz, slots, updatedAt: now });
   },
 );

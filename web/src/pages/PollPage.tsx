@@ -20,7 +20,7 @@ export function PollPage() {
   useEffect(() => {
     let active = true;
     setState({ kind: "loading" });
-    getPoll(id)
+    getPoll(id, getEditToken(id) ?? undefined)
       .then((poll) => active && setState({ kind: "ready", poll }))
       .catch((err) => {
         if (!active) return;

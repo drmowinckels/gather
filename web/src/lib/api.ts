@@ -17,7 +17,7 @@ export interface CreatedPoll {
   editToken: string;
 }
 
-export interface Response {
+export interface PollResponse {
   name: string;
   tz: string;
   slots: string[];
@@ -34,7 +34,7 @@ export interface Poll {
   tz: string;
   public: boolean;
   createdAt: string;
-  responses: Response[];
+  responses: PollResponse[];
 }
 
 export class ApiError extends Error {
@@ -48,7 +48,7 @@ export class ApiError extends Error {
   }
 }
 
-async function toError(res: globalThis.Response): Promise<ApiError> {
+async function toError(res: Response): Promise<ApiError> {
   let code = "request_failed";
   try {
     const body = (await res.json()) as { error?: string };
@@ -69,8 +69,10 @@ export async function createPoll(input: PollInput): Promise<CreatedPoll> {
   return (await res.json()) as CreatedPoll;
 }
 
-export async function getPoll(id: string): Promise<Poll> {
-  const res = await fetch(`${API_BASE}/v1/polls/${encodeURIComponent(id)}`);
+export async function getPoll(id: string, editToken?: string): Promise<Poll> {
+  const res = await fetch(`${API_BASE}/v1/polls/${encodeURIComponent(id)}`, {
+    headers: editToken ? { Authorization: `Bearer ${editToken}` } : undefined,
+  });
   if (!res.ok) throw await toError(res);
   return (await res.json()) as Poll;
 }
@@ -84,7 +86,7 @@ export interface SlotsInput {
 export async function submitSlots(
   id: string,
   input: SlotsInput,
-): Promise<Response> {
+): Promise<PollResponse> {
   const res = await fetch(
     `${API_BASE}/v1/polls/${encodeURIComponent(id)}/slots`,
     {
@@ -94,5 +96,5 @@ export async function submitSlots(
     },
   );
   if (!res.ok) throw await toError(res);
-  return (await res.json()) as Response;
+  return (await res.json()) as PollResponse;
 }
