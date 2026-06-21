@@ -37,8 +37,17 @@ export default {
   fetch: app.fetch,
   // Daily cron: purge polls that expired (last day + grace period).
   async scheduled(_event: ScheduledController, env: Env, _ctx: ExecutionContext) {
-    const removed = await deleteExpired(env.DB, todayUTC());
-    await purgeRateLimits(env.DB, 60);
-    console.log(`gather cron: removed ${removed} expired poll(s)`);
+    // Independent steps — one failing must not skip the other.
+    try {
+      const removed = await deleteExpired(env.DB, todayUTC());
+      console.log(`gather cron: removed ${removed} expired poll(s)`);
+    } catch (err) {
+      console.error("gather cron: deleteExpired failed", err);
+    }
+    try {
+      await purgeRateLimits(env.DB, 60);
+    } catch (err) {
+      console.error("gather cron: purgeRateLimits failed", err);
+    }
   },
 } satisfies ExportedHandler<Env>;

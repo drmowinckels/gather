@@ -5,15 +5,7 @@ export async function deleteExpired(
   db: D1Database,
   today: string,
 ): Promise<number> {
-  const expired = await db
-    .prepare(
-      `SELECT id FROM polls WHERE expires_at IS NOT NULL AND expires_at < ?`,
-    )
-    .bind(today)
-    .all<{ id: string }>();
-  if (expired.results.length === 0) return 0;
-
-  await db.batch([
+  const results = await db.batch([
     db
       .prepare(
         `DELETE FROM responses WHERE poll_id IN
@@ -24,5 +16,5 @@ export async function deleteExpired(
       .prepare(`DELETE FROM polls WHERE expires_at IS NOT NULL AND expires_at < ?`)
       .bind(today),
   ]);
-  return expired.results.length;
+  return results[1].meta.changes ?? 0;
 }

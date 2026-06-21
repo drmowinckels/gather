@@ -116,6 +116,11 @@ describe("parseGatherCommand", () => {
     expect(cmd).toMatchObject({ from: "09:30", to: "12:00", tz: "UTC" });
     expect(cmd.days).toHaveLength(1);
   });
+
+  it("zero-pads single-digit hours (incl. with minutes) to valid HH:MM", () => {
+    const cmd = parseGatherCommand("mon 9:30-9:45", { today, defaultTz: "UTC" });
+    expect(cmd).toMatchObject({ from: "09:30", to: "09:45" });
+  });
   it("throws when no days are present", () => {
     expect(() => parseGatherCommand("9-15 tz:UTC", { today })).toThrow();
   });

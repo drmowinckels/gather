@@ -35,6 +35,20 @@ function canSeeResults(c: Context, row: PollRow): boolean {
   return token !== null && constantTimeEqual(token, row.edit_token);
 }
 
+// Fetch a poll, or return the matching error response (404 unknown, 410 expired).
+// Centralises the not-found / expiry gate every read & write endpoint shares.
+async function loadActivePoll(
+  c: Context<{ Bindings: Env }>,
+  id: string,
+): Promise<PollRow | Response> {
+  const row = await c.env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
+    .bind(id)
+    .first<PollRow>();
+  if (!row) return c.json({ error: "not_found" }, 404);
+  if (isExpired(row.expires_at, todayUTC())) return c.json({ error: "expired" }, 410);
+  return row;
+}
+
 interface PollRow {
   id: string;
   title: string;
@@ -128,11 +142,8 @@ polls.post(
 
 polls.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const row = await c.env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
-    .bind(id)
-    .first<PollRow>();
-  if (!row) return c.json({ error: "not_found" }, 404);
-  if (isExpired(row.expires_at, todayUTC())) return c.json({ error: "expired" }, 410);
+  const row = await loadActivePoll(c, id);
+  if (row instanceof Response) return row;
 
   let responses: ResponseRow[] = [];
   if (canSeeResults(c, row)) {
@@ -149,11 +160,8 @@ polls.get("/:id", async (c) => {
 
 polls.get("/:id/best", async (c) => {
   const id = c.req.param("id");
-  const row = await c.env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
-    .bind(id)
-    .first<PollRow>();
-  if (!row) return c.json({ error: "not_found" }, 404);
-  if (isExpired(row.expires_at, todayUTC())) return c.json({ error: "expired" }, 410);
+  const row = await loadActivePoll(c, id);
+  if (row instanceof Response) return row;
   if (!canSeeResults(c, row)) return c.json({ error: "forbidden" }, 403);
 
   const limitRaw = c.req.query("limit");
@@ -182,13 +190,8 @@ polls.post(
   }),
   async (c) => {
     const id = c.req.param("id");
-    const row = await c.env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
-      .bind(id)
-      .first<PollRow>();
-    if (!row) return c.json({ error: "not_found" }, 404);
-    if (isExpired(row.expires_at, todayUTC())) {
-      return c.json({ error: "expired" }, 410);
-    }
+    const row = await loadActivePoll(c, id);
+    if (row instanceof Response) return row;
 
     const token = bearerToken(c);
     if (!token || !constantTimeEqual(token, row.edit_token)) {
@@ -226,13 +229,8 @@ polls.post(
   }),
   async (c) => {
     const id = c.req.param("id");
-    const poll = await c.env.DB.prepare(`SELECT * FROM polls WHERE id = ?`)
-      .bind(id)
-      .first<PollRow>();
-    if (!poll) return c.json({ error: "not_found" }, 404);
-    if (isExpired(poll.expires_at, todayUTC())) {
-      return c.json({ error: "expired" }, 410);
-    }
+    const poll = await loadActivePoll(c, id);
+    if (poll instanceof Response) return poll;
 
     const body = c.req.valid("json");
     const slots = [...new Set(body.slots)];

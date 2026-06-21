@@ -44,7 +44,9 @@ export function GroupHeatmap({
   const agg = useMemo(() => aggregate(poll.responses), [poll.responses]);
   const label = (key: string) => formatSlotLabelInTz(key, poll.tz, viewerTz);
 
-  if (agg.total === 0) {
+  // Empty state covers both "no responses" and "responses but nobody is free in
+  // any slot" — in the latter, agg.ranked is empty and there's no best slot.
+  if (agg.ranked.length === 0) {
     return (
       <div
         className="card"

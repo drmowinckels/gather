@@ -3,6 +3,16 @@ import { z } from "zod";
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+function isRealDate(s: string): boolean {
+  const [y, m, d] = s.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  return (
+    dt.getUTCFullYear() === y &&
+    dt.getUTCMonth() === m - 1 &&
+    dt.getUTCDate() === d
+  );
+}
+
 function isValidTimezone(tz: string): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: tz });
@@ -15,7 +25,14 @@ function isValidTimezone(tz: string): boolean {
 export const createPollSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
-    days: z.array(z.string().regex(ISO_DATE)).min(1).max(60),
+    days: z
+      .array(
+        z.string().regex(ISO_DATE).refine(isRealDate, {
+          message: "must be a real calendar date",
+        }),
+      )
+      .min(1)
+      .max(60),
     from: z.string().regex(HHMM),
     to: z.string().regex(HHMM),
     slot: z

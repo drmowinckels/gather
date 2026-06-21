@@ -246,7 +246,10 @@ export function parseGatherCommand(
   let to = "17:00";
   let tz = opts.defaultTz ?? "UTC";
 
-  const time = (h: string) => (h.includes(":") ? h : `${pad(Number(h))}:00`);
+  const time = (h: string) => {
+    const [hh, mm = "00"] = h.split(":");
+    return `${pad(Number(hh))}:${mm}`; // "9" -> "09:00", "9:30" -> "09:30"
+  };
 
   for (const tok of tokens) {
     if (tok.startsWith("tz:")) {

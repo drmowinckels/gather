@@ -1,22 +1,36 @@
 import { timeSlots, dayHeader } from "./datetime";
 
+// Intl.DateTimeFormat is expensive to construct; reuse one per (tz, withSeconds).
+const FMT_CACHE = new Map<string, Intl.DateTimeFormat>();
+
+function formatter(tz: string, withSeconds: boolean): Intl.DateTimeFormat {
+  const key = `${tz}:${withSeconds}`;
+  let f = FMT_CACHE.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat("en-US", {
+      timeZone: tz,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      ...(withSeconds ? { second: "2-digit" } : {}),
+    });
+    FMT_CACHE.set(key, f);
+  }
+  return f;
+}
+
 function fmtParts(
   instant: Date,
   tz: string,
   withSeconds: boolean,
 ): Record<string, string> {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    hourCycle: "h23",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    ...(withSeconds ? { second: "2-digit" } : {}),
-  });
   const map: Record<string, string> = {};
-  for (const p of dtf.formatToParts(instant)) map[p.type] = p.value;
+  for (const p of formatter(tz, withSeconds).formatToParts(instant)) {
+    map[p.type] = p.value;
+  }
   return map;
 }
 

@@ -87,7 +87,13 @@ async function main() {
   if (command === "best") {
     const id = positionals[1];
     if (!id) throw new Error("Usage: gather best <id>");
-    const limit = values.limit ? Number.parseInt(values.limit, 10) : undefined;
+    let limit: number | undefined;
+    if (values.limit !== undefined) {
+      limit = Number.parseInt(values.limit, 10);
+      if (!Number.isFinite(limit) || limit < 1) {
+        throw new Error("--limit must be a positive integer");
+      }
+    }
     const best = await getBest(api, id, limit);
     if (best.results.length === 0) {
       console.log("No availability yet.");

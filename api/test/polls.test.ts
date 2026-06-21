@@ -47,6 +47,11 @@ describe("POST /v1/polls", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects impossible calendar dates", async () => {
+    const res = await post({ ...validPoll, days: ["2026-13-45"] });
+    expect(res.status).toBe(400);
+  });
+
   it("sets CORS headers for the allowed origin", async () => {
     const res = await post(validPoll);
     expect(res.headers.get("access-control-allow-origin")).toBe(ORIGIN);
