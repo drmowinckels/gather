@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { RespondPanel } from "../components/RespondPanel";
 import { GroupHeatmap } from "../components/GroupHeatmap";
 import { getPoll, ApiError, type Poll, type PollResponse } from "../lib/api";
-import { getEditToken } from "../lib/storage";
+import { getEditToken, saveEditToken } from "../lib/storage";
 import {
   formatDayRange,
   tzOffsetLabel,
@@ -12,6 +12,7 @@ import {
   listTimezones,
 } from "../lib/datetime";
 import { formatSlotLabelInTz } from "../lib/tz";
+import { parseHostToken, buildHostLink } from "../lib/hostlink";
 
 type State =
   | { kind: "loading" }
@@ -22,6 +23,7 @@ type State =
 
 export function PollPage() {
   const { id = "" } = useParams();
+  const navigate = useNavigate();
   const [state, setState] = useState<State>({ kind: "loading" });
   const [viewerTz, setViewerTz] = useState(browserTimezone());
   const tzOptions = useMemo(
@@ -33,10 +35,18 @@ export function PollPage() {
     [],
   );
   const [copied, setCopied] = useState(false);
+  const [hostCopied, setHostCopied] = useState(false);
 
   useEffect(() => {
     let active = true;
     setState({ kind: "loading" });
+    // A host link carries the edit token in the hash — claim it for this device,
+    // then strip it from the URL so it isn't left visible or bookmarked by accident.
+    const hostToken = parseHostToken(window.location.hash);
+    if (hostToken) {
+      saveEditToken(id, hostToken);
+      navigate(`/e/${id}`, { replace: true });
+    }
     getPoll(id, getEditToken(id) ?? undefined)
       .then((poll) => active && setState({ kind: "ready", poll }))
       .catch((err) => {
@@ -69,6 +79,16 @@ export function PollPage() {
       setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
+    }
+  }
+
+  async function copyHostLink(link: string) {
+    try {
+      await navigator.clipboard.writeText(link);
+      setHostCopied(true);
+      setTimeout(() => setHostCopied(false), 1800);
+    } catch {
+      setHostCopied(false);
     }
   }
 
@@ -241,6 +261,45 @@ export function PollPage() {
             )}
           </p>
         </div>
+
+        {isHost &&
+          (() => {
+            const token = getEditToken(poll.id);
+            if (!token) return null;
+            const hostLink = buildHostLink(window.location.href, token);
+            return (
+              <div
+                className="card"
+                style={{
+                  padding: 22,
+                  margin: "26px 0",
+                  borderLeft: "3px solid var(--border-strong)",
+                }}
+              >
+                <span className="fieldlbl">🔑 Your host link</span>
+                <div className="copy-row">
+                  <input
+                    className="input"
+                    readOnly
+                    value={hostLink}
+                    aria-label="Private host link"
+                    onFocus={(e) => e.currentTarget.select()}
+                  />
+                  <button
+                    type="button"
+                    className="btn btn-primary btn-sm"
+                    onClick={() => copyHostLink(hostLink)}
+                  >
+                    {hostCopied ? "Copied" : "Copy"}
+                  </button>
+                </div>
+                <p className="subtle" style={{ fontSize: 13, margin: "12px 0 0" }}>
+                  Keep this private — anyone with it can lock the poll and see
+                  private results. Open it on another device to manage from there.
+                </p>
+              </div>
+            );
+          })()}
 
         <RespondPanel poll={poll} viewerTz={viewerTz} onSaved={mergeResponse} />
 
