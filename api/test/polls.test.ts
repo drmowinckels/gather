@@ -126,7 +126,7 @@ describe("GET /v1/polls/:id/best", () => {
       results: Array<{ slot: string; count: number; names: string[] }>;
     };
     expect(body.total).toBe(2);
-    expect(body.results[0]).toEqual({
+    expect(body.results[0]).toMatchObject({
       slot: "2099-07-15T09:00",
       count: 2,
       names: ["Ada", "Kari"],
@@ -330,6 +330,23 @@ describe("POST /v1/polls/:id/slots", () => {
       slots: [],
     });
     expect(res.status).toBe(404);
+  });
+
+  it("stores 'maybe' availability, disjoint from 'available'", async () => {
+    const { id } = await newPoll();
+    await submit(id, {
+      name: "Ada",
+      tz: "Europe/Oslo",
+      slots: ["2099-07-15T09:00"],
+      maybe: ["2099-07-15T09:00", "2099-07-15T09:30"], // 09:00 also available -> dropped
+    });
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { responses: Array<{ slots: string[]; maybe: string[] }> };
+    expect(poll.responses[0].slots).toEqual(["2099-07-15T09:00"]);
+    expect(poll.responses[0].maybe).toEqual(["2099-07-15T09:30"]);
   });
 
   it("caps distinct respondents at MAX_RESPONSES (3 in tests)", async () => {

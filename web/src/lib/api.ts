@@ -21,6 +21,7 @@ export interface PollResponse {
   name: string;
   tz: string;
   slots: string[];
+  maybe: string[];
   updatedAt: string;
 }
 
@@ -83,6 +84,7 @@ export interface SlotsInput {
   name: string;
   tz: string;
   slots: string[];
+  maybe: string[];
 }
 
 export async function submitSlots(

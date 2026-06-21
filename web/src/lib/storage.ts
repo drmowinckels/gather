@@ -34,18 +34,26 @@ export function getName(): string {
   return read(NAME_KEY) ?? "";
 }
 
-// Cache the visitor's own painted slots so reload restores them even when a
-// private poll hides the response list from non-hosts.
-export function saveOwnSlots(pollId: string, slots: string[]): void {
-  write(SLOTS_PREFIX + pollId, JSON.stringify(slots));
+export interface OwnMarks {
+  slots: string[];
+  maybe: string[];
 }
 
-export function getOwnSlots(pollId: string): string[] | null {
+// Cache the visitor's own availability so reload restores it even when a private
+// poll hides the response list from non-hosts.
+export function saveOwnMarks(pollId: string, marks: OwnMarks): void {
+  write(SLOTS_PREFIX + pollId, JSON.stringify(marks));
+}
+
+export function getOwnMarks(pollId: string): OwnMarks | null {
   const raw = read(SLOTS_PREFIX + pollId);
   if (!raw) return null;
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as string[]) : null;
+    if (parsed && Array.isArray(parsed.slots) && Array.isArray(parsed.maybe)) {
+      return parsed as OwnMarks;
+    }
+    return null;
   } catch {
     return null;
   }

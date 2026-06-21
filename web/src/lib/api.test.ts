@@ -101,6 +101,7 @@ describe("submitSlots", () => {
       name: "Ada",
       tz: "Europe/Oslo",
       slots: ["2026-07-15T09:00"],
+      maybe: [],
     });
     expect(saved.name).toBe("Ada");
     const [url, opts] = fn.mock.calls[0];
@@ -112,7 +113,7 @@ describe("submitSlots", () => {
   it("throws on an invalid_slots rejection", async () => {
     mockFetch({ error: "invalid_slots" }, { status: 400 });
     await expect(
-      submitSlots("abc123", { name: "Ada", tz: "UTC", slots: ["x"] }),
+      submitSlots("abc123", { name: "Ada", tz: "UTC", slots: ["x"], maybe: [] }),
     ).rejects.toMatchObject({ code: "invalid_slots", status: 400 });
   });
 });

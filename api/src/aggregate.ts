@@ -1,22 +1,45 @@
 export interface RankedSlot {
   slot: string;
-  count: number;
+  count: number; // "available"
   names: string[];
+  maybe: number; // "might be available"
+  maybeNames: string[];
 }
 
-// Rank slots by how many respondents are free. Ties break by earliest slot
-// (slot keys are `YYYY-MM-DDThh:mm`, so lexical order is chronological).
+interface Tally {
+  count: number;
+  names: string[];
+  maybe: number;
+  maybeNames: string[];
+}
+
+// Rank slots by how many respondents are available. Ties break by total
+// available-or-maybe, then by earliest slot (keys are `YYYY-MM-DDThh:mm`, so
+// lexical order is chronological).
 export function rankSlots(
-  responses: { name: string; slots: string[] }[],
+  responses: { name: string; slots: string[]; maybe?: string[] }[],
   limit?: number,
 ): { total: number; results: RankedSlot[] } {
-  const tally = new Map<string, { count: number; names: string[] }>();
+  const tally = new Map<string, Tally>();
+  const entry = (s: string): Tally => {
+    let e = tally.get(s);
+    if (!e) {
+      e = { count: 0, names: [], maybe: 0, maybeNames: [] };
+      tally.set(s, e);
+    }
+    return e;
+  };
+
   for (const r of responses) {
     for (const s of r.slots) {
-      const entry = tally.get(s) ?? { count: 0, names: [] };
-      entry.count++;
-      entry.names.push(r.name);
-      tally.set(s, entry);
+      const e = entry(s);
+      e.count++;
+      e.names.push(r.name);
+    }
+    for (const s of r.maybe ?? []) {
+      const e = entry(s);
+      e.maybe++;
+      e.maybeNames.push(r.name);
     }
   }
 
@@ -24,7 +47,14 @@ export function rankSlots(
     slot,
     count: e.count,
     names: e.names,
-  })).sort((a, b) => b.count - a.count || a.slot.localeCompare(b.slot));
+    maybe: e.maybe,
+    maybeNames: e.maybeNames,
+  })).sort(
+    (a, b) =>
+      b.count - a.count ||
+      b.count + b.maybe - (a.count + a.maybe) ||
+      a.slot.localeCompare(b.slot),
+  );
 
   if (limit !== undefined && limit > 0) results = results.slice(0, limit);
   return { total: responses.length, results };

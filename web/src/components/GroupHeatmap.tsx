@@ -7,6 +7,8 @@ import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
 const BEST_SHADOW =
   "0 0 0 2px var(--brand), 0 0 14px color-mix(in oklab, var(--brand) 60%, transparent)";
 const LOCK_SHADOW = "0 0 0 2px var(--border-strong)";
+const HATCH =
+  "repeating-linear-gradient(45deg, color-mix(in oklab, var(--brand) 24%, transparent) 0 4px, transparent 4px 8px)";
 
 export function GroupHeatmap({
   poll,
@@ -132,27 +134,30 @@ export function GroupHeatmap({
                 }
                 const cell = agg.cells.get(key);
                 const count = cell?.count ?? 0;
+                const maybeN = cell?.maybe ?? 0;
                 const pct = Math.round((count / agg.total) * 100);
                 const isBest = key === agg.bestKey;
                 const isLocked = key === poll.lockedSlot;
+                const empty = count === 0 && maybeN === 0;
+                const base =
+                  count > 0
+                    ? `color-mix(in oklab, var(--brand) ${pct}%, var(--heat-base))`
+                    : "transparent";
                 return (
                   <div
                     key={d}
                     className="heatcell"
                     onMouseEnter={() => setHovered(key)}
                     title={
-                      count > 0
-                        ? `${label(key)} — ${count}/${agg.total} free: ${cell!.names.join(", ")}`
-                        : `${label(key)} — nobody yet`
+                      empty
+                        ? `${label(key)} — nobody yet`
+                        : `${label(key)} — ${count} available${maybeN ? `, ${maybeN} maybe` : ""}`
                     }
                     style={{
-                      background:
-                        count === 0
-                          ? "transparent"
-                          : `color-mix(in oklab, var(--brand) ${pct}%, var(--heat-base))`,
+                      background: maybeN > 0 ? `${HATCH}, ${base}` : base,
                       boxShadow: isLocked
                         ? LOCK_SHADOW
-                        : count === 0
+                        : empty
                           ? "inset 0 0 0 1px var(--border-subtle)"
                           : isBest
                             ? BEST_SHADOW
@@ -160,7 +165,7 @@ export function GroupHeatmap({
                       color: pct >= 55 ? "var(--on-brand)" : "var(--fg-subtle)",
                     }}
                   >
-                    {count > 0 ? count : ""}
+                    {count > 0 ? count : maybeN > 0 ? maybeN : ""}
                   </div>
                 );
               })}
@@ -188,6 +193,12 @@ export function GroupHeatmap({
               }}
             />
             <span>{agg.total}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 5, marginLeft: 6 }}>
+              <span
+                style={{ width: 14, height: 14, borderRadius: 4, background: HATCH }}
+              />
+              maybe
+            </span>
           </div>
         </div>
 
@@ -224,6 +235,7 @@ export function GroupHeatmap({
             </div>
             <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>
               {best.count} / {agg.total} available
+              {best.maybe > 0 ? ` · ${best.maybe} maybe` : ""}
               {best.count === agg.total ? " · all in" : ""}
             </div>
           </div>
@@ -278,19 +290,40 @@ export function GroupHeatmap({
                   {hovered ? "This slot" : "Best slot"}
                 </div>
                 <div style={{ fontWeight: 700, fontSize: 13 }}>{label(key)}</div>
-                <div style={{ fontSize: 12, color: "var(--botanical)", marginTop: 4 }}>
-                  Available · {cell.count}
-                </div>
-                <div
-                  style={{
-                    fontSize: 12,
-                    color: "var(--fg-muted)",
-                    marginTop: 6,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  {cell.names.join(", ")}
-                </div>
+                {cell.count > 0 && (
+                  <>
+                    <div style={{ fontSize: 12, color: "var(--botanical)", marginTop: 4 }}>
+                      Available · {cell.count}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--fg-muted)",
+                        marginTop: 4,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {cell.names.join(", ")}
+                    </div>
+                  </>
+                )}
+                {cell.maybe > 0 && (
+                  <>
+                    <div style={{ fontSize: 12, color: "var(--fg-subtle)", marginTop: 8 }}>
+                      Maybe · {cell.maybe}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 12,
+                        color: "var(--fg-muted)",
+                        marginTop: 4,
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      {cell.maybeNames.join(", ")}
+                    </div>
+                  </>
+                )}
               </div>
             );
           })()}

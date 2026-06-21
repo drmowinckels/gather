@@ -75,8 +75,12 @@ per-poll respondent cap (both `429`). See [Notes](#notes).
 API client + command helpers — and a [Jinx integration guide](docs/jinx-integration.md)
 for bots. The bot itself lives in its own repo as a consumer of the API.
 
-**Next:** the gather product is feature-complete for v1. Jinx wiring happens in
-the bot's own repo against this client.
+**Slice 10 (done):** tri-state availability. Each cell cycles **available →
+maybe → busy** (tap or drag); "maybe" ("might be able to make it") is stored
+separately and shown in the heatmap as a diagonal hatch, with its own counts and
+names. Best-slot ranks by available first, then available-or-maybe.
+
+**Next:** Jinx wiring happens in the bot's own repo against this client.
 
 ## API
 
@@ -87,7 +91,7 @@ the full contract and visual spec.
 | ------ | --------------------- | --------------------------------------------- | -------------------------------------- |
 | `POST` | `/v1/polls`           | `{title, days[], from, to, slot, tz, public}` | `{id, url, editToken}`                 |
 | `GET`  | `/v1/polls/:id`       | —                                             | poll + aggregated responses            |
-| `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[]}`                         | saved `{name, tz, slots, …}`           |
+| `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[], maybe[]}`                | saved `{name, tz, slots, maybe, …}`    |
 | `GET`  | `/v1/polls/:id/best`  | `?limit=` (optional)                          | `{total, results[{slot,count,names}]}` |
 | `POST` | `/v1/polls/:id/lock`  | `{slot}` (or `{slot:null}`), host token       | updated poll                           |
 

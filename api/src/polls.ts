@@ -68,6 +68,7 @@ interface ResponseRow {
   name: string;
   tz: string;
   slots: string;
+  maybe: string | null;
   updated_at: string;
 }
 
@@ -88,6 +89,7 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
       name: r.name,
       tz: r.tz,
       slots: JSON.parse(r.slots) as string[],
+      maybe: JSON.parse(r.maybe ?? "[]") as string[],
       updatedAt: r.updated_at,
     })),
   };
@@ -148,7 +150,7 @@ polls.get("/:id", async (c) => {
   let responses: ResponseRow[] = [];
   if (canSeeResults(c, row)) {
     const result = await c.env.DB.prepare(
-      `SELECT name, tz, slots, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+      `SELECT name, tz, slots, maybe, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
     )
       .bind(id)
       .all<ResponseRow>();
@@ -171,13 +173,14 @@ polls.get("/:id/best", async (c) => {
     : undefined;
 
   const result = await c.env.DB.prepare(
-    `SELECT name, slots FROM responses WHERE poll_id = ?`,
+    `SELECT name, slots, maybe FROM responses WHERE poll_id = ?`,
   )
     .bind(id)
-    .all<{ name: string; slots: string }>();
+    .all<{ name: string; slots: string; maybe: string | null }>();
   const responses = result.results.map((r) => ({
     name: r.name,
     slots: JSON.parse(r.slots) as string[],
+    maybe: JSON.parse(r.maybe ?? "[]") as string[],
   }));
 
   return c.json(rankSlots(responses, limit));
@@ -214,7 +217,7 @@ polls.post(
       .run();
 
     const responses = await c.env.DB.prepare(
-      `SELECT name, tz, slots, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+      `SELECT name, tz, slots, maybe, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
     )
       .bind(id)
       .all<ResponseRow>();
@@ -234,13 +237,16 @@ polls.post(
 
     const body = c.req.valid("json");
     const slots = [...new Set(body.slots)];
+    const slotSet = new Set(slots);
+    // "maybe" is distinct from "available"; a definite slot wins.
+    const maybe = [...new Set(body.maybe)].filter((s) => !slotSet.has(s));
     const valid = validSlotKeys(
       JSON.parse(poll.days) as string[],
       poll.from_time,
       poll.to_time,
       poll.slot_minutes,
     );
-    const invalid = slots.filter((s) => !valid.has(s));
+    const invalid = [...slots, ...maybe].filter((s) => !valid.has(s));
     if (invalid.length > 0) {
       return c.json({ error: "invalid_slots", invalid: invalid.slice(0, 10) }, 400);
     }
@@ -259,14 +265,15 @@ polls.post(
 
     const now = new Date().toISOString();
     await c.env.DB.prepare(
-      `INSERT INTO responses (poll_id, name, tz, slots, updated_at)
-       VALUES (?, ?, ?, ?, ?)
+      `INSERT INTO responses (poll_id, name, tz, slots, maybe, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
        ON CONFLICT(poll_id, name)
-       DO UPDATE SET tz = excluded.tz, slots = excluded.slots, updated_at = excluded.updated_at`,
+       DO UPDATE SET tz = excluded.tz, slots = excluded.slots,
+                     maybe = excluded.maybe, updated_at = excluded.updated_at`,
     )
-      .bind(id, body.name, body.tz, JSON.stringify(slots), now)
+      .bind(id, body.name, body.tz, JSON.stringify(slots), JSON.stringify(maybe), now)
       .run();
 
-    return c.json({ name: body.name, tz: body.tz, slots, updatedAt: now });
+    return c.json({ name: body.name, tz: body.tz, slots, maybe, updatedAt: now });
   },
 );

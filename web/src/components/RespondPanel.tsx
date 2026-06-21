@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AvailabilityGrid } from "./AvailabilityGrid";
 import { submitSlots, ApiError, type Poll, type PollResponse } from "../lib/api";
 import { buildGridView } from "../lib/tz";
-import { getName, saveName, getOwnSlots, saveOwnSlots } from "../lib/storage";
+import { marksFrom, splitMarks, type Marks } from "../lib/paint";
+import { getName, saveName, getOwnMarks, saveOwnMarks } from "../lib/storage";
 
 type SaveState =
   | { kind: "idle" }
@@ -28,7 +29,7 @@ export function RespondPanel({
   const initialName = useMemo(() => getName(), []);
 
   const [name, setName] = useState(initialName);
-  const [slots, setSlots] = useState<Set<string>>(new Set());
+  const [marks, setMarks] = useState<Marks>(new Map());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
 
   // Restore this person's availability once: from the server (their saved name
@@ -37,14 +38,16 @@ export function RespondPanel({
     const mine = initialName
       ? poll.responses.find((r) => r.name === initialName)
       : undefined;
-    const restored = mine?.slots ?? getOwnSlots(poll.id);
-    if (restored) setSlots(new Set(restored));
+    const restored = mine
+      ? { slots: mine.slots, maybe: mine.maybe }
+      : getOwnMarks(poll.id);
+    if (restored) setMarks(marksFrom(restored.slots, restored.maybe));
   }, [initialName, poll.id, poll.responses]);
 
   const nameRef = useRef(name);
   nameRef.current = name;
-  const slotsRef = useRef(slots);
-  slotsRef.current = slots;
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   async function doSave() {
@@ -52,13 +55,14 @@ export function RespondPanel({
     if (!trimmed) return;
     setSave({ kind: "saving" });
     try {
-      const painted = [...slotsRef.current];
+      const painted = splitMarks(marksRef.current);
       const saved = await submitSlots(poll.id, {
         name: trimmed,
         tz: viewerTz,
-        slots: painted,
+        slots: painted.slots,
+        maybe: painted.maybe,
       });
-      saveOwnSlots(poll.id, painted);
+      saveOwnMarks(poll.id, painted);
       onSaved?.(saved);
       setSave({ kind: "saved" });
     } catch (err) {
@@ -93,7 +97,8 @@ export function RespondPanel({
         Your availability
       </h2>
       <p className="helper" style={{ margin: "6px 0 18px", fontSize: 14 }}>
-        Click and drag to paint when you're free. Drag again to erase.
+        Click or drag to mark when you're free. Each tap cycles a slot:
+        available → maybe → clear.
       </p>
 
       <div className="field" style={{ maxWidth: 320 }}>
@@ -112,8 +117,8 @@ export function RespondPanel({
 
       <AvailabilityGrid
         view={view}
-        value={slots}
-        onChange={setSlots}
+        value={marks}
+        onChange={setMarks}
         onCommit={scheduleSave}
       />
 

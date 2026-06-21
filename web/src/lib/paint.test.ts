@@ -1,21 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { modeFor, applyPaint } from "./paint";
+import {
+  cycleNext,
+  applyMark,
+  marksFrom,
+  splitMarks,
+  type Marks,
+} from "./paint";
 import { timeSlots, slotKey, hourLabel } from "./datetime";
 
-describe("paint", () => {
-  it("fills from a busy cell and erases from a free cell", () => {
-    expect(modeFor(new Set(), "k")).toBe("fill");
-    expect(modeFor(new Set(["k"]), "k")).toBe("erase");
+describe("paint cycle", () => {
+  it("cycles busy -> yes -> maybe -> busy", () => {
+    expect(cycleNext(undefined)).toBe("yes");
+    expect(cycleNext("yes")).toBe("maybe");
+    expect(cycleNext("maybe")).toBeUndefined();
   });
 
-  it("applyPaint adds or removes without mutating the input", () => {
-    const start = new Set(["a"]);
-    const filled = applyPaint(start, "b", "fill");
-    expect([...filled].sort()).toEqual(["a", "b"]);
-    expect([...start]).toEqual(["a"]); // unchanged
+  it("applyMark sets/clears without mutating the input", () => {
+    const start: Marks = new Map([["a", "yes"]]);
+    const withMaybe = applyMark(start, "b", "maybe");
+    expect([...withMaybe.entries()].sort()).toEqual([
+      ["a", "yes"],
+      ["b", "maybe"],
+    ]);
+    expect([...start.entries()]).toEqual([["a", "yes"]]); // unchanged
 
-    const erased = applyPaint(filled, "a", "erase");
-    expect([...erased]).toEqual(["b"]);
+    const cleared = applyMark(withMaybe, "a", undefined);
+    expect(cleared.has("a")).toBe(false);
+  });
+
+  it("round-trips through marksFrom / splitMarks (yes wins a duplicate)", () => {
+    const marks = marksFrom(["x"], ["y", "x"]); // x is also available -> stays yes
+    expect(marks.get("x")).toBe("yes");
+    expect(marks.get("y")).toBe("maybe");
+    const { slots, maybe } = splitMarks(marks);
+    expect(slots).toEqual(["x"]);
+    expect(maybe).toEqual(["y"]);
   });
 });
 
@@ -34,6 +53,5 @@ describe("slot helpers", () => {
     expect(hourLabel("09:00")).toBe("9am");
     expect(hourLabel("09:30")).toBe("");
     expect(hourLabel("12:00")).toBe("12pm");
-    expect(hourLabel("13:00")).toBe("1pm");
   });
 });

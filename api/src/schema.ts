@@ -61,6 +61,7 @@ export const submitSlotsSchema = z.object({
     message: "tz must be a valid IANA timezone",
   }),
   slots: z.array(z.string().regex(SLOT_KEY)).max(5000),
+  maybe: z.array(z.string().regex(SLOT_KEY)).max(5000).optional().default([]),
 });
 
 export type SubmitSlotsInput = z.infer<typeof submitSlotsSchema>;

@@ -1,19 +1,27 @@
 import { useEffect, useMemo, useRef } from "react";
 import { hourLabel, dayHeader } from "../lib/datetime";
-import { modeFor, applyPaint, type PaintMode } from "../lib/paint";
+import { cycleNext, applyMark, type Status, type Marks } from "../lib/paint";
 import type { GridView } from "../lib/tz";
 
 interface GridProps {
   view: GridView;
-  value: Set<string>;
-  onChange: (updater: (prev: Set<string>) => Set<string>) => void;
+  value: Marks;
+  onChange: (updater: (prev: Marks) => Marks) => void;
   onCommit?: () => void;
   disabled?: boolean;
 }
 
 const GUTTER = 46;
-const FREE_BG =
+const YES_BG =
   "linear-gradient(180deg, var(--brand), color-mix(in oklab, var(--brand) 78%, #000))";
+// Diagonal hatch reads as "tentative".
+const MAYBE_BG =
+  "repeating-linear-gradient(45deg, color-mix(in oklab, var(--brand) 55%, var(--bg-elev-1)) 0 5px, var(--bg-elev-1) 5px 10px)";
+const BUSY_BG = "var(--bg-elev-1)";
+
+function bgFor(status: Status | undefined): string {
+  return status === "yes" ? YES_BG : status === "maybe" ? MAYBE_BG : BUSY_BG;
+}
 
 export function AvailabilityGrid({
   view,
@@ -23,7 +31,7 @@ export function AvailabilityGrid({
   disabled = false,
 }: GridProps) {
   const dragging = useRef(false);
-  const mode = useRef<PaintMode>("fill");
+  const target = useRef<Status | undefined>(undefined);
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
 
@@ -47,21 +55,21 @@ export function AvailabilityGrid({
   function start(key: string, e: React.PointerEvent) {
     if (disabled) return;
     e.preventDefault();
-    const m = modeFor(value, key);
-    mode.current = m;
+    const next = cycleNext(value.get(key));
+    target.current = next;
     dragging.current = true;
-    onChange((prev) => applyPaint(prev, key, m));
+    onChange((prev) => applyMark(prev, key, next));
   }
 
   function enter(key: string) {
     if (disabled || !dragging.current) return;
-    onChange((prev) => applyPaint(prev, key, mode.current));
+    onChange((prev) => applyMark(prev, key, target.current));
   }
 
   function toggleKey(key: string) {
     if (disabled) return;
-    const m = modeFor(value, key);
-    onChange((prev) => applyPaint(prev, key, m));
+    const next = cycleNext(value.get(key));
+    onChange((prev) => applyMark(prev, key, next));
     commitRef.current?.();
   }
 
@@ -106,18 +114,18 @@ export function AvailabilityGrid({
           {view.days.map((d, di) => {
             const key = view.keyAt(d, t);
             if (key === null) {
-              // No canonical slot maps here (timezone-shift gap).
               return <div key={d} className="gridcell" style={{ visibility: "hidden" }} />;
             }
-            const free = value.has(key);
+            const status = value.get(key);
             const h = headers[di];
+            const word =
+              status === "yes" ? "available" : status === "maybe" ? "maybe" : "busy";
             return (
               <button
                 key={d}
                 type="button"
                 className="gridcell"
-                aria-pressed={free}
-                aria-label={`${h.weekday} ${h.day}, ${t} — ${free ? "free" : "busy"}`}
+                aria-label={`${h.weekday} ${h.day}, ${t} — ${word}`}
                 disabled={disabled}
                 onPointerDown={(e) => start(key, e)}
                 onPointerEnter={() => enter(key)}
@@ -128,8 +136,11 @@ export function AvailabilityGrid({
                   }
                 }}
                 style={{
-                  background: free ? FREE_BG : "var(--bg-elev-1)",
-                  boxShadow: free ? "none" : "inset 0 0 0 1px var(--border-subtle)",
+                  background: bgFor(status),
+                  boxShadow:
+                    status === undefined
+                      ? "inset 0 0 0 1px var(--border-subtle)"
+                      : "none",
                 }}
               />
             );
@@ -144,11 +155,16 @@ export function AvailabilityGrid({
           marginTop: 14,
           fontSize: 12,
           color: "var(--fg-subtle)",
+          flexWrap: "wrap",
         }}
       >
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ width: 14, height: 14, borderRadius: 7, background: FREE_BG }} />
-          free
+          <span style={{ width: 14, height: 14, borderRadius: 7, background: YES_BG }} />
+          available
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ width: 14, height: 14, borderRadius: 7, background: MAYBE_BG }} />
+          maybe
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
@@ -156,7 +172,7 @@ export function AvailabilityGrid({
               width: 14,
               height: 14,
               borderRadius: 7,
-              background: "var(--bg-elev-1)",
+              background: BUSY_BG,
               boxShadow: "inset 0 0 0 1px var(--border-subtle)",
             }}
           />
