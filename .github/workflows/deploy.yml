@@ -59,6 +59,23 @@ jobs:
       - run: npm run build
         working-directory: cli
 
+  test-client:
+    name: Test & build client
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+        working-directory: client
+      - run: npm test
+        working-directory: client
+      - run: npm run build
+        working-directory: client
+
   # Deploys are skipped until the one-time setup is done (see README):
   # CLOUDFLARE_* secrets for the API, and the VITE_API_BASE variable for web.
   deploy-api:

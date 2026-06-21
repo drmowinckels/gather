@@ -71,7 +71,12 @@ The poll page shows "Link active until <date>".
 **Slice 8 (done):** abuse hardening — per-IP poll-creation rate limit and a
 per-poll respondent cap (both `429`). See [Notes](#notes).
 
-**Next slices:** the Jinx GitHub-bot integration.
+**Slice 9 (done):** `gather-client` ([`client/`](client)) — a dependency-free
+API client + command helpers — and a [Jinx integration guide](docs/jinx-integration.md)
+for bots. The bot itself lives in its own repo as a consumer of the API.
+
+**Next:** the gather product is feature-complete for v1. Jinx wiring happens in
+the bot's own repo against this client.
 
 ## API
 
@@ -106,6 +111,14 @@ node dist/index.js lock <id> 2026-07-15T09:00
 `--days` accepts ISO dates (`2026-07-15,2026-07-16`) or weekdays/ranges
 (`mon-fri`, `tue,wed,thu`); weekdays resolve to their next upcoming occurrence.
 The API base defaults to production; override with `--api` or `$GATHER_API`.
+
+## Client library & bots
+
+[`client/`](client) is a tiny, dependency-free `gather-client` (a `GatherClient`
+class plus `resolveDays` / `parseGatherCommand` helpers) for any consumer of the
+API — Node, browser, or a Worker. See
+[**docs/jinx-integration.md**](docs/jinx-integration.md) for a full bot flow
+(parse an issue command → create a poll → post the link → lock the winner).
 
 ## Develop
 
