@@ -55,9 +55,10 @@ canonical (in the poll's home tz), so two people in different zones who pick the
 same absolute time land on the same slot. So "14:00 Oslo" is "08:00 New York"
 automatically.
 
-**Slice 5 (done):** the host can "lock in" the winning slot
-(`POST /v1/polls/:id/lock`, edit-token gated). Everyone sees a "Locked in" banner
-and the locked cell is ringed; the host can unlock.
+**Slice 5 (done):** the host can "lock in" a slot
+(`POST /v1/polls/:id/lock`, edit-token gated) — tap any heatmap cell to pick it
+(defaults to the best), then lock. Everyone sees a "Locked in" banner and the
+locked cell is ringed; the host can unlock.
 
 **Slice 6 (done):** polls auto-expire **14 days after their last day**. The
 expiry is stored at creation; expired polls return `410` and a daily Cloudflare

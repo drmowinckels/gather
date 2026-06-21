@@ -7,6 +7,7 @@ import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
 const BEST_SHADOW =
   "0 0 0 2px var(--brand), 0 0 14px color-mix(in oklab, var(--brand) 60%, transparent)";
 const LOCK_SHADOW = "0 0 0 2px var(--border-strong)";
+const SELECT_SHADOW = "0 0 0 2px var(--fg)";
 const HATCH =
   "repeating-linear-gradient(45deg, color-mix(in oklab, var(--brand) 24%, transparent) 0 4px, transparent 4px 8px)";
 
@@ -25,6 +26,7 @@ export function GroupHeatmap({
 }) {
   const [locking, setLocking] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
 
   async function setLock(slot: string | null) {
     if (!editToken) return;
@@ -138,6 +140,7 @@ export function GroupHeatmap({
                 const pct = Math.round((count / agg.total) * 100);
                 const isBest = key === agg.bestKey;
                 const isLocked = key === poll.lockedSlot;
+                const isSelected = isHost && key === (selected ?? agg.bestKey);
                 const empty = count === 0 && maybeN === 0;
                 const base =
                   count > 0
@@ -148,20 +151,24 @@ export function GroupHeatmap({
                     key={d}
                     className="heatcell"
                     onMouseEnter={() => setHovered(key)}
+                    onClick={isHost ? () => setSelected(key) : undefined}
                     title={
                       empty
                         ? `${label(key)} — nobody yet`
                         : `${label(key)} — ${count} available${maybeN ? `, ${maybeN} maybe` : ""}`
                     }
                     style={{
+                      cursor: isHost ? "pointer" : "default",
                       background: maybeN > 0 ? `${HATCH}, ${base}` : base,
                       boxShadow: isLocked
                         ? LOCK_SHADOW
-                        : empty
-                          ? "inset 0 0 0 1px var(--border-subtle)"
-                          : isBest
-                            ? BEST_SHADOW
-                            : "none",
+                        : isSelected
+                          ? SELECT_SHADOW
+                          : empty
+                            ? "inset 0 0 0 1px var(--border-subtle)"
+                            : isBest
+                              ? BEST_SHADOW
+                              : "none",
                       color: pct >= 55 ? "var(--on-brand)" : "var(--fg-subtle)",
                     }}
                   >
@@ -351,15 +358,27 @@ export function GroupHeatmap({
                   </button>
                 </>
               ) : (
-                <button
-                  type="button"
-                  className="btn btn-primary"
-                  style={{ width: "100%" }}
-                  onClick={() => setLock(best.slot)}
-                  disabled={locking}
-                >
-                  {locking ? "Locking…" : `Lock in ${label(best.slot)}`}
-                </button>
+                (() => {
+                  const target = selected ?? best.slot;
+                  return (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-primary"
+                        style={{ width: "100%" }}
+                        onClick={() => setLock(target)}
+                        disabled={locking}
+                      >
+                        {locking ? "Locking…" : `Lock in ${label(target)}`}
+                      </button>
+                      <p className="subtle" style={{ fontSize: 12, margin: "8px 0 0" }}>
+                        {selected
+                          ? "Tap another slot to change your pick."
+                          : "Best slot picked — tap any slot to choose a different one."}
+                      </p>
+                    </>
+                  );
+                })()
               )}
             </div>
           )}
