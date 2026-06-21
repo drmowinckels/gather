@@ -1,4 +1,4 @@
--- gather schema: polls + responses
+-- samkoma schema: polls + responses
 -- A poll is a stateless resource keyed by a short id. No user accounts; the
 -- edit_token gates poll settings + lock-in. Responses hold each respondent's
 -- painted availability as a JSON array of slot keys.

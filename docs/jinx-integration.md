@@ -1,19 +1,19 @@
-# Integrating gather with a bot (e.g. Jinx)
+# Integrating samkoma with a bot (e.g. Jinx)
 
-gather is API-first: the web UI is just one client of a public REST API, and a
+samkoma is API-first: the web UI is just one client of a public REST API, and a
 bot is another. This guide shows how a GitHub bot like **Jinx** can open a poll
 from an issue comment, post the link, and later edit the comment with the
 winning slot.
 
-> Jinx lives in its own repo and is _one consumer_ of the API — gather is not
-> branded to or owned by it. Copy the [`gather-client`](../client) module (or
+> Jinx lives in its own repo and is _one consumer_ of the API — samkoma is not
+> branded to or owned by it. Copy the [`samkoma-client`](../client) module (or
 > publish it) and adapt the command grammar to however your bot already parses
 > issues.
 
 ## The flow
 
 ```
-issue comment: /jinx gather tue-thu 9-15 tz:Europe/Oslo
+issue comment: /jinx samkoma tue-thu 9-15 tz:Europe/Oslo
         │
         ▼
   parse → POST /v1/polls ──▶ { id, url, editToken }
@@ -45,18 +45,18 @@ issue comment: /jinx gather tue-thu 9-15 tz:Europe/Oslo
 ## Using the client
 
 ```ts
-import { GatherClient, parseGatherCommand, GatherError } from "gather-client"; // or copy client/src/index.ts into your bot
+import { SamkomaClient, parseSamkomaCommand, SamkomaError } from "samkoma-client"; // or copy client/src/index.ts into your bot
 
-const gather = new GatherClient(); // defaults to the production API
+const samkoma = new SamkomaClient(); // defaults to the production API
 
-// 1. Someone comments "/jinx gather tue-thu 9-15 tz:Europe/Oslo"
+// 1. Someone comments "/jinx samkoma tue-thu 9-15 tz:Europe/Oslo"
 async function onSlashCommand(commentBody: string, title: string) {
-  const args = commentBody.replace(/^\/jinx gather\s+/, "");
-  const { days, from, to, tz } = parseGatherCommand(args, {
+  const args = commentBody.replace(/^\/jinx samkoma\s+/, "");
+  const { days, from, to, tz } = parseSamkomaCommand(args, {
     defaultTz: "Europe/Oslo",
   });
 
-  const poll = await gather.createPoll({
+  const poll = await samkoma.createPoll({
     title,
     days,
     from,
@@ -73,26 +73,26 @@ async function onSlashCommand(commentBody: string, title: string) {
 // 2. Later (a deadline, a /jinx close, or a poll), pick + lock the winner.
 async function lockWinner(pollId: string) {
   const editToken = await loadEditToken(pollId);
-  const best = await gather.getBest(pollId, { limit: 1, editToken });
+  const best = await samkoma.getBest(pollId, { limit: 1, editToken });
   if (best.results.length === 0) return "No availability yet.";
 
   const winner = best.results[0];
-  await gather.lock(pollId, winner.slot, editToken);
+  await samkoma.lock(pollId, winner.slot, editToken);
   return `✅ Locked in **${winner.slot.replace("T", " ")}** (${winner.count}/${best.total} available).`;
 }
 ```
 
 ### Error handling
 
-Every call rejects with a `GatherError` carrying `code` and `status`:
+Every call rejects with a `SamkomaError` carrying `code` and `status`:
 
 ```ts
 try {
-  await gather.createPoll(input);
+  await samkoma.createPoll(input);
 } catch (err) {
-  if (err instanceof GatherError && err.code === "rate_limited") {
+  if (err instanceof SamkomaError && err.code === "rate_limited") {
     // back off and retry
-  } else if (err instanceof GatherError && err.code === "invalid_body") {
+  } else if (err instanceof SamkomaError && err.code === "invalid_body") {
     // tell the user the command was malformed
   } else {
     throw err;
@@ -105,7 +105,7 @@ Common codes: `invalid_body` (400), `rate_limited` / `poll_full` (429),
 
 ## The command grammar is yours
 
-`parseGatherCommand` is a _reference_ parser for `tue-thu 9-15 tz:Europe/Oslo`
+`parseSamkomaCommand` is a _reference_ parser for `tue-thu 9-15 tz:Europe/Oslo`
 (a day spec, an `H-H`/`HH:MM-HH:MM` range, and `tz:<zone>`). If your bot already
 has a grammar, skip it and build the `PollInput` yourself — `resolveDays()` is
 exported separately to turn `"mon-fri"` / ISO lists into concrete dates.

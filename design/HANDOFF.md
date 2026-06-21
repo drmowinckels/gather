@@ -1,7 +1,7 @@
-# Handoff: gather — a modern, API-first when2meet alternative
+# Handoff: samkoma — a modern, API-first when2meet alternative
 
 ## Overview
-**gather** is a group-availability scheduling tool: a host creates a poll for a set of
+**samkoma** is a group-availability scheduling tool: a host creates a poll for a set of
 days/times in a timezone, shares one link, respondents paint when they're free, and a live
 heatmap surfaces the slot that works for the most people. It is **API-first** — everything the
 web UI does is a thin client over a REST API — so a bot (e.g. **Jinx**, the R-Ladies+ GitHub
@@ -11,7 +11,7 @@ The product is intentionally **independent** (not branded to R-Ladies or Dr. Mow
 is treated as *one consumer* of the public API, not the owner of the product.
 
 ## About the design files
-The file in this bundle — `gather.design.html` — is a **design reference created in HTML**. It
+The file in this bundle — `samkoma.design.html` — is a **design reference created in HTML**. It
 is a prototype showing the intended look, layout, and behavior; it is **not production code to
 copy**. It is authored as a "Design Component" (a streaming HTML format) and pulls a few CSS
 tokens from a design system, but for implementation you should treat it purely as a visual
@@ -21,7 +21,7 @@ Your task: **recreate these designs in the target codebase's environment** using
 patterns and libraries. If no codebase exists yet, pick the most appropriate stack (suggestion
 below) and build there. Do **not** ship the HTML directly.
 
-Open `gather.design.html` in a browser to see all screens laid out as labeled frames on a gray
+Open `samkoma.design.html` in a browser to see all screens laid out as labeled frames on a gray
 canvas (it's a single scrollable spec sheet).
 
 ## Fidelity
@@ -35,8 +35,8 @@ and counts in the mock are placeholder data.
   to CSS variables or a Tailwind theme.
 - **Backend/API:** any REST stack (Node/Express/Fastify, Python/FastAPI, Go). Stateless poll
   resources keyed by short id; no user accounts required (edit-token model).
-- **CLI:** a thin wrapper over the REST API (`gather new …`) that stores an edit token in
-  `~/.gather`.
+- **CLI:** a thin wrapper over the REST API (`samkoma new …`) that stores an edit token in
+  `~/.samkoma`.
 - **Bot integration (Jinx):** Jinx parses a slash-command on a GitHub issue, calls
   `POST /v1/polls`, posts the poll link as a comment, and later edits the comment with the
   winning slot.
@@ -64,7 +64,7 @@ and counts in the mock are placeholder data.
     (1.5px `--border`), `--fg` text, transparent bg. Both pill radius (9999px).
   - **Terminal snippet:** `--bg-inset` bg, 1px `--border-subtle`, left border 3px `--brand`,
     radius 10px, JetBrains Mono 13.5px. Example:
-    `$ gather new "Team offsite" --days mon-fri --9to17 --tz Europe/Oslo`
+    `$ samkoma new "Team offsite" --days mon-fri --9to17 --tz Europe/Oslo`
   - **Hero heatmap card:** `--bg-elev-1`, 1px `--border`, radius 18px, soft shadow, padding 24.
     Mini heatmap (see Heatmap spec) + legend "fewer … everyone".
   - **Feature cells (×3):** numbered `01/02/03` (Manrope 800, 13px, .08em, `--brand`), a 17px/700
@@ -133,9 +133,9 @@ Same data + interaction, three treatments. **Pick one** for production; A is the
 - **Right — "A bot on a GitHub issue":** a mocked GitHub issue thread:
   - Issue header (open dot, title "Schedule the September offsite", "#312 · open").
   - A user comment containing a slash command:
-    `/jinx gather tue-thu 9-15 tz:Europe/Oslo`
-  - A **gather-bot/jinx-bot** reply card: "📋 Poll's up! **Team offsite — September**", the
-    schedule line, the poll link (`gather.so/e/9fK2qd`), and status chips ("0 responses",
+    `/jinx samkoma tue-thu 9-15 tz:Europe/Oslo`
+  - A **samkoma-bot/jinx-bot** reply card: "📋 Poll's up! **Team offsite — September**", the
+    schedule line, the poll link (`samkoma.so/e/9fK2qd`), and status chips ("0 responses",
     "closes in 5 days"), plus "I'll edit this comment with the winning slot once everyone's in."
 
 ---
@@ -188,7 +188,7 @@ On dark, filled-`--brand` buttons use **`#06181a`** (near-black) text for contra
 - **Families:** `Manrope` for everything UI (wordmark, headings, body, labels); `JetBrains Mono`
   for code/terminal/endpoints. (Load via Google Fonts.) The ornamental serif/deco faces from the
   original system were intentionally dropped for a contemporary look.
-- **Wordmark "gather":** Manrope 800, lowercase, letter-spacing -0.03em, single color
+- **Wordmark "samkoma":** Manrope 800, lowercase, letter-spacing -0.03em, single color
   (`--fg` in chrome; `#16201f`/`--brand` accents elsewhere). No special "R" treatment.
 - **Scale (px):** h1 60 (-0.035em, lh 1.0) · h2 28 / 24 / 21 (-0.02em) · feature title 17/700 ·
   body 15–21 (lh 1.5) · eyebrow 12–14 uppercase, letter-spacing .2em, `--brand` · micro-labels
@@ -226,7 +226,7 @@ number color → white/near-black when pct high (count ≥ ~55%), else var(--fg-
 - **Theme toggle:** persist choice (localStorage) and respect `prefers-color-scheme` when unset.
 - **Responsive:** desktop wide grid; on mobile show fewer day columns with horizontal scroll and
   a sticky action bar. Min 44px touch targets.
-- **No accounts:** creating a poll returns an **edit token** (stored client-side / in `~/.gather`
+- **No accounts:** creating a poll returns an **edit token** (stored client-side / in `~/.samkoma`
   for CLI). Anyone with the link can respond; edit token gates poll settings + lock-in.
 
 ## State (frontend)
@@ -238,7 +238,7 @@ number color → white/near-black when pct high (count ≥ ~55%), else var(--fg-
 ---
 
 ## API contract (as drawn, plus sensible completion)
-Base: `https://gather.so/v1` · Auth for bots: `Authorization: Bearer <token>`.
+Base: `https://samkoma.so/v1` · Auth for bots: `Authorization: Bearer <token>`.
 
 | Method | Endpoint | Body / notes | Returns |
 |---|---|---|---|
@@ -249,7 +249,7 @@ Base: `https://gather.so/v1` · Auth for bots: `Authorization: Bearer <token>`.
 
 **Create example (from the design):**
 ```
-curl -X POST https://gather.so/v1/polls \
+curl -X POST https://samkoma.so/v1/polls \
   -H "Authorization: Bearer $BOT_TOKEN" \
   -d '{
     "title": "Team offsite",
@@ -257,37 +257,37 @@ curl -X POST https://gather.so/v1/polls \
     "from": "09:00", "to": "15:00", "slot": 30,
     "tz": "Europe/Oslo"
   }'
-→ { "id": "9fK2qd", "url": "https://gather.so/e/9fK2qd" }
+→ { "id": "9fK2qd", "url": "https://samkoma.so/e/9fK2qd" }
 ```
 
 ### CLI grammar (placeholder — confirm before building)
 ```
-gather new "<title>" \
+samkoma new "<title>" \
   --days tue,wed,thu          # or mon-fri
   --from 09:00 --to 15:00 --slot 30m
   --tz Europe/Oslo
   --public
 → ✓ poll created
-  → https://gather.so/e/9fK2qd
-  edit token saved to ~/.gather
+  → https://samkoma.so/e/9fK2qd
+  edit token saved to ~/.samkoma
 ```
 
 ### Jinx / GitHub bot flow (placeholder grammar)
-1. User comments on an issue: `/jinx gather tue-thu 9-15 tz:Europe/Oslo`
+1. User comments on an issue: `/jinx samkoma tue-thu 9-15 tz:Europe/Oslo`
 2. Jinx calls `POST /v1/polls`, replies with the poll link + status chips.
 3. Jinx polls `GET /v1/polls/:id/best` and edits its comment with the winning slot when done.
-> The `/jinx gather …` and `gather new …` grammars and the `gather.so` domain are **assumptions**.
+> The `/jinx samkoma …` and `samkoma new …` grammars and the `samkoma.so` domain are **assumptions**.
 > Confirm/adjust to however Jinx already parses commands and your real domain.
 
 ---
 
 ## Files
-- `gather.design.html` — the full visual spec (all 5 screens + 3 grid directions + light/dark +
+- `samkoma.design.html` — the full visual spec (all 5 screens + 3 grid directions + light/dark +
   mobile), as labeled frames on a scrollable canvas. Open in any browser.
 
 ## Open questions to confirm before building
 1. Exact CLI flag grammar and Jinx slash-command syntax.
-2. Production domain (`gather.so` is a placeholder).
+2. Production domain (`samkoma.so` is a placeholder).
 3. Which grid direction (A / B / C) to ship.
 4. Tie-break rule for "best slot".
 5. Storage model for polls (DB vs. serverless KV) and edit-token security.

@@ -1,8 +1,8 @@
-# gather
+# samkoma
 
 Find a time, together.
 
-**gather** is an API-first group-availability scheduler —
+**samkoma** is an API-first group-availability scheduler —
 a modern [when2meet](https://www.when2meet.com) alternative. A host creates a
 poll for some days and times, shares one link, respondents paint when they're
 free, and a live heatmap surfaces the slot that works for the most people.
@@ -13,7 +13,7 @@ can create polls and read results programmatically too.
 ## How it runs (static frontend, persistent links)
 
 GitHub Pages only serves static files, but a scheduling tool needs shared,
-persistent state. So gather is split in two:
+persistent state. So samkoma is split in two:
 
 | Part       | Lives on                | What it is                             |
 | ---------- | ----------------------- | -------------------------------------- |
@@ -25,14 +25,14 @@ indefinitely because the data lives in D1, not in the page. Both tiers are free
 at this scale.
 
 ```
-browser ──fetch──▶  gather-api.<sub>.workers.dev  ──▶  D1 (SQLite)
+browser ──fetch──▶  samkoma-api.<sub>.workers.dev  ──▶  D1 (SQLite)
 (Pages SPA)                 (Worker, REST)
 ```
 
 ## Live
 
-- **App:** https://gather.drmowinckels.io
-- **API:** https://api.gather.drmowinckels.io
+- **App:** https://samkoma.drmowinckels.io
+- **API:** https://api.samkoma.drmowinckels.io
 
 ## Status
 
@@ -65,14 +65,14 @@ expiry is stored at creation; expired polls return `410` and a daily Cloudflare
 Cron Trigger deletes them (and their responses), so stale polls don't pile up.
 The poll page shows "Link active until <date>".
 
-**Slice 7 (done):** a `gather` CLI (`cli/`) — a thin client over the API:
-`gather new`, `gather best`, `gather lock`/`unlock`, with edit tokens stored in
-`~/.gather`. See [CLI](#cli).
+**Slice 7 (done):** a `samkoma` CLI (`cli/`) — a thin client over the API:
+`samkoma new`, `samkoma best`, `samkoma lock`/`unlock`, with edit tokens stored in
+`~/.samkoma`. See [CLI](#cli).
 
 **Slice 8 (done):** abuse hardening — per-IP poll-creation rate limit and a
 per-poll respondent cap (both `429`). See [Notes](#notes).
 
-**Slice 9 (done):** `gather-client` ([`client/`](client)) — a dependency-free
+**Slice 9 (done):** `samkoma-client` ([`client/`](client)) — a dependency-free
 API client + command helpers — and a [Jinx integration guide](docs/jinx-integration.md)
 for bots. The bot itself lives in its own repo as a consumer of the API.
 
@@ -103,7 +103,7 @@ as `Authorization: Bearer <token>`.
 
 ## CLI
 
-`cli/` is a thin client over the same API. It stores edit tokens in `~/.gather`
+`cli/` is a thin client over the same API. It stores edit tokens in `~/.samkoma`
 so the host can lock from the terminal.
 
 ```bash
@@ -115,12 +115,12 @@ node dist/index.js lock <id> 2026-07-15T09:00
 
 `--days` accepts ISO dates (`2026-07-15,2026-07-16`) or weekdays/ranges
 (`mon-fri`, `tue,wed,thu`); weekdays resolve to their next upcoming occurrence.
-The API base defaults to production; override with `--api` or `$GATHER_API`.
+The API base defaults to production; override with `--api` or `$SAMKOMA_API`.
 
 ## Client library & bots
 
-[`client/`](client) is a tiny, dependency-free `gather-client` (a `GatherClient`
-class plus `resolveDays` / `parseGatherCommand` helpers) for any consumer of the
+[`client/`](client) is a tiny, dependency-free `samkoma-client` (a `SamkomaClient`
+class plus `resolveDays` / `parseSamkomaCommand` helpers) for any consumer of the
 API — Node, browser, or a Worker. See
 [**docs/jinx-integration.md**](docs/jinx-integration.md) for a full bot flow
 (parse an issue command → create a poll → post the link → lock the winner).
@@ -163,7 +163,7 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
 1. **Create the D1 database** and paste its id into `api/wrangler.toml`
    (replacing `REPLACE_WITH_D1_ID`):
    ```bash
-   cd api && npx wrangler d1 create gather
+   cd api && npx wrangler d1 create samkoma
    ```
 2. **Add GitHub Actions secrets** (repo → Settings → Secrets → Actions):
    - `CLOUDFLARE_API_TOKEN` — token with Workers + D1 edit permissions
@@ -173,9 +173,9 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
    GitHub Actions **variable** `VITE_API_BASE` = that URL and re-run the workflow
    so the web build points at the live API.
 
-> The frontend is served at the root of the custom domain `gather.drmowinckels.io`
+> The frontend is served at the root of the custom domain `samkoma.drmowinckels.io`
 > (Vite `base` is `/`). The API has a Cloudflare Worker custom domain
-> `api.gather.drmowinckels.io`. `ALLOWED_ORIGINS` / `WEB_BASE_URL` in
+> `api.samkoma.drmowinckels.io`. `ALLOWED_ORIGINS` / `WEB_BASE_URL` in
 > `api/wrangler.toml` and the `VITE_API_BASE` repo variable all point at these.
 
 ## Notes

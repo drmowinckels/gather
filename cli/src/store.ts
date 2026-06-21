@@ -2,7 +2,7 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { readFileSync, writeFileSync } from "node:fs";
 
-export const TOKEN_FILE = join(homedir(), ".gather");
+export const TOKEN_FILE = join(homedir(), ".samkoma");
 
 function load(): Record<string, string> {
   try {

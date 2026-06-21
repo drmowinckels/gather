@@ -79,6 +79,6 @@ describe("CreatePoll", () => {
     expect(typeof payload.tz).toBe("string");
 
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/e/9fK2qd"));
-    expect(localStorage.getItem("gather:edit:9fK2qd")).toBe("secret-token");
+    expect(localStorage.getItem("samkoma:edit:9fK2qd")).toBe("secret-token");
   });
 });

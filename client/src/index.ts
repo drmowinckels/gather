@@ -1,7 +1,7 @@
-// gather-client — a tiny, dependency-free client for the gather REST API.
+// samkoma-client — a tiny, dependency-free client for the samkoma REST API.
 // Works anywhere `fetch` exists (Node 18+, browsers, Cloudflare Workers).
 
-export const DEFAULT_BASE_URL = "https://api.gather.drmowinckels.io";
+export const DEFAULT_BASE_URL = "https://api.samkoma.drmowinckels.io";
 
 export interface PollInput {
   title: string;
@@ -60,17 +60,17 @@ export interface SlotsInput {
   maybe?: string[]; // "might be available" slots (optional)
 }
 
-export class GatherError extends Error {
+export class SamkomaError extends Error {
   constructor(
     public code: string,
     public status: number,
   ) {
-    super(`gather API error: ${code} (${status})`);
-    this.name = "GatherError";
+    super(`samkoma API error: ${code} (${status})`);
+    this.name = "SamkomaError";
   }
 }
 
-async function toError(res: Response): Promise<GatherError> {
+async function toError(res: Response): Promise<SamkomaError> {
   let code = "request_failed";
   try {
     const body = (await res.json()) as { error?: string };
@@ -78,10 +78,10 @@ async function toError(res: Response): Promise<GatherError> {
   } catch {
     // non-JSON body
   }
-  return new GatherError(code, res.status);
+  return new SamkomaError(code, res.status);
 }
 
-export interface GatherClientOptions {
+export interface SamkomaClientOptions {
   /** API base URL. Defaults to production. */
   baseUrl?: string;
   /**
@@ -92,11 +92,11 @@ export interface GatherClientOptions {
   editToken?: string;
 }
 
-export class GatherClient {
+export class SamkomaClient {
   private baseUrl: string;
   private editToken?: string;
 
-  constructor(options: GatherClientOptions = {}) {
+  constructor(options: SamkomaClientOptions = {}) {
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
     this.editToken = options.editToken;
   }
@@ -155,7 +155,7 @@ export class GatherClient {
     slot: string | null,
     editToken?: string,
   ): Promise<Poll> {
-    if (!editToken) throw new GatherError("missing_edit_token", 0);
+    if (!editToken) throw new SamkomaError("missing_edit_token", 0);
     return this.request(`/v1/polls/${encodeURIComponent(id)}/lock`, {
       method: "POST",
       headers: {
@@ -238,7 +238,7 @@ export interface ParsedCommand {
  * Adapt freely to your bot's own grammar — this is a starting point. Recognises
  * a day spec, an `H-H` (or `HH:MM-HH:MM`) time range, and `tz:<zone>`.
  */
-export function parseGatherCommand(
+export function parseSamkomaCommand(
   text: string,
   opts: { defaultTz?: string; today?: Date } = {},
 ): ParsedCommand {

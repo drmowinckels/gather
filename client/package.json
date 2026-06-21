@@ -1,7 +1,7 @@
 {
-  "name": "gather-client",
+  "name": "samkoma-client",
   "version": "0.1.0",
-  "description": "Tiny, dependency-free client for the gather scheduling API",
+  "description": "Tiny, dependency-free client for the samkoma scheduling API",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

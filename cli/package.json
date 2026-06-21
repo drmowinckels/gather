@@ -1,10 +1,10 @@
 {
-  "name": "gather-cli",
+  "name": "samkoma-cli",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "gather": "dist/index.js"
+    "samkoma": "dist/index.js"
   },
   "files": [
     "dist"

@@ -1,4 +1,4 @@
-name = "gather-api"
+name = "samkoma-api"
 main = "src/index.ts"
 compatibility_date = "2025-02-04"
 
@@ -6,14 +6,14 @@ compatibility_date = "2025-02-04"
 # values are overridden by `.dev.vars`; tests override them in vitest.config.ts.
 # ALLOWED_ORIGINS is a comma-separated allowlist for CORS.
 [vars]
-ALLOWED_ORIGINS = "https://gather.drmowinckels.io"
-WEB_BASE_URL = "https://gather.drmowinckels.io"
+ALLOWED_ORIGINS = "https://samkoma.drmowinckels.io"
+WEB_BASE_URL = "https://samkoma.drmowinckels.io"
 CREATE_LIMIT = "30"      # max poll creations per IP per minute
 MAX_RESPONSES = "1000"   # max distinct respondents per poll
 
 [[d1_databases]]
 binding = "DB"
-database_name = "gather"
+database_name = "samkoma"
 database_id = "cb6ccb98-b67d-4087-9398-4afc97b11a21"
 migrations_dir = "migrations"
 

@@ -72,7 +72,7 @@ export function CliEquivalent({
         <span className="prompt" style={{ color: "var(--brand)" }}>
           $
         </span>{" "}
-        gather new{" "}
+        samkoma new{" "}
         <span style={{ color: "var(--brand-2)" }}>
           "{title || "Untitled poll"}"
         </span>{" "}

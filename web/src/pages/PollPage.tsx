@@ -142,7 +142,7 @@ export function PollPage() {
         <div style={{ padding: "64px 0", maxWidth: 460 }}>
           <h1 className="h2">Can't load this poll right now</h1>
           <p className="helper" style={{ margin: "10px 0 20px" }}>
-            The gather service didn't respond. Refresh to try again.
+            The samkoma service didn't respond. Refresh to try again.
           </p>
           <button
             type="button"

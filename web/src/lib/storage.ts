@@ -1,6 +1,6 @@
-const EDIT_PREFIX = "gather:edit:";
-const SLOTS_PREFIX = "gather:slots:";
-const NAME_KEY = "gather:name";
+const EDIT_PREFIX = "samkoma:edit:";
+const SLOTS_PREFIX = "samkoma:slots:";
+const NAME_KEY = "samkoma:name";
 
 function read(key: string): string | null {
   try {

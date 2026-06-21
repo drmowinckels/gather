@@ -22,7 +22,7 @@ export class ApiError extends Error {
     public code: string,
     public status: number,
   ) {
-    super(`gather API error: ${code} (${status})`);
+    super(`samkoma API error: ${code} (${status})`);
     this.name = "ApiError";
   }
 }
