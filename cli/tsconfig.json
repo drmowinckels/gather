@@ -5,13 +5,15 @@
     "moduleResolution": "NodeNext",
     "lib": ["ES2022"],
     "types": ["node"],
-    "outDir": "dist",
-    "rootDir": "src",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "skipLibCheck": true,
-    "declaration": false
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "samkoma-client": ["../client/src/index.ts"]
+    }
   },
   "include": ["src"]
 }
