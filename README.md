@@ -163,7 +163,7 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
 1. **Create the D1 database** and paste its id into `api/wrangler.toml`
    (replacing `REPLACE_WITH_D1_ID`):
    ```bash
-   cd api && npx wrangler d1 create gather
+   cd api && npx wrangler d1 create samkoma
    ```
 2. **Add GitHub Actions secrets** (repo → Settings → Secrets → Actions):
    - `CLOUDFLARE_API_TOKEN` — token with Workers + D1 edit permissions

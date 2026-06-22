@@ -99,7 +99,7 @@ jobs:
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         working-directory: api
         run: |
-          npx wrangler d1 migrations apply gather --remote
+          npx wrangler d1 migrations apply samkoma --remote
           npx wrangler deploy
       - name: Skipped notice
         if: ${{ env.CLOUDFLARE_API_TOKEN == '' || env.CLOUDFLARE_ACCOUNT_ID == '' }}

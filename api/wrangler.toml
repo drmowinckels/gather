@@ -13,10 +13,8 @@ MAX_RESPONSES = "1000"   # max distinct respondents per poll
 
 [[d1_databases]]
 binding = "DB"
-# D1 name is fixed at creation (no rename); the live database is "gather".
-# The binding uses database_id below, so the rebrand does not affect runtime.
-database_name = "gather"
-database_id = "cb6ccb98-b67d-4087-9398-4afc97b11a21"
+database_name = "samkoma"
+database_id = "a9868339-bdf0-4557-b286-75482dbc6298"
 migrations_dir = "migrations"
 
 # Daily cleanup of expired polls (03:17 UTC).
