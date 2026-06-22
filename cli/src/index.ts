@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
+import { SamkomaClient } from "samkoma-client";
 import { buildCreateBody, buildEditBody } from "./lib.js";
-import { createPoll, getBest, lockSlot, editPoll } from "./api.js";
 import { saveToken, getToken, TOKEN_FILE } from "./store.js";
 
 const DEFAULT_API =
@@ -67,6 +67,7 @@ async function main() {
   });
 
   const api = values.api ?? DEFAULT_API;
+  const client = new SamkomaClient({ baseUrl: api });
   const command = positionals[0];
 
   if (values.help || !command || command === "help") {
@@ -88,7 +89,7 @@ async function main() {
       tz: values.tz ?? systemTz(),
       public: values.public ?? false,
     });
-    const created = await createPoll(api, body);
+    const created = await client.createPoll(body);
     saveToken(created.id, created.editToken);
     console.log("✓ poll created");
     console.log(`  → ${created.url}`);
@@ -120,7 +121,7 @@ async function main() {
       slot: values.slot,
       public: isPublic,
     });
-    const poll = await editPoll(api, id, body, token);
+    const poll = await client.editPoll(id, body, token);
     console.log("✓ poll updated");
     console.log(`  ${poll.title}`);
     console.log(`  ${poll.days.length} day(s), ${poll.from}–${poll.to}`);
@@ -137,7 +138,7 @@ async function main() {
         throw new Error("--limit must be a positive integer");
       }
     }
-    const best = await getBest(api, id, limit);
+    const best = await client.getBest(id, { limit });
     if (best.results.length === 0) {
       console.log("No availability yet.");
       return;
@@ -169,7 +170,10 @@ async function main() {
         "Usage: samkoma lock <id> <slot>  (e.g. 2026-07-15T09:00)",
       );
     }
-    const poll = await lockSlot(api, id, slot ?? null, token);
+    const poll =
+      command === "lock"
+        ? await client.lock(id, slot as string, token)
+        : await client.unlock(id, token);
     console.log(
       poll.lockedSlot
         ? `✓ locked in ${prettySlot(poll.lockedSlot)}`
