@@ -182,8 +182,10 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
 
 - No accounts. Creating a poll returns an **edit token** stored client-side;
   anyone with the link can respond.
-- **Abuse limits:** poll creation is rate-limited per IP (`CREATE_LIMIT`/min,
-  default 30) and each poll caps distinct respondents (`MAX_RESPONSES`, default 1000) — both `429`. Counters live in a tiny D1 table the daily cron purges.
+- **Abuse limits:** poll creation and slot submission are both rate-limited per
+  IP (`CREATE_LIMIT`/min default 30, `SUBMIT_LIMIT`/min default 120), and each
+  poll caps distinct respondents (`MAX_RESPONSES`, default 1000) — all `429`.
+  Counters live in a tiny D1 table the daily cron purges.
 - `npm audit` advisories in both packages are confined to the dev toolchain
   (vite / vitest / wrangler / miniflare). Production dependencies — the Worker
   (Hono, zod) and the SPA (React) — report **0 vulnerabilities**.
