@@ -478,6 +478,22 @@ describe("POST /v1/polls/:id/slots", () => {
     expect(poll.responses[0].maybe).toEqual(["2099-07-15T09:30"]);
   });
 
+  it("rate-limits submissions beyond SUBMIT_LIMIT (10 in tests)", async () => {
+    const { id } = await newPoll();
+    let res!: Response;
+    // Same name upserts (never hits the distinct-respondent cap), so this
+    // isolates the per-IP submission throttle.
+    for (let i = 0; i <= 10; i++) {
+      res = await submit(id, {
+        name: "Ada",
+        tz: "Europe/Oslo",
+        slots: ["2099-07-15T09:00"],
+      });
+    }
+    expect(res.status).toBe(429);
+    expect(((await res.json()) as { error: string }).error).toBe("rate_limited");
+  });
+
   it("caps distinct respondents at MAX_RESPONSES (3 in tests)", async () => {
     const { id } = await newPoll();
     let status = 0;

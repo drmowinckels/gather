@@ -21,6 +21,7 @@ export default defineWorkersConfig(async () => {
               ALLOWED_ORIGINS: "http://localhost:5173",
               WEB_BASE_URL: "http://localhost:5173",
               CREATE_LIMIT: "10",
+              SUBMIT_LIMIT: "10",
               MAX_RESPONSES: "3",
             },
           },

@@ -25,6 +25,10 @@ function bearerToken(c: Context): string | null {
   return header.startsWith("Bearer ") ? header.slice(7) : null;
 }
 
+function clientIp(c: Context): string {
+  return c.req.header("CF-Connecting-IP") ?? "anon";
+}
+
 function constantTimeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
@@ -108,9 +112,8 @@ polls.post(
     if (!result.success) return badRequest(c, result.error.issues);
   }),
   async (c) => {
-    const ip = c.req.header("CF-Connecting-IP") ?? "anon";
     const limit = Number.parseInt(c.env.CREATE_LIMIT, 10) || 30;
-    if (!(await rateLimit(c.env.DB, `create:${ip}`, limit, 60))) {
+    if (!(await rateLimit(c.env.DB, `create:${clientIp(c)}`, limit, 60))) {
       return c.json({ error: "rate_limited" }, 429);
     }
 
@@ -325,6 +328,13 @@ polls.post(
     if (!result.success) return badRequest(c, result.error.issues);
   }),
   async (c) => {
+    // Per-IP throttle: the only authenticated-free write, so it needs a guard
+    // against a leaked link being flooded (junk responses + filling the cap).
+    const limit = Number.parseInt(c.env.SUBMIT_LIMIT, 10) || 120;
+    if (!(await rateLimit(c.env.DB, `slots:${clientIp(c)}`, limit, 60))) {
+      return c.json({ error: "rate_limited" }, 429);
+    }
+
     const id = c.req.param("id");
     const poll = await loadActivePoll(c, id);
     if (poll instanceof Response) return poll;
