@@ -1,5 +1,20 @@
-const API_BASE: string =
-  import.meta.env.VITE_API_BASE ?? "http://localhost:8787";
+// A production build with no VITE_API_BASE would silently call localhost and
+// fail opaquely in users' browsers; fail the build/load loudly instead. Dev and
+// tests fall back to the local Worker.
+export function resolveApiBase(
+  base: string | undefined,
+  isProd: boolean,
+): string {
+  if (base) return base;
+  if (isProd)
+    throw new Error("VITE_API_BASE must be set for production builds");
+  return "http://localhost:8787";
+}
+
+const API_BASE: string = resolveApiBase(
+  import.meta.env.VITE_API_BASE,
+  import.meta.env.PROD,
+);
 
 export interface PollInput {
   title: string;

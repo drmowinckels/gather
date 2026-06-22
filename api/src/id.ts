@@ -2,9 +2,15 @@ const ALPHABET =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
 export function shortId(len = 6): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(len));
+  // Rejection sampling: discard bytes in the partial final block so every
+  // character is equiprobable (a plain `% 62` skews toward the first 8 chars).
+  const limit = Math.floor(256 / ALPHABET.length) * ALPHABET.length;
   let out = "";
-  for (let i = 0; i < len; i++) out += ALPHABET[bytes[i] % ALPHABET.length];
+  while (out.length < len) {
+    for (const b of crypto.getRandomValues(new Uint8Array(len - out.length))) {
+      if (b < limit) out += ALPHABET[b % ALPHABET.length];
+    }
+  }
   return out;
 }
 

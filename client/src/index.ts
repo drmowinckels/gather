@@ -283,8 +283,11 @@ export function parseSamkomaCommand(
   let tz = opts.defaultTz ?? "UTC";
 
   const time = (h: string) => {
-    const [hh, mm = "00"] = h.split(":");
-    return `${pad(Number(hh))}:${mm}`; // "9" -> "09:00", "9:30" -> "09:30"
+    const [hh, mm = "0"] = h.split(":");
+    const H = Number(hh);
+    const M = Number(mm);
+    if (H > 23 || M > 59) throw new Error(`Invalid time: "${h}"`);
+    return `${pad(H)}:${pad(M)}`; // "9" -> "09:00", "9:30" -> "09:30"
   };
 
   for (const tok of tokens) {

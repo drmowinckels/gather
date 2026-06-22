@@ -147,4 +147,13 @@ describe("parseSamkomaCommand", () => {
   it("throws when no days are present", () => {
     expect(() => parseSamkomaCommand("9-15 tz:UTC", { today })).toThrow();
   });
+
+  it("rejects out-of-range times instead of emitting a malformed body", () => {
+    expect(() => parseSamkomaCommand("mon 25-30", { today })).toThrow(
+      /invalid time/i,
+    );
+    expect(() => parseSamkomaCommand("mon 9:75-10:00", { today })).toThrow(
+      /invalid time/i,
+    );
+  });
 });

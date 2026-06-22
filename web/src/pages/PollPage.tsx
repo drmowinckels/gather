@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { RespondPanel } from "../components/RespondPanel";
@@ -38,6 +38,10 @@ export function PollPage() {
   const [copied, setCopied] = useState(false);
   const [hostCopied, setHostCopied] = useState(false);
   const [editing, setEditing] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  useEffect(() => () => clearTimeout(toastTimer.current), []);
 
   useEffect(() => {
     let active = true;
@@ -78,7 +82,8 @@ export function PollPage() {
     try {
       await navigator.clipboard.writeText(window.location.href);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setCopied(false), 1800);
     } catch {
       setCopied(false);
     }
@@ -88,7 +93,8 @@ export function PollPage() {
     try {
       await navigator.clipboard.writeText(link);
       setHostCopied(true);
-      setTimeout(() => setHostCopied(false), 1800);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setHostCopied(false), 1800);
     } catch {
       setHostCopied(false);
     }

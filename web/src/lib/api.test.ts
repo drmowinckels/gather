@@ -5,6 +5,7 @@ import {
   submitSlots,
   lockSlot,
   editPoll,
+  resolveApiBase,
   ApiError,
   type PollInput,
 } from "./api";
@@ -18,6 +19,20 @@ const input: PollInput = {
   tz: "Europe/Oslo",
   public: true,
 };
+
+describe("resolveApiBase", () => {
+  it("uses the configured base when present", () => {
+    expect(resolveApiBase("https://api.example", true)).toBe(
+      "https://api.example",
+    );
+  });
+  it("throws on a production build with no base", () => {
+    expect(() => resolveApiBase(undefined, true)).toThrow(/VITE_API_BASE/);
+  });
+  it("falls back to the local Worker in dev", () => {
+    expect(resolveApiBase(undefined, false)).toBe("http://localhost:8787");
+  });
+});
 
 function mockFetch(body: unknown, init: { status?: number } = {}) {
   const fn = vi.fn().mockResolvedValue(
