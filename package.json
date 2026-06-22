@@ -1,10 +1,20 @@
 {
   "name": "samkoma",
   "private": true,
-  "description": "Repo-wide tooling (formatting). Each app has its own package under api/, web/, cli/, client/.",
+  "description": "Find a time, together. An npm-workspaces monorepo: shared core + api/web/cli/client.",
+  "workspaces": [
+    "core",
+    "api",
+    "web",
+    "cli",
+    "client"
+  ],
   "scripts": {
     "format": "prettier --write \"**/*.{ts,tsx,css}\"",
-    "format:check": "prettier --check \"**/*.{ts,tsx,css}\""
+    "format:check": "prettier --check \"**/*.{ts,tsx,css}\"",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
     "prettier": "3.4.2"
