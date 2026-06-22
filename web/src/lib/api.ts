@@ -44,7 +44,7 @@ export class ApiError extends Error {
   status: number;
   code: string;
   constructor(code: string, status: number) {
-    super(`gather API error: ${code} (${status})`);
+    super(`samkoma API error: ${code} (${status})`);
     this.name = "ApiError";
     this.code = code;
     this.status = status;

@@ -24,7 +24,7 @@ app.use(
   }),
 );
 
-app.get("/", (c) => c.json({ name: "gather", version: "v1" }));
+app.get("/", (c) => c.json({ name: "samkoma", version: "v1" }));
 app.route("/v1/polls", polls);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
@@ -40,14 +40,14 @@ export default {
     // Independent steps — one failing must not skip the other.
     try {
       const removed = await deleteExpired(env.DB, todayUTC());
-      console.log(`gather cron: removed ${removed} expired poll(s)`);
+      console.log(`samkoma cron: removed ${removed} expired poll(s)`);
     } catch (err) {
-      console.error("gather cron: deleteExpired failed", err);
+      console.error("samkoma cron: deleteExpired failed", err);
     }
     try {
       await purgeRateLimits(env.DB, 60);
     } catch (err) {
-      console.error("gather cron: purgeRateLimits failed", err);
+      console.error("samkoma cron: purgeRateLimits failed", err);
     }
   },
 } satisfies ExportedHandler<Env>;

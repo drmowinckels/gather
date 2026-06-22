@@ -50,7 +50,7 @@ export function Landing() {
               Create a poll →
             </Link>
             <a
-              href="https://github.com/drmowinckels/gather#readme"
+              href="https://github.com/drmowinckels/samkoma#readme"
               className="btn btn-outline"
               target="_blank"
               rel="noreferrer"
@@ -59,7 +59,7 @@ export function Landing() {
             </a>
           </div>
           <div className="term" style={{ marginTop: 26, maxWidth: 460 }}>
-            <span className="prompt">$</span> gather new{" "}
+            <span className="prompt">$</span> samkoma new{" "}
             <span className="str">"Team offsite"</span> --days mon-fri --9to17
             --tz Europe/Oslo
           </div>

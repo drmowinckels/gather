@@ -16,7 +16,7 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
         <nav className="nav" aria-label="Primary">
           <div className="nav-links">
             <Link to="/" className="wordmark">
-              gather
+              samkoma
             </Link>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
@@ -43,9 +43,9 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
 
       <footer className="footer">
         <div className="shell">
-          gather · group scheduling with one shared link ·{" "}
+          samkoma · group scheduling with one shared link ·{" "}
           <a
-            href="https://github.com/drmowinckels/gather"
+            href="https://github.com/drmowinckels/samkoma"
             target="_blank"
             rel="noreferrer"
           >

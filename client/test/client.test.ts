@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
-  GatherClient,
-  GatherError,
+  SamkomaClient,
+  SamkomaError,
   resolveDays,
-  parseGatherCommand,
+  parseSamkomaCommand,
 } from "../src/index.js";
 
 function mockFetch(body: unknown, status = 200) {
@@ -21,9 +21,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const client = new GatherClient({ baseUrl: "https://api.example/" });
+const client = new SamkomaClient({ baseUrl: "https://api.example/" });
 
-describe("GatherClient", () => {
+describe("SamkomaClient", () => {
   it("creates a poll at the configured base URL", async () => {
     const fn = mockFetch({ id: "abc", url: "u", editToken: "t" }, 201);
     const created = await client.createPoll({
@@ -59,11 +59,11 @@ describe("GatherClient", () => {
     expect(fn.mock.calls[0][1].headers.Authorization).toBe("Bearer tok");
 
     await expect(client.lock("abc", "2026-07-15T09:00")).rejects.toBeInstanceOf(
-      GatherError,
+      SamkomaError,
     );
   });
 
-  it("maps an error response to GatherError", async () => {
+  it("maps an error response to SamkomaError", async () => {
     mockFetch({ error: "rate_limited" }, 429);
     await expect(
       client.createPoll({
@@ -99,10 +99,10 @@ describe("resolveDays", () => {
   });
 });
 
-describe("parseGatherCommand", () => {
+describe("parseSamkomaCommand", () => {
   const today = new Date(2026, 5, 20);
   it("parses the reference grammar", () => {
-    const cmd = parseGatherCommand("tue-thu 9-15 tz:Europe/Oslo", { today });
+    const cmd = parseSamkomaCommand("tue-thu 9-15 tz:Europe/Oslo", { today });
     expect(cmd.from).toBe("09:00");
     expect(cmd.to).toBe("15:00");
     expect(cmd.tz).toBe("Europe/Oslo");
@@ -112,16 +112,16 @@ describe("parseGatherCommand", () => {
     ).toEqual([2, 3, 4]); // Tue, Wed, Thu
   });
   it("accepts HH:MM ranges and a default tz", () => {
-    const cmd = parseGatherCommand("mon 09:30-12:00", { today, defaultTz: "UTC" });
+    const cmd = parseSamkomaCommand("mon 09:30-12:00", { today, defaultTz: "UTC" });
     expect(cmd).toMatchObject({ from: "09:30", to: "12:00", tz: "UTC" });
     expect(cmd.days).toHaveLength(1);
   });
 
   it("zero-pads single-digit hours (incl. with minutes) to valid HH:MM", () => {
-    const cmd = parseGatherCommand("mon 9:30-9:45", { today, defaultTz: "UTC" });
+    const cmd = parseSamkomaCommand("mon 9:30-9:45", { today, defaultTz: "UTC" });
     expect(cmd).toMatchObject({ from: "09:30", to: "09:45" });
   });
   it("throws when no days are present", () => {
-    expect(() => parseGatherCommand("9-15 tz:UTC", { today })).toThrow();
+    expect(() => parseSamkomaCommand("9-15 tz:UTC", { today })).toThrow();
   });
 });

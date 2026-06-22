@@ -91,7 +91,7 @@ export function CreatePoll() {
       const msg =
         err instanceof ApiError
           ? "We couldn't create the poll. Check the fields and try again."
-          : "Can't reach the gather service. Check your connection and try again.";
+          : "Can't reach the samkoma service. Check your connection and try again.";
       setError(msg);
       setSubmitting(false);
     }

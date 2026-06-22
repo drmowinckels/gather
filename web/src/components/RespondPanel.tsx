@@ -71,7 +71,7 @@ export function RespondPanel({
         message:
           err instanceof ApiError
             ? "Couldn't save — please try again."
-            : "Can't reach gather. Check your connection.",
+            : "Can't reach samkoma. Check your connection.",
       });
     }
   }

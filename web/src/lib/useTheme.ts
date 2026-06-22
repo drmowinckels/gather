@@ -13,7 +13,7 @@ export function useTheme(): [Theme, () => void] {
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
     try {
-      localStorage.setItem("gather-theme", theme);
+      localStorage.setItem("samkoma-theme", theme);
     } catch {
       // ignore
     }
