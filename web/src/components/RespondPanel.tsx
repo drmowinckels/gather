@@ -32,9 +32,14 @@ export function RespondPanel({
   const [marks, setMarks] = useState<Marks>(new Map());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
 
-  // Restore this person's availability once: from the server (their saved name
-  // matches a response), else from the local cache (private polls hide others).
+  // Restore this person's availability once per poll: from the server (their
+  // saved name matches a response), else from the local cache (private polls
+  // hide others). Guarded by poll id so a later response merge — which changes
+  // poll.responses — doesn't re-run this and clobber in-progress painting.
+  const restoredFor = useRef<string | null>(null);
   useEffect(() => {
+    if (restoredFor.current === poll.id) return;
+    restoredFor.current = poll.id;
     const mine = initialName
       ? poll.responses.find((r) => r.name === initialName)
       : undefined;
