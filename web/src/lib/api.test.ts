@@ -4,6 +4,7 @@ import {
   getPoll,
   submitSlots,
   lockSlot,
+  editPoll,
   ApiError,
   type PollInput,
 } from "./api";
@@ -133,5 +134,25 @@ describe("lockSlot", () => {
     const fn = mockFetch({ id: "abc123", lockedSlot: null });
     await lockSlot("abc123", null, "tok");
     expect(JSON.parse(fn.mock.calls[0][1].body)).toEqual({ slot: null });
+  });
+});
+
+describe("editPoll", () => {
+  it("PATCHes the partial body with the edit token", async () => {
+    const fn = mockFetch({ id: "abc123", title: "Renamed", days: ["2026-07-15"] });
+    const poll = await editPoll("abc123", { title: "Renamed" }, "tok");
+    expect(poll.title).toBe("Renamed");
+    const [url, opts] = fn.mock.calls[0];
+    expect(url).toBe("http://localhost:8787/v1/polls/abc123");
+    expect(opts.method).toBe("PATCH");
+    expect(opts.headers.Authorization).toBe("Bearer tok");
+    expect(JSON.parse(opts.body)).toEqual({ title: "Renamed" });
+  });
+
+  it("throws the server's code on a non-additive edit", async () => {
+    mockFetch({ error: "not_additive", removed: ["2026-07-16T09:00"] }, { status: 400 });
+    await expect(
+      editPoll("abc123", { days: ["2026-07-15"] }, "tok"),
+    ).rejects.toMatchObject({ code: "not_additive", status: 400 });
   });
 });

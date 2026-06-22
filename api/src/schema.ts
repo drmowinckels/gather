@@ -53,6 +53,38 @@ export const createPollSchema = z
 
 export type CreatePollInput = z.infer<typeof createPollSchema>;
 
+// Partial edit of a poll. Every field is optional, but at least one must be
+// present. The from/to ordering is enforced in the handler against the merged
+// (existing + patched) values, since a body may carry only one of them.
+export const patchPollSchema = z
+  .object({
+    title: z.string().trim().min(1).max(200).optional(),
+    days: z
+      .array(
+        z.string().regex(ISO_DATE).refine(isRealDate, {
+          message: "must be a real calendar date",
+        }),
+      )
+      .min(1)
+      .max(60)
+      .optional(),
+    from: z.string().regex(HHMM).optional(),
+    to: z.string().regex(HHMM).optional(),
+    slot: z
+      .number()
+      .int()
+      .refine((v) => [15, 30, 60].includes(v), {
+        message: "slot must be 15, 30 or 60 minutes",
+      })
+      .optional(),
+    public: z.boolean().optional(),
+  })
+  .refine((d) => Object.keys(d).length > 0, {
+    message: "provide at least one field to update",
+  });
+
+export type PatchPollInput = z.infer<typeof patchPollSchema>;
+
 const SLOT_KEY = /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/;
 
 export const submitSlotsSchema = z.object({

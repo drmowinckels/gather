@@ -268,6 +268,135 @@ describe("private poll results gating", () => {
   });
 });
 
+describe("PATCH /v1/polls/:id", () => {
+  function patch(id: string, body: unknown, token?: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: ORIGIN,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(body),
+    });
+  }
+  function submit(id: string, name: string, slots: string[]) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({ name, tz: "Europe/Oslo", slots }),
+    });
+  }
+  async function newPoll(overrides: Record<string, unknown> = {}) {
+    return (await (await post({ ...validPoll, ...overrides })).json()) as {
+      id: string;
+      editToken: string;
+    };
+  }
+
+  it("lets the host rename a poll", async () => {
+    const { id, editToken } = await newPoll();
+    const res = await patch(id, { title: "Renamed" }, editToken);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { title: string }).title).toBe("Renamed");
+
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, { headers: { Origin: ORIGIN } })
+    ).json()) as { title: string };
+    expect(poll.title).toBe("Renamed");
+  });
+
+  it("lets the host add a day and extends the expiry", async () => {
+    const { id, editToken } = await newPoll();
+    const days = [...validPoll.days, "2099-07-18"];
+    const res = await patch(id, { days }, editToken);
+    expect(res.status).toBe(200);
+    const updated = (await res.json()) as { days: string[]; expiresAt: string };
+    expect(updated.days).toEqual(days);
+    expect(updated.expiresAt).toBe("2099-08-01"); // 2099-07-18 + 14d grace
+  });
+
+  it("lets the host extend the window when slot-aligned", async () => {
+    const { id, editToken } = await newPoll();
+    const res = await patch(id, { from: "08:00", to: "16:00" }, editToken);
+    expect(res.status).toBe(200);
+    const updated = (await res.json()) as { from: string; to: string };
+    expect(updated.from).toBe("08:00");
+    expect(updated.to).toBe("16:00");
+  });
+
+  it("lets the host toggle visibility", async () => {
+    const { id, editToken } = await newPoll({ public: false });
+    const res = await patch(id, { public: true }, editToken);
+    expect(((await res.json()) as { public: boolean }).public).toBe(true);
+  });
+
+  it("preserves existing responses across an additive edit", async () => {
+    const { id, editToken } = await newPoll();
+    await submit(id, "Ada", ["2099-07-15T09:00"]);
+    await patch(id, { days: [...validPoll.days, "2099-07-18"] }, editToken);
+
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, { headers: { Origin: ORIGIN } })
+    ).json()) as { responses: Array<{ name: string; slots: string[] }> };
+    expect(poll.responses).toHaveLength(1);
+    expect(poll.responses[0]).toMatchObject({ name: "Ada", slots: ["2099-07-15T09:00"] });
+  });
+
+  it("forbids non-hosts (missing or wrong token)", async () => {
+    const { id } = await newPoll();
+    expect((await patch(id, { title: "x" })).status).toBe(403);
+    expect((await patch(id, { title: "x" }, "nope")).status).toBe(403);
+  });
+
+  it("rejects removing a day", async () => {
+    const { id, editToken } = await newPoll();
+    const res = await patch(id, { days: ["2099-07-15"] }, editToken);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("not_additive");
+  });
+
+  it("rejects shrinking the window", async () => {
+    const { id, editToken } = await newPoll();
+    const res = await patch(id, { to: "12:00" }, editToken);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("not_additive");
+  });
+
+  it("rejects extending the window off the slot grid", async () => {
+    const { id, editToken } = await newPoll(); // 30-min slots from 09:00
+    const res = await patch(id, { from: "08:45" }, editToken);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("not_additive");
+  });
+
+  it("rejects changing the slot length", async () => {
+    const { id, editToken } = await newPoll(); // slot 30
+    const res = await patch(id, { slot: 60 }, editToken);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("slot_change_unsupported");
+  });
+
+  it("rejects a merged window where from is not before to", async () => {
+    const { id, editToken } = await newPoll(); // from 09:00, to 15:00
+    const res = await patch(id, { to: "08:00" }, editToken);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("from_after_to");
+  });
+
+  it("rejects an empty body", async () => {
+    const { id, editToken } = await newPoll();
+    const res = await patch(id, {}, editToken);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe("invalid_body");
+  });
+
+  it("404s for an unknown poll", async () => {
+    const res = await patch("nope00", { title: "x" }, "tok");
+    expect(res.status).toBe(404);
+  });
+});
+
 describe("POST /v1/polls/:id/slots", () => {
   async function newPoll() {
     return (await (await post(validPoll)).json()) as { id: string };

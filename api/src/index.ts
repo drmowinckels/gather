@@ -18,7 +18,7 @@ app.use(
         .filter(Boolean);
       return allowed.includes(origin) ? origin : null;
     },
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     maxAge: 86400,
   }),

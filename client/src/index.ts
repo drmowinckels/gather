@@ -60,6 +60,20 @@ export interface SlotsInput {
   maybe?: string[]; // "might be available" slots (optional)
 }
 
+/**
+ * A partial edit of a poll. Additive-only on the server: you may rename, add
+ * days, or extend the window, but you cannot remove slots people may have
+ * voted on, nor change the slot length. At least one field is required.
+ */
+export interface EditPollInput {
+  title?: string;
+  days?: string[];
+  from?: string;
+  to?: string;
+  slot?: number;
+  public?: boolean;
+}
+
 export class SamkomaError extends Error {
   constructor(
     public code: string,
@@ -139,6 +153,26 @@ export class SamkomaClient {
     const q = opts.limit ? `?limit=${opts.limit}` : "";
     return this.request(`/v1/polls/${encodeURIComponent(id)}/best${q}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+  }
+
+  /**
+   * Edit a poll (host only, needs the edit token). Additive-only — see
+   * {@link EditPollInput}. Returns the updated poll.
+   */
+  editPoll(
+    id: string,
+    input: EditPollInput,
+    editToken = this.editToken,
+  ): Promise<Poll> {
+    if (!editToken) throw new SamkomaError("missing_edit_token", 0);
+    return this.request(`/v1/polls/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${editToken}`,
+      },
+      body: JSON.stringify(input),
     });
   }
 

@@ -103,6 +103,32 @@ export async function submitSlots(
   return (await res.json()) as PollResponse;
 }
 
+export interface EditPollInput {
+  title?: string;
+  days?: string[];
+  from?: string;
+  to?: string;
+  slot?: number;
+  public?: boolean;
+}
+
+export async function editPoll(
+  id: string,
+  input: EditPollInput,
+  editToken: string,
+): Promise<Poll> {
+  const res = await fetch(`${API_BASE}/v1/polls/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${editToken}`,
+    },
+    body: JSON.stringify(input),
+  });
+  if (!res.ok) throw await toError(res);
+  return (await res.json()) as Poll;
+}
+
 export async function lockSlot(
   id: string,
   slot: string | null,

@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { RespondPanel } from "../components/RespondPanel";
 import { GroupHeatmap } from "../components/GroupHeatmap";
+import { EditPollPanel } from "../components/EditPollPanel";
 import { getPoll, ApiError, type Poll, type PollResponse } from "../lib/api";
 import { getEditToken, saveEditToken } from "../lib/storage";
 import {
@@ -36,6 +37,7 @@ export function PollPage() {
   );
   const [copied, setCopied] = useState(false);
   const [hostCopied, setHostCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -157,7 +159,8 @@ export function PollPage() {
   }
 
   const { poll } = state;
-  const isHost = getEditToken(poll.id) !== null;
+  const hostToken = getEditToken(poll.id);
+  const isHost = hostToken !== null;
   const offset = tzOffsetLabel(poll.tz);
 
   return (
@@ -173,12 +176,31 @@ export function PollPage() {
         >
           <h1 className="h2">{poll.title}</h1>
           {isHost && <span className="tag">You host this</span>}
+          {isHost && !editing && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              style={{ marginLeft: "auto" }}
+              onClick={() => setEditing(true)}
+            >
+              Edit poll
+            </button>
+          )}
         </div>
         <p className="helper">
           {formatDayRange(poll.days)} · {poll.from}–{poll.to} · {poll.slot}-min
           slots · home tz {poll.tz}
           {offset ? ` (${offset})` : ""}
         </p>
+
+        {isHost && editing && hostToken && (
+          <EditPollPanel
+            poll={poll}
+            editToken={hostToken}
+            onSaved={(updated) => setState({ kind: "ready", poll: updated })}
+            onClose={() => setEditing(false)}
+          />
+        )}
 
         <label
           className="tz-control"

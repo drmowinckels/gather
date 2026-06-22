@@ -63,6 +63,17 @@ describe("SamkomaClient", () => {
     );
   });
 
+  it("edits a poll with PATCH and the edit token, refusing without one", async () => {
+    const fn = mockFetch({ id: "abc", title: "Renamed" });
+    await client.editPoll("abc", { title: "Renamed" }, "tok");
+    expect(fn.mock.calls[0][0]).toBe("https://api.example/v1/polls/abc");
+    expect(fn.mock.calls[0][1].method).toBe("PATCH");
+    expect(JSON.parse(fn.mock.calls[0][1].body)).toEqual({ title: "Renamed" });
+    expect(fn.mock.calls[0][1].headers.Authorization).toBe("Bearer tok");
+
+    expect(() => client.editPoll("abc", { title: "x" })).toThrow(SamkomaError);
+  });
+
   it("maps an error response to SamkomaError", async () => {
     mockFetch({ error: "rate_limited" }, 429);
     await expect(

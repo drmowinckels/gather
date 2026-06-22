@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { zValidator } from "@hono/zod-validator";
-import { createPollSchema, submitSlotsSchema, lockSchema } from "./schema";
+import {
+  createPollSchema,
+  submitSlotsSchema,
+  lockSchema,
+  patchPollSchema,
+} from "./schema";
 import { shortId, editToken } from "./id";
 import { validSlotKeys } from "./slots";
 import { rankSlots } from "./aggregate";
@@ -222,6 +227,95 @@ polls.post(
       .bind(id)
       .all<ResponseRow>();
     return c.json(serializePoll({ ...row, locked_slot: slot }, responses.results));
+  },
+);
+
+// Edit a poll (host only). Additive-only: an edit may rename, add days, extend
+// the window or refine nothing — but it must not remove any slot that a
+// respondent could already have voted on. The slot length cannot change.
+polls.patch(
+  "/:id",
+  zValidator("json", patchPollSchema, (result, c) => {
+    if (!result.success) return badRequest(c, result.error.issues);
+  }),
+  async (c) => {
+    const id = c.req.param("id");
+    const row = await loadActivePoll(c, id);
+    if (row instanceof Response) return row;
+
+    const token = bearerToken(c);
+    if (!token || !constantTimeEqual(token, row.edit_token)) {
+      return c.json({ error: "forbidden" }, 403);
+    }
+
+    const body = c.req.valid("json");
+    if (body.slot !== undefined && body.slot !== row.slot_minutes) {
+      return c.json({ error: "slot_change_unsupported" }, 400);
+    }
+
+    const next = {
+      title: body.title ?? row.title,
+      days: body.days ?? (JSON.parse(row.days) as string[]),
+      from: body.from ?? row.from_time,
+      to: body.to ?? row.to_time,
+      slot: row.slot_minutes,
+      isPublic: body.public ?? row.is_public === 1,
+    };
+
+    if (next.from >= next.to) return c.json({ error: "from_after_to" }, 400);
+
+    // The new grid must be a superset of the old one, so no existing vote is
+    // orphaned. This catches removed days, a shrunk window, and a window
+    // extended off the slot grid (e.g. 09:00→08:45 with 30-min slots).
+    const oldKeys = validSlotKeys(
+      JSON.parse(row.days) as string[],
+      row.from_time,
+      row.to_time,
+      row.slot_minutes,
+    );
+    const newKeys = validSlotKeys(next.days, next.from, next.to, next.slot);
+    const removed = [...oldKeys].filter((k) => !newKeys.has(k));
+    if (removed.length > 0) {
+      return c.json({ error: "not_additive", removed: removed.slice(0, 10) }, 400);
+    }
+
+    const expiresAt = expiryDate(next.days, GRACE_DAYS);
+    await c.env.DB.prepare(
+      `UPDATE polls
+         SET title = ?, days = ?, from_time = ?, to_time = ?,
+             is_public = ?, expires_at = ?
+       WHERE id = ?`,
+    )
+      .bind(
+        next.title,
+        JSON.stringify(next.days),
+        next.from,
+        next.to,
+        next.isPublic ? 1 : 0,
+        expiresAt,
+        id,
+      )
+      .run();
+
+    const responses = await c.env.DB.prepare(
+      `SELECT name, tz, slots, maybe, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+    )
+      .bind(id)
+      .all<ResponseRow>();
+    return c.json(
+      serializePoll(
+        {
+          ...row,
+          title: next.title,
+          days: JSON.stringify(next.days),
+          from_time: next.from,
+          to_time: next.to,
+          is_public: next.isPublic ? 1 : 0,
+          expires_at: expiresAt,
+        },
+        responses.results,
+      ),
+    );
   },
 );
 

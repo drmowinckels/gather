@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { resolveDays, parseSlot, parseTime, buildCreateBody } from "../src/lib";
+import {
+  resolveDays,
+  parseSlot,
+  parseTime,
+  buildCreateBody,
+  buildEditBody,
+} from "../src/lib";
 
 const today = new Date(2026, 5, 20); // local midnight, weekday-agnostic anchor
 const dayMs = 86_400_000;
@@ -92,5 +98,31 @@ describe("buildCreateBody", () => {
         today,
       ),
     ).toThrow();
+  });
+});
+
+describe("buildEditBody", () => {
+  it("includes only the fields that were passed", () => {
+    expect(buildEditBody({ title: "  Renamed " }, today)).toEqual({ title: "Renamed" });
+    expect(buildEditBody({ days: "2026-07-15,2026-07-16" }, today)).toEqual({
+      days: ["2026-07-15", "2026-07-16"],
+    });
+    expect(buildEditBody({ from: "08:00" }, today)).toEqual({ from: "08:00" });
+    expect(buildEditBody({ public: true }, today)).toEqual({ public: true });
+    expect(buildEditBody({ public: false }, today)).toEqual({ public: false });
+  });
+
+  it("throws when nothing is passed", () => {
+    expect(() => buildEditBody({}, today)).toThrow();
+  });
+
+  it("validates an inverted range only when both ends are given", () => {
+    expect(() => buildEditBody({ from: "15:00", to: "09:00" }, today)).toThrow();
+    expect(buildEditBody({ from: "20:00" }, today)).toEqual({ from: "20:00" }); // server checks vs existing 'to'
+  });
+
+  it("rejects an empty title and a bad slot", () => {
+    expect(() => buildEditBody({ title: "   " }, today)).toThrow();
+    expect(() => buildEditBody({ slot: "45" }, today)).toThrow();
   });
 });

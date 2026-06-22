@@ -110,3 +110,50 @@ export function buildCreateBody(
     public: opts.public,
   };
 }
+
+export interface EditOptions {
+  title?: string;
+  days?: string;
+  from?: string;
+  to?: string;
+  slot?: string;
+  public?: boolean; // tri-state: true → public, false → private, undefined → unchanged
+}
+
+export interface EditBody {
+  title?: string;
+  days?: string[];
+  from?: string;
+  to?: string;
+  slot?: number;
+  public?: boolean;
+}
+
+// Build a partial edit body from only the flags the host actually passed. The
+// server enforces the additive-only rule (no removed slots) and the from < to
+// ordering against the merged values, so we only validate what is present here.
+export function buildEditBody(
+  opts: EditOptions,
+  today: Date = new Date(),
+): EditBody {
+  const body: EditBody = {};
+  if (opts.title !== undefined) {
+    const title = opts.title.trim();
+    if (!title) throw new Error("A title is required");
+    body.title = title;
+  }
+  if (opts.days !== undefined) body.days = resolveDays(opts.days, today);
+  if (opts.from !== undefined) body.from = parseTime(opts.from, "--from");
+  if (opts.to !== undefined) body.to = parseTime(opts.to, "--to");
+  if (opts.slot !== undefined) body.slot = parseSlot(opts.slot);
+  if (opts.public !== undefined) body.public = opts.public;
+  if (body.from !== undefined && body.to !== undefined && body.from >= body.to) {
+    throw new Error("--from must be earlier than --to");
+  }
+  if (Object.keys(body).length === 0) {
+    throw new Error(
+      "Nothing to edit — pass --title, --days, --from, --to, --slot, --public or --private",
+    );
+  }
+  return body;
+}

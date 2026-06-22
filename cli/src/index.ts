@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
-import { buildCreateBody } from "./lib.js";
-import { createPoll, getBest, lockSlot } from "./api.js";
+import { buildCreateBody, buildEditBody } from "./lib.js";
+import { createPoll, getBest, lockSlot, editPoll } from "./api.js";
 import { saveToken, getToken, TOKEN_FILE } from "./store.js";
 
 const DEFAULT_API = process.env.SAMKOMA_API ?? "https://api.samkoma.drmowinckels.io";
@@ -10,6 +10,7 @@ const HELP = `samkoma — group scheduling from the command line
 
 Usage:
   samkoma new "<title>" [options]     Create a poll
+  samkoma edit <id> [options]         Edit a poll, host only (add days / extend / rename)
   samkoma best <id> [--limit N]       Show where availability converges
   samkoma lock <id> <slot>            Lock in a slot (host only)
   samkoma unlock <id>                 Unlock (host only)
@@ -21,6 +22,14 @@ Options for "new":
   --slot <min>    Slot size: 15, 30 or 60 (default 30)
   --tz <IANA>     Timezone (default: your system timezone)
   --public        Make group results public
+
+Options for "edit" (only the flags you pass are changed; editing is additive —
+you can add days or widen the window, but not drop slots people may have voted on):
+  --title <text>  Rename the poll
+  --days <spec>   New day set (must include all current days)
+  --from <HH:MM>  Widen the window earlier (must stay on the slot grid)
+  --to <HH:MM>    Widen the window later
+  --public        Make results public      --private  Make results private
 
   --api <url>     API base (default: $SAMKOMA_API or ${DEFAULT_API})
 `;
@@ -42,12 +51,14 @@ async function main() {
     args: process.argv.slice(2),
     allowPositionals: true,
     options: {
+      title: { type: "string" },
       days: { type: "string" },
       from: { type: "string" },
       to: { type: "string" },
       slot: { type: "string" },
       tz: { type: "string" },
-      public: { type: "boolean", default: false },
+      public: { type: "boolean" },
+      private: { type: "boolean" },
       limit: { type: "string" },
       api: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
@@ -73,7 +84,7 @@ async function main() {
       to: values.to,
       slot: values.slot,
       tz: values.tz ?? systemTz(),
-      public: values.public,
+      public: values.public ?? false,
     });
     const created = await createPoll(api, body);
     saveToken(created.id, created.editToken);
@@ -81,6 +92,34 @@ async function main() {
     console.log(`  → ${created.url}`);
     console.log(`  ${body.days.length} day(s), ${body.from}–${body.to}, ${body.slot}-min slots, ${body.tz}`);
     console.log(`  edit token saved to ${TOKEN_FILE}`);
+    return;
+  }
+
+  if (command === "edit") {
+    const id = positionals[1];
+    if (!id) throw new Error("Usage: samkoma edit <id> [options]");
+    const token = getToken(id);
+    if (!token) {
+      throw new Error(
+        `No edit token for "${id}" in ${TOKEN_FILE} — only the host who created the poll can edit it.`,
+      );
+    }
+    if (values.public && values.private) {
+      throw new Error("Pass either --public or --private, not both");
+    }
+    const isPublic = values.public ? true : values.private ? false : undefined;
+    const body = buildEditBody({
+      title: values.title,
+      days: values.days,
+      from: values.from,
+      to: values.to,
+      slot: values.slot,
+      public: isPublic,
+    });
+    const poll = await editPoll(api, id, body, token);
+    console.log("✓ poll updated");
+    console.log(`  ${poll.title}`);
+    console.log(`  ${poll.days.length} day(s), ${poll.from}–${poll.to}`);
     return;
   }
 

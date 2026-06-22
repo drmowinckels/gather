@@ -1,4 +1,4 @@
-import type { PollBody } from "./lib.js";
+import type { PollBody, EditBody } from "./lib.js";
 
 export interface CreatedPoll {
   id: string;
@@ -14,6 +14,9 @@ export interface BestResult {
 export interface Poll {
   id: string;
   title: string;
+  days: string[];
+  from: string;
+  to: string;
   lockedSlot: string | null;
 }
 
@@ -59,6 +62,22 @@ export function getBest(
 ): Promise<BestResult> {
   const q = limit ? `?limit=${limit}` : "";
   return request(`${api}/v1/polls/${encodeURIComponent(id)}/best${q}`);
+}
+
+export function editPoll(
+  api: string,
+  id: string,
+  body: EditBody,
+  token: string,
+): Promise<Poll> {
+  return request(`${api}/v1/polls/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 export function lockSlot(
