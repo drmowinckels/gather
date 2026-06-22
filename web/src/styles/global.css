@@ -24,10 +24,8 @@ body {
 
 a {
   color: var(--brand);
-  text-decoration: none;
-}
-a:hover {
   text-decoration: underline;
+  text-underline-offset: 0.15em;
 }
 
 :focus-visible {
@@ -68,6 +66,7 @@ a:hover {
   font-size: 14px;
   font-weight: 500;
   color: var(--fg-muted);
+  text-decoration: none;
 }
 .navlink:hover {
   color: var(--brand);
@@ -81,6 +80,7 @@ a:hover {
   color: var(--fg);
   font-size: 24px;
   text-transform: lowercase;
+  text-decoration: none;
 }
 .wordmark:hover {
   text-decoration: none;
