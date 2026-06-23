@@ -90,14 +90,22 @@ the full contract and visual spec.
 
 | Method | Endpoint              | Body                                          | Returns                                |
 | ------ | --------------------- | --------------------------------------------- | -------------------------------------- |
-| `POST` | `/v1/polls`           | `{title, days[], from, to, slot, tz, public}` | `{id, url, editToken}`                 |
+| `POST` | `/v1/polls`           | `{title, kind?, days[], from, to, slot, tz, public}` | `{id, url, editToken}`          |
 | `GET`  | `/v1/polls/:id`       | —                                             | poll + aggregated responses            |
 | `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[], maybe[]}`                | saved `{name, tz, slots, maybe, …}`    |
 | `GET`  | `/v1/polls/:id/best`  | `?limit=` (optional)                          | `{total, results[{slot,count,names}]}` |
 | `POST` | `/v1/polls/:id/lock`  | `{slot}` (or `{slot:null}`), host token       | updated poll                           |
 
-Slot keys are `YYYY-MM-DDThh:mm` in the poll's canonical timezone. For a
-non-public poll, `GET /v1/polls/:id` returns an empty `responses` list and
+A poll is one of two `kind`s (default `dates`):
+
+- **`dates`** — specific calendar dates; `days` are ISO dates (`YYYY-MM-DD`),
+  slot keys are `YYYY-MM-DDThh:mm`, and each viewer can see/paint in their own
+  timezone. Polls expire 14 days after their last day.
+- **`weekdays`** — recurring days of the week; `days` are weekday tokens
+  (`mon`…`sun`), slot keys are `monThh:mm`, and everyone uses the poll's home
+  timezone (no per-viewer conversion). Polls expire 60 days after creation.
+
+For a non-public poll, `GET /v1/polls/:id` returns an empty `responses` list and
 `GET /v1/polls/:id/best` returns `403` unless the request sends the edit token
 as `Authorization: Bearer <token>`.
 
