@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { editPoll, ApiError, type Poll, type EditPollInput } from "../lib/api";
+import { MonthCalendar } from "./MonthCalendar";
 
 const ERROR_TEXT: Record<string, string> = {
   not_additive:
@@ -23,7 +24,6 @@ export function EditPollPanel({
 }) {
   const [title, setTitle] = useState(poll.title);
   const [added, setAdded] = useState<string[]>([]);
-  const [newDate, setNewDate] = useState("");
   const [from, setFrom] = useState(poll.from);
   const [to, setTo] = useState(poll.to);
   const [isPublic, setIsPublic] = useState(poll.public);
@@ -36,20 +36,18 @@ export function EditPollPanel({
   const goingPublic = !poll.public && isPublic;
 
   const currentDays = useMemo(() => [...poll.days].sort(), [poll.days]);
-  const minNewDate = currentDays[currentDays.length - 1] ?? "";
+  const lockedDays = useMemo(() => new Set(currentDays), [currentDays]);
+  const calendarValue = useMemo(
+    () => new Set([...currentDays, ...added]),
+    [currentDays, added],
+  );
 
-  function addDate() {
-    if (!newDate) return;
-    if (currentDays.includes(newDate) || added.includes(newDate)) {
-      setNewDate("");
-      return;
-    }
-    setAdded((prev) => [...prev, newDate].sort());
-    setNewDate("");
-  }
-
-  function removeAdded(iso: string) {
-    setAdded((prev) => prev.filter((d) => d !== iso));
+  // Existing days are locked, so the calendar only ever toggles added days.
+  function onCalendarChange(updater: (prev: Set<string>) => Set<string>) {
+    setAdded((prevAdded) => {
+      const next = updater(new Set([...currentDays, ...prevAdded]));
+      return [...next].filter((d) => !lockedDays.has(d)).sort();
+    });
   }
 
   // Only send fields the host actually changed; the server is the source of
@@ -130,52 +128,14 @@ export function EditPollPanel({
 
       <div className="field">
         <span className="fieldlbl">Days</span>
-        <div className="chips">
-          {currentDays.map((iso) => (
-            <span
-              key={iso}
-              className="chip on"
-              aria-disabled="true"
-              title="Existing day — can't be removed"
-              style={{ cursor: "default", opacity: 0.85 }}
-            >
-              {iso}
-            </span>
-          ))}
-          {added.map((iso) => (
-            <button
-              key={iso}
-              type="button"
-              className="chip on"
-              aria-pressed="true"
-              onClick={() => removeAdded(iso)}
-              title="Click to remove this added day"
-            >
-              {iso} ✕
-            </button>
-          ))}
-        </div>
-        <div className="copy-row" style={{ marginTop: 10, maxWidth: 320 }}>
-          <input
-            type="date"
-            className="input"
-            aria-label="Add a day"
-            min={minNewDate}
-            value={newDate}
-            onChange={(e) => setNewDate(e.target.value)}
-          />
-          <button
-            type="button"
-            className="btn btn-outline btn-sm"
-            onClick={addDate}
-            disabled={!newDate}
-          >
-            Add
-          </button>
-        </div>
-        <p className="subtle" style={{ margin: "7px 0 0", fontSize: 12 }}>
-          You can add days, but existing ones stay — people may have answered
-          for them.
+        <MonthCalendar
+          value={calendarValue}
+          onChange={onCalendarChange}
+          lockedDays={lockedDays}
+        />
+        <p className="subtle" style={{ margin: "10px 0 0", fontSize: 12 }}>
+          You can add days, but existing ones (ringed, fixed) stay — people may
+          have answered for them.
         </p>
       </div>
 

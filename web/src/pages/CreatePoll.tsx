@@ -2,20 +2,15 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { CliEquivalent } from "../components/CliEquivalent";
+import { MonthCalendar } from "../components/MonthCalendar";
 import { createPoll, ApiError } from "../lib/api";
 import { saveEditToken } from "../lib/storage";
-import {
-  browserTimezone,
-  listTimezones,
-  tzOffsetLabel,
-  upcomingDays,
-} from "../lib/datetime";
+import { browserTimezone, listTimezones, tzOffsetLabel } from "../lib/datetime";
 
 const SLOT_SIZES = [15, 30, 60];
 
 export function CreatePoll() {
   const navigate = useNavigate();
-  const baseDays = useMemo(() => upcomingDays(14), []);
   const tzOptions = useMemo(
     () =>
       listTimezones().map((z) => {
@@ -27,8 +22,6 @@ export function CreatePoll() {
 
   const [title, setTitle] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [extraDays, setExtraDays] = useState<string[]>([]);
-  const [newDate, setNewDate] = useState("");
   const [from, setFrom] = useState("09:00");
   const [to, setTo] = useState("17:00");
   const [slot, setSlot] = useState(30);
@@ -37,40 +30,10 @@ export function CreatePoll() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const dayChips = useMemo(() => {
-    const all = [...baseDays];
-    const seen = new Set(baseDays.map((d) => d.iso));
-    for (const iso of extraDays) {
-      if (!seen.has(iso)) {
-        all.push({ iso, label: iso });
-        seen.add(iso);
-      }
-    }
-    return all.sort((a, b) => a.iso.localeCompare(b.iso));
-  }, [baseDays, extraDays]);
-
   const selectedDays = [...selected].sort();
   const timeValid = from < to;
   const canSubmit =
     title.trim().length > 0 && selectedDays.length > 0 && timeValid;
-
-  function toggleDay(iso: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(iso)) next.delete(iso);
-      else next.add(iso);
-      return next;
-    });
-  }
-
-  function addDate() {
-    if (!newDate) return;
-    setExtraDays((prev) =>
-      prev.includes(newDate) ? prev : [...prev, newDate],
-    );
-    setSelected((prev) => new Set(prev).add(newDate));
-    setNewDate("");
-  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -148,36 +111,15 @@ export function CreatePoll() {
 
           <div className="field">
             <span className="fieldlbl">Which days?</span>
-            <div className="chips">
-              {dayChips.map((d) => (
-                <button
-                  key={d.iso}
-                  type="button"
-                  className={`chip${selected.has(d.iso) ? " on" : ""}`}
-                  aria-pressed={selected.has(d.iso)}
-                  onClick={() => toggleDay(d.iso)}
-                >
-                  {d.label}
-                </button>
-              ))}
-            </div>
-            <div className="copy-row" style={{ marginTop: 10, maxWidth: 320 }}>
-              <input
-                type="date"
-                className="input"
-                aria-label="Add a specific date"
-                value={newDate}
-                onChange={(e) => setNewDate(e.target.value)}
-              />
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={addDate}
-                disabled={!newDate}
-              >
-                Add
-              </button>
-            </div>
+            <p className="subtle" style={{ margin: "0 0 12px", fontSize: 12 }}>
+              Tap a day, or drag across several. Use ‹ › to reach another month.
+            </p>
+            <MonthCalendar value={selected} onChange={setSelected} />
+            <p className="subtle" style={{ margin: "10px 0 0", fontSize: 12 }}>
+              {selectedDays.length === 0
+                ? "No days selected yet."
+                : `${selectedDays.length} day${selectedDays.length === 1 ? "" : "s"} selected.`}
+            </p>
           </div>
 
           <div className="field-row field">

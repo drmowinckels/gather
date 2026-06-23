@@ -41,10 +41,14 @@ describe("CreatePoll", () => {
     await user.type(screen.getByLabelText("Event name"), "Standup");
     expect(submit).toBeDisabled();
 
-    const dayChip = screen
-      .getAllByRole("button")
-      .find((b) => b.getAttribute("aria-pressed") === "false")!;
-    await user.click(dayChip);
+    const day = screen
+      .getAllByRole("gridcell")
+      .find(
+        (c) =>
+          !(c as HTMLButtonElement).disabled &&
+          c.getAttribute("aria-pressed") === "false",
+      )!;
+    await user.click(day);
 
     expect(submit).toBeEnabled();
   });
@@ -59,10 +63,14 @@ describe("CreatePoll", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Event name"), "Standup");
-    const dayChip = screen
-      .getAllByRole("button")
-      .find((b) => b.getAttribute("aria-pressed") === "false")!;
-    await user.click(dayChip);
+    const day = screen
+      .getAllByRole("gridcell")
+      .find(
+        (c) =>
+          !(c as HTMLButtonElement).disabled &&
+          c.getAttribute("aria-pressed") === "false",
+      )!;
+    await user.click(day);
 
     await user.click(screen.getByRole("button", { name: /create poll/i }));
 

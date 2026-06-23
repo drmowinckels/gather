@@ -40,42 +40,24 @@ export function tzOffsetLabel(tz: string): string {
   }
 }
 
-const ISO = (d: Date): string =>
-  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
+// Format dates in the viewer's own locale (e.g. Norwegian "ons. 15"), not a
+// hardcoded en-US. Resolves from the browser; jsdom reports "en-US", so tests
+// stay deterministic. Slot keys remain canonical ISO regardless — only labels
+// follow the locale.
+export const DISPLAY_LOCALE =
+  typeof navigator !== "undefined" ? navigator.language : "en-US";
 
 // Hoisted: building Intl.DateTimeFormat is expensive; these are reused across
 // renders (the grid re-renders on every paint frame during a drag).
-const WEEKDAY_DAY_FMT = new Intl.DateTimeFormat("en-US", {
+const WEEKDAY_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   weekday: "short",
-  day: "numeric",
 });
-const WEEKDAY_FMT = new Intl.DateTimeFormat("en-US", { weekday: "short" });
-const DAY_FMT = new Intl.DateTimeFormat("en-US", { day: "numeric" });
-const RANGE_FMT = new Intl.DateTimeFormat("en-US", {
+const DAY_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, { day: "numeric" });
+const RANGE_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
   weekday: "short",
   month: "short",
   day: "numeric",
 });
-
-export interface DayOption {
-  iso: string;
-  label: string;
-}
-
-export function upcomingDays(count: number, start = new Date()): DayOption[] {
-  const out: DayOption[] = [];
-  for (let i = 0; i < count; i++) {
-    const d = new Date(
-      start.getFullYear(),
-      start.getMonth(),
-      start.getDate() + i,
-    );
-    out.push({ iso: ISO(d), label: WEEKDAY_DAY_FMT.format(d) });
-  }
-  return out;
-}
 
 // Slot-grid helpers live in @samkoma/core (shared with the API). Re-exported so
 // the rest of the web app keeps importing them from this datetime module.
