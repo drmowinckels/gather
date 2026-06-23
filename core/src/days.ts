@@ -1,14 +1,9 @@
 import { pad } from "./time.js";
 
-const WEEKDAYS: Record<string, number> = {
-  mon: 0,
-  tue: 1,
-  wed: 2,
-  thu: 3,
-  fri: 4,
-  sat: 5,
-  sun: 6,
-};
+const WEEKDAY_TOKENS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const WEEKDAYS: Record<string, number> = Object.fromEntries(
+  WEEKDAY_TOKENS.map((t, i) => [t, i]),
+);
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -26,6 +21,34 @@ function nextOccurrence(weekday: number, today: Date): string {
   return toISO(
     new Date(today.getFullYear(), today.getMonth(), today.getDate() + ahead),
   );
+}
+
+// Parse a day spec into sorted, de-duplicated weekday tokens (mon–sun) for a
+// weekday poll — unlike resolveDays, weekdays are kept as tokens, not resolved
+// to calendar dates. Tokens may be weekdays ("mon") or ranges ("mon-fri").
+export function parseWeekdays(spec: string): string[] {
+  const order = (t: string) => WEEKDAYS[t];
+  const out = new Set<string>();
+  for (const raw of spec.split(",")) {
+    const token = raw.trim().toLowerCase();
+    if (!token) continue;
+    const range = token.match(/^([a-z]{3})-([a-z]{3})$/);
+    if (range) {
+      const start = WEEKDAYS[range[1]];
+      const end = WEEKDAYS[range[2]];
+      if (start === undefined || end === undefined || start > end) {
+        throw new Error(`Invalid weekday range: "${raw}"`);
+      }
+      for (let i = start; i <= end; i++) out.add(WEEKDAY_TOKENS[i]);
+      continue;
+    }
+    if (WEEKDAYS[token] === undefined) {
+      throw new Error(`Unrecognized weekday: "${raw}"`);
+    }
+    out.add(token);
+  }
+  if (out.size === 0) throw new Error("No weekdays given (use --days mon-fri)");
+  return [...out].sort((a, b) => order(a) - order(b));
 }
 
 // Resolve a `--days` spec into sorted, de-duplicated ISO dates. Tokens may be

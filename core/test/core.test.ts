@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   resolveDays,
+  parseWeekdays,
   timeSlots,
   validSlotKeys,
   slotKey,
@@ -32,6 +33,24 @@ describe("resolveDays", () => {
   });
 });
 
+describe("parseWeekdays", () => {
+  it("keeps weekday tokens (not dates), deduped and week-ordered", () => {
+    expect(parseWeekdays("fri,mon,mon")).toEqual(["mon", "fri"]);
+    expect(parseWeekdays("mon-fri")).toEqual([
+      "mon",
+      "tue",
+      "wed",
+      "thu",
+      "fri",
+    ]);
+  });
+
+  it("throws on unknown weekday or inverted range", () => {
+    expect(() => parseWeekdays("funday")).toThrow(/weekday/i);
+    expect(() => parseWeekdays("fri-mon")).toThrow(/range/i);
+  });
+});
+
 describe("slot grid", () => {
   it("steps start times within [from, to)", () => {
     expect(timeSlots("09:00", "10:30", 30)).toEqual([
@@ -52,6 +71,13 @@ describe("slot grid", () => {
     expect(keys.size).toBe(4);
     expect(keys.has(slotKey("2026-07-15", "09:30"))).toBe(true);
     expect(keys.has(slotKey("2026-07-15", "10:00"))).toBe(false); // 10:00 has no full slot before 10:00 end
+  });
+
+  it("builds weekday keys when days are weekday tokens (kind-agnostic)", () => {
+    const keys = validSlotKeys(["mon", "wed"], "09:00", "10:00", 30);
+    expect(keys.size).toBe(4);
+    expect(keys.has("monT09:00")).toBe(true);
+    expect(keys.has("wedT09:30")).toBe(true);
   });
 });
 

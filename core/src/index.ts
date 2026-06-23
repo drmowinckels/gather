@@ -1,5 +1,5 @@
 export { pad, toMinutes, timeSlots, slotKey, validSlotKeys } from "./time.js";
-export { resolveDays } from "./days.js";
+export { resolveDays, parseWeekdays } from "./days.js";
 export {
   tallySlots,
   rankCells,
