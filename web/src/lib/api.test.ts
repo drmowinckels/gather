@@ -12,6 +12,7 @@ import {
 
 const input: PollInput = {
   title: "Team offsite",
+  kind: "dates",
   days: ["2026-07-15", "2026-07-16"],
   from: "09:00",
   to: "15:00",

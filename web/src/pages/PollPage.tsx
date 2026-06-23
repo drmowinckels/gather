@@ -208,38 +208,48 @@ export function PollPage() {
           />
         )}
 
-        <label
-          className="tz-control"
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginTop: 16,
-            fontSize: 13,
-            color: "var(--fg-muted)",
-            flexWrap: "wrap",
-          }}
-        >
-          <span>Showing times in</span>
-          <select
-            className="input"
-            style={{ width: "auto", maxWidth: "100%" }}
-            value={viewerTz}
-            onChange={(e) => setViewerTz(e.target.value)}
-            aria-label="Show times in timezone"
+        {poll.kind === "dates" ? (
+          <label
+            className="tz-control"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginTop: 16,
+              fontSize: 13,
+              color: "var(--fg-muted)",
+              flexWrap: "wrap",
+            }}
           >
-            {tzOptions.map((z) => (
-              <option key={z.value} value={z.value}>
-                {z.label}
-              </option>
-            ))}
-          </select>
-          {viewerTz !== poll.tz && (
-            <span className="subtle" style={{ fontSize: 12 }}>
-              converted from {poll.tz}
-            </span>
-          )}
-        </label>
+            <span>Showing times in</span>
+            <select
+              className="input"
+              style={{ width: "auto", maxWidth: "100%" }}
+              value={viewerTz}
+              onChange={(e) => setViewerTz(e.target.value)}
+              aria-label="Show times in timezone"
+            >
+              {tzOptions.map((z) => (
+                <option key={z.value} value={z.value}>
+                  {z.label}
+                </option>
+              ))}
+            </select>
+            {viewerTz !== poll.tz && (
+              <span className="subtle" style={{ fontSize: 12 }}>
+                converted from {poll.tz}
+              </span>
+            )}
+          </label>
+        ) : (
+          <p
+            className="helper"
+            style={{ marginTop: 16, fontSize: 13 }}
+            aria-label="timezone note"
+          >
+            Weekday times are shown in the poll's home timezone, {poll.tz}.
+          </p>
+        )}
 
         {poll.lockedSlot && (
           <div
@@ -254,7 +264,12 @@ export function PollPage() {
           >
             📌 Locked in:{" "}
             <strong>
-              {formatSlotLabelInTz(poll.lockedSlot, poll.tz, viewerTz)}
+              {formatSlotLabelInTz(
+                poll.lockedSlot,
+                poll.kind,
+                poll.tz,
+                viewerTz,
+              )}
             </strong>
           </div>
         )}

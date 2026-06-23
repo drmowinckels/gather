@@ -1,4 +1,22 @@
-import { timeSlots, dayHeader } from "./datetime";
+import { timeSlots, dayHeader, DISPLAY_LOCALE } from "./datetime";
+
+export type PollKind = "dates" | "weekdays";
+
+const WEEKDAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+const WEEKDAY_LABEL_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+  weekday: "short",
+});
+
+// "mon" -> "Mon" / "man." in the viewer's locale. 2024-01-01 was a Monday.
+export function weekdayLabel(token: string): string {
+  const i = WEEKDAY_ORDER.indexOf(token);
+  return i < 0 ? token : WEEKDAY_LABEL_FMT.format(new Date(2024, 0, 1 + i));
+}
+
+function dateLabel(iso: string): string {
+  const h = dayHeader(iso);
+  return `${h.weekday} ${h.day}`;
+}
 
 // Intl.DateTimeFormat is expensive to construct; reuse one per (tz, withSeconds).
 const FMT_CACHE = new Map<string, Intl.DateTimeFormat>();
@@ -86,16 +104,18 @@ export function existsInTz(dateISO: string, time: string, tz: string): boolean {
 }
 
 export interface GridView {
-  days: string[]; // viewer-local ISO dates
+  days: string[]; // column keys (viewer-local ISO dates, or weekday tokens)
   times: string[]; // viewer-local HH:MM
+  dayLabels: string[]; // header label per column, parallel to `days`
   keyAt: (day: string, time: string) => string | null; // canonical slot key, or gap
 }
 
-// Build the grid as the viewer sees it. Canonical slot keys (in the poll's
-// timezone) are converted to the viewer's local day/time; painting and
-// aggregation still use the canonical keys, so two people in different zones who
-// pick the same absolute time land on the same slot.
+// Build the grid as the viewer sees it. For dated polls, canonical slot keys
+// (in the poll's timezone) are converted to the viewer's local day/time, so two
+// people in different zones who pick the same absolute time land on the same
+// slot. Weekday polls are timezone-naive: everyone uses the poll's home tz.
 export function buildGridView(
+  kind: PollKind,
   days: string[],
   from: string,
   to: string,
@@ -104,6 +124,16 @@ export function buildGridView(
   viewerTz: string,
 ): GridView {
   const times = timeSlots(from, to, slot);
+
+  if (kind === "weekdays") {
+    return {
+      days,
+      times,
+      dayLabels: days.map(weekdayLabel),
+      keyAt: (d, t) => `${d}T${t}`,
+    };
+  }
+
   if (pollTz === viewerTz) {
     // Skip wall times that don't exist (spring-forward gap) on a given date.
     const valid = new Set<string>();
@@ -113,6 +143,7 @@ export function buildGridView(
     return {
       days,
       times,
+      dayLabels: days.map(dateLabel),
       keyAt: (d, t) => (valid.has(`${d}T${t}`) ? `${d}T${t}` : null),
     };
   }
@@ -131,20 +162,27 @@ export function buildGridView(
       timeSet.add(local.time);
     }
   }
+  const localDays = [...daySet].sort();
   return {
-    days: [...daySet].sort(),
+    days: localDays,
     times: [...timeSet].sort(),
+    dayLabels: localDays.map(dateLabel),
     keyAt: (d, t) => map.get(`${d}T${t}`) ?? null,
   };
 }
 
-// "2026-07-16T12:00" (canonical, in pollTz) -> "Wed 16, 14:00" in viewerTz.
+// Canonical key -> human label. Dates convert to the viewer's tz ("Wed 16, 14:00");
+// weekday keys ("monT09:00") render in the poll's tz ("Mon 09:00").
 export function formatSlotLabelInTz(
   canonicalKey: string,
+  kind: PollKind,
   pollTz: string,
   viewerTz: string,
 ): string {
   const [day, time] = canonicalKey.split("T");
+  if (kind === "weekdays") {
+    return `${weekdayLabel(day)} ${time}`;
+  }
   if (pollTz === viewerTz) {
     const h = dayHeader(day);
     return `${h.weekday} ${h.day}, ${time}`;

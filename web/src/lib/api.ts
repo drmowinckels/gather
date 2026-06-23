@@ -16,8 +16,11 @@ const API_BASE: string = resolveApiBase(
   import.meta.env.PROD,
 );
 
+export type PollKind = "dates" | "weekdays";
+
 export interface PollInput {
   title: string;
+  kind: PollKind;
   days: string[];
   from: string;
   to: string;
@@ -43,6 +46,7 @@ export interface PollResponse {
 export interface Poll {
   id: string;
   title: string;
+  kind: PollKind;
   days: string[];
   from: string;
   to: string;

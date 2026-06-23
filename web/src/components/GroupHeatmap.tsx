@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { lockSlot, type Poll } from "../lib/api";
 import { aggregate } from "../lib/heatmap";
-import { hourLabel, dayHeader } from "../lib/datetime";
+import { hourLabel } from "../lib/datetime";
 import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
 
 const BEST_SHADOW =
@@ -43,6 +43,7 @@ export function GroupHeatmap({
   const view = useMemo(
     () =>
       buildGridView(
+        poll.kind,
         poll.days,
         poll.from,
         poll.to,
@@ -50,11 +51,11 @@ export function GroupHeatmap({
         poll.tz,
         viewerTz,
       ),
-    [poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
+    [poll.kind, poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
   );
-  const headers = useMemo(() => view.days.map((d) => dayHeader(d)), [view]);
   const agg = useMemo(() => aggregate(poll.responses), [poll.responses]);
-  const label = (key: string) => formatSlotLabelInTz(key, poll.tz, viewerTz);
+  const label = (key: string) =>
+    formatSlotLabelInTz(key, poll.kind, poll.tz, viewerTz);
 
   // Empty state covers both "no responses" and "responses but nobody is free in
   // any slot" — in the latter, agg.ranked is empty and there's no best slot.
@@ -114,7 +115,7 @@ export function GroupHeatmap({
                   color: "var(--fg-muted)",
                 }}
               >
-                {headers[i].weekday} {headers[i].day}
+                {view.dayLabels[i]}
               </div>
             ))}
           </div>

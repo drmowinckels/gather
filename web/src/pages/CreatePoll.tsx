@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { CliEquivalent } from "../components/CliEquivalent";
 import { MonthCalendar } from "../components/MonthCalendar";
-import { createPoll, ApiError } from "../lib/api";
+import { createPoll, ApiError, type PollKind } from "../lib/api";
 import { saveEditToken } from "../lib/storage";
 import { browserTimezone, listTimezones, tzOffsetLabel } from "../lib/datetime";
+import { weekdayLabel } from "../lib/tz";
 
 const SLOT_SIZES = [15, 30, 60];
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export function CreatePoll() {
   const navigate = useNavigate();
@@ -21,6 +23,7 @@ export function CreatePoll() {
   );
 
   const [title, setTitle] = useState("");
+  const [kind, setKind] = useState<PollKind>("dates");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [from, setFrom] = useState("09:00");
   const [to, setTo] = useState("17:00");
@@ -30,7 +33,16 @@ export function CreatePoll() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const selectedDays = [...selected].sort();
+  // Dates and weekdays use different day namespaces, so reset on switch.
+  function switchKind(next: PollKind) {
+    setKind(next);
+    setSelected(new Set());
+  }
+
+  const selectedDays =
+    kind === "weekdays"
+      ? [...selected].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
+      : [...selected].sort();
   const timeValid = from < to;
   const canSubmit =
     title.trim().length > 0 && selectedDays.length > 0 && timeValid;
@@ -43,6 +55,7 @@ export function CreatePoll() {
     try {
       const created = await createPoll({
         title: title.trim(),
+        kind,
         days: selectedDays,
         from,
         to,
@@ -111,10 +124,74 @@ export function CreatePoll() {
 
           <div className="field">
             <span className="fieldlbl">Which days?</span>
-            <p className="subtle" style={{ margin: "0 0 12px", fontSize: 12 }}>
-              Tap a day, or drag across several. Use ‹ › to reach another month.
-            </p>
-            <MonthCalendar value={selected} onChange={setSelected} />
+            <div
+              className="chips"
+              role="radiogroup"
+              aria-label="Poll type"
+              style={{ margin: "0 0 14px" }}
+            >
+              <button
+                type="button"
+                className={`chip${kind === "dates" ? " on" : ""}`}
+                role="radio"
+                aria-checked={kind === "dates"}
+                onClick={() => switchKind("dates")}
+              >
+                Specific dates
+              </button>
+              <button
+                type="button"
+                className={`chip${kind === "weekdays" ? " on" : ""}`}
+                role="radio"
+                aria-checked={kind === "weekdays"}
+                onClick={() => switchKind("weekdays")}
+              >
+                Days of the week
+              </button>
+            </div>
+
+            {kind === "dates" ? (
+              <>
+                <p
+                  className="subtle"
+                  style={{ margin: "0 0 12px", fontSize: 12 }}
+                >
+                  Tap a day, or drag across several. Use ‹ › to reach another
+                  month.
+                </p>
+                <MonthCalendar value={selected} onChange={setSelected} />
+              </>
+            ) : (
+              <>
+                <p
+                  className="subtle"
+                  style={{ margin: "0 0 12px", fontSize: 12 }}
+                >
+                  Pick the weekdays that recur — times stay in the poll's home
+                  timezone.
+                </p>
+                <div className="chips">
+                  {WEEKDAYS.map((wd) => (
+                    <button
+                      key={wd}
+                      type="button"
+                      className={`chip${selected.has(wd) ? " on" : ""}`}
+                      aria-pressed={selected.has(wd)}
+                      onClick={() =>
+                        setSelected((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(wd)) next.delete(wd);
+                          else next.add(wd);
+                          return next;
+                        })
+                      }
+                    >
+                      {weekdayLabel(wd)}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
             <p className="subtle" style={{ margin: "10px 0 0", fontSize: 12 }}>
               {selectedDays.length === 0
                 ? "No days selected yet."
@@ -233,6 +310,7 @@ export function CreatePoll() {
           </p>
           <CliEquivalent
             title={title.trim()}
+            kind={kind}
             days={selectedDays}
             from={from}
             to={to}

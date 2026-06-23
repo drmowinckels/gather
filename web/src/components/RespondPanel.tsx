@@ -28,6 +28,7 @@ export function RespondPanel({
   const view = useMemo(
     () =>
       buildGridView(
+        poll.kind,
         poll.days,
         poll.from,
         poll.to,
@@ -35,7 +36,7 @@ export function RespondPanel({
         poll.tz,
         viewerTz,
       ),
-    [poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
+    [poll.kind, poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
   );
 
   const initialName = useMemo(() => getName(), []);

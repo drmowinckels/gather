@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
-import { hourLabel, dayHeader } from "../lib/datetime";
+import { useEffect, useRef } from "react";
+import { hourLabel } from "../lib/datetime";
 import { cycleNext, applyMark, type Status, type Marks } from "../lib/paint";
 import type { GridView } from "../lib/tz";
 
@@ -35,8 +35,6 @@ export function AvailabilityGrid({
   const lastPainted = useRef<string | null>(null);
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
-
-  const headers = useMemo(() => view.days.map((d) => dayHeader(d)), [view]);
 
   useEffect(() => {
     const end = () => {
@@ -103,7 +101,7 @@ export function AvailabilityGrid({
               color: "var(--fg-muted)",
             }}
           >
-            {headers[i].weekday} {headers[i].day}
+            {view.dayLabels[i]}
           </div>
         ))}
       </div>
@@ -142,7 +140,6 @@ export function AvailabilityGrid({
               );
             }
             const status = value.get(key);
-            const h = headers[di];
             const word =
               status === "yes"
                 ? "available"
@@ -155,7 +152,7 @@ export function AvailabilityGrid({
                 type="button"
                 className="gridcell"
                 data-key={key}
-                aria-label={`${h.weekday} ${h.day}, ${t} — ${word}`}
+                aria-label={`${view.dayLabels[di]}, ${t} — ${word}`}
                 disabled={disabled}
                 onPointerDown={(e) => start(key, e)}
                 onKeyDown={(e) => {

@@ -22,6 +22,7 @@ import { ApiError, type Poll } from "../lib/api";
 const poll: Poll = {
   id: "abc123",
   title: "Team offsite",
+  kind: "dates",
   days: ["2099-07-15", "2099-07-16"],
   from: "09:00",
   to: "15:00",

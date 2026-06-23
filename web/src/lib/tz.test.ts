@@ -57,6 +57,7 @@ describe("partsInTz", () => {
 describe("buildGridView", () => {
   it("is the identity grid when viewer tz equals poll tz", () => {
     const v = buildGridView(
+      "dates",
       ["2026-07-15"],
       "09:00",
       "10:00",
@@ -71,6 +72,7 @@ describe("buildGridView", () => {
 
   it("shifts local times but maps cells back to canonical keys (Oslo poll → NY viewer)", () => {
     const v = buildGridView(
+      "dates",
       ["2026-07-15"],
       "12:00",
       "13:00",
@@ -91,6 +93,7 @@ describe("buildGridView", () => {
     // wall-time (12:00 Oslo) lands at different UTC times per date — proving the
     // conversion is per-date DST-aware, not a single fixed shift.
     const v = buildGridView(
+      "dates",
       ["2026-01-15", "2026-07-15"],
       "12:00",
       "12:30",
@@ -109,6 +112,7 @@ describe("buildGridView", () => {
   it("drops slots that fall in a spring-forward gap (same tz)", () => {
     // 2026-03-29 Europe/Oslo: clocks jump 02:00 -> 03:00, so 02:00/02:30 vanish.
     const v = buildGridView(
+      "dates",
       ["2026-03-29"],
       "01:00",
       "04:00",
@@ -126,6 +130,7 @@ describe("buildGridView", () => {
   it("pushes slots onto the previous local day when the offset crosses midnight", () => {
     // 00:00–00:30 Oslo (CEST, +2) == 22:00–22:30 the previous day in UTC
     const v = buildGridView(
+      "dates",
       ["2026-07-15"],
       "00:00",
       "01:00",
@@ -152,6 +157,7 @@ describe("formatSlotLabelInTz", () => {
     expect(
       formatSlotLabelInTz(
         "2026-07-15T12:00",
+        "dates",
         "Europe/Oslo",
         "America/New_York",
       ),
@@ -159,8 +165,31 @@ describe("formatSlotLabelInTz", () => {
   });
 
   it("keeps the poll-tz label when zones match", () => {
-    expect(formatSlotLabelInTz("2026-07-15T12:00", "UTC", "UTC")).toBe(
+    expect(formatSlotLabelInTz("2026-07-15T12:00", "dates", "UTC", "UTC")).toBe(
       "Wed 15, 12:00",
     );
+  });
+});
+
+describe("weekday polls", () => {
+  it("builds a timezone-naive weekday grid with localized headers", () => {
+    const v = buildGridView(
+      "weekdays",
+      ["mon", "wed"],
+      "09:00",
+      "10:00",
+      30,
+      "Europe/Oslo",
+      "America/New_York", // ignored for weekday polls
+    );
+    expect(v.days).toEqual(["mon", "wed"]);
+    expect(v.dayLabels).toEqual(["Mon", "Wed"]);
+    expect(v.keyAt("mon", "09:30")).toBe("monT09:30");
+  });
+
+  it("labels a weekday slot key without tz conversion", () => {
+    expect(
+      formatSlotLabelInTz("monT09:00", "weekdays", "Europe/Oslo", "UTC"),
+    ).toBe("Mon 09:00");
   });
 });

@@ -7,6 +7,7 @@ function makePoll(responses: PollResponse[]): Poll {
   return {
     id: "p1",
     title: "Test",
+    kind: "dates",
     days: ["2026-07-15"], // a Wednesday
     from: "09:00",
     to: "11:00",

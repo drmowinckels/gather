@@ -1,5 +1,6 @@
 interface CliProps {
   title: string;
+  kind: "dates" | "weekdays";
   days: string[];
   from: string;
   to: string;
@@ -10,6 +11,7 @@ interface CliProps {
 
 export function CliEquivalent({
   title,
+  kind,
   days,
   from,
   to,
@@ -77,7 +79,8 @@ export function CliEquivalent({
           "{title || "Untitled poll"}"
         </span>{" "}
         \{"\n"}
-        {"  "}--days {daysArg} \{"\n"}
+        {"  "}--days {daysArg}
+        {kind === "weekdays" ? " --weekdays" : ""} \{"\n"}
         {"  "}--from {from} --to {to} --slot {slot}m \{"\n"}
         {"  "}--tz {tz}
         {isPublic ? " --public" : ""}

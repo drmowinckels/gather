@@ -8,6 +8,7 @@ import type { GridView } from "../lib/tz";
 const view: GridView = {
   days: ["2099-07-15"],
   times: ["09:00", "09:30"],
+  dayLabels: ["Wed 15"],
   keyAt: (d, t) => `${d}T${t}`,
 };
 

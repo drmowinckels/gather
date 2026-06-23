@@ -10,6 +10,7 @@ const tz = "Europe/Oslo";
 const poll: Poll = {
   id: "abc123",
   title: "Team offsite",
+  kind: "dates",
   days: ["2099-07-15"],
   from: "09:00",
   to: "10:00",

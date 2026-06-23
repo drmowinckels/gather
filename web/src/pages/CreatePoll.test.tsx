@@ -89,4 +89,21 @@ describe("CreatePoll", () => {
     await waitFor(() => expect(navigate).toHaveBeenCalledWith("/e/9fK2qd"));
     expect(localStorage.getItem("samkoma:edit:9fK2qd")).toBe("secret-token");
   });
+
+  it("creates a weekday poll when the 'Days of the week' type is chosen", async () => {
+    createPoll.mockResolvedValue({ id: "wk", url: "x", editToken: "t" });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Event name"), "Standup");
+    await user.click(screen.getByRole("radio", { name: /days of the week/i }));
+    await user.click(screen.getByRole("button", { name: "Mon" }));
+    await user.click(screen.getByRole("button", { name: "Wed" }));
+    await user.click(screen.getByRole("button", { name: /create poll/i }));
+
+    await waitFor(() => expect(createPoll).toHaveBeenCalledTimes(1));
+    const payload = createPoll.mock.calls[0][0];
+    expect(payload.kind).toBe("weekdays");
+    expect(payload.days).toEqual(["mon", "wed"]); // week order
+  });
 });

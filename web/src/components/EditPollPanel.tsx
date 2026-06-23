@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { editPoll, ApiError, type Poll, type EditPollInput } from "../lib/api";
 import { MonthCalendar } from "./MonthCalendar";
+import { weekdayLabel } from "../lib/tz";
+
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 const ERROR_TEXT: Record<string, string> = {
   not_additive:
@@ -128,11 +131,42 @@ export function EditPollPanel({
 
       <div className="field">
         <span className="fieldlbl">Days</span>
-        <MonthCalendar
-          value={calendarValue}
-          onChange={onCalendarChange}
-          lockedDays={lockedDays}
-        />
+        {poll.kind === "weekdays" ? (
+          <div className="chips">
+            {WEEKDAYS.map((wd) => {
+              const selected = calendarValue.has(wd);
+              const isLocked = lockedDays.has(wd);
+              return (
+                <button
+                  key={wd}
+                  type="button"
+                  className={`chip${selected ? " on" : ""}`}
+                  aria-pressed={selected}
+                  disabled={isLocked}
+                  title={
+                    isLocked ? "Existing day — can't be removed" : undefined
+                  }
+                  onClick={() =>
+                    onCalendarChange((prev) => {
+                      const next = new Set(prev);
+                      if (next.has(wd)) next.delete(wd);
+                      else next.add(wd);
+                      return next;
+                    })
+                  }
+                >
+                  {weekdayLabel(wd)}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <MonthCalendar
+            value={calendarValue}
+            onChange={onCalendarChange}
+            lockedDays={lockedDays}
+          />
+        )}
         <p className="subtle" style={{ margin: "10px 0 0", fontSize: 12 }}>
           You can add days, but existing ones (ringed, fixed) stay — people may
           have answered for them.
