@@ -2,6 +2,8 @@ import { z } from "zod";
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
+const WEEKDAY_SET = new Set<string>(WEEKDAYS);
 
 function isRealDate(s: string): boolean {
   const [y, m, d] = s.split("-").map(Number);
@@ -22,17 +24,36 @@ function isValidTimezone(tz: string): boolean {
   }
 }
 
+// A `days` entry is valid if it matches the poll kind: a real calendar date for
+// "dates", a weekday token (mon–sun) for "weekdays".
+function checkDays(
+  kind: "dates" | "weekdays",
+  days: string[],
+  ctx: z.RefinementCtx,
+): void {
+  days.forEach((day, i) => {
+    const ok =
+      kind === "dates"
+        ? ISO_DATE.test(day) && isRealDate(day)
+        : WEEKDAY_SET.has(day);
+    if (!ok) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["days", i],
+        message:
+          kind === "dates"
+            ? "must be a real calendar date"
+            : "must be a weekday (mon–sun)",
+      });
+    }
+  });
+}
+
 export const createPollSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
-    days: z
-      .array(
-        z.string().regex(ISO_DATE).refine(isRealDate, {
-          message: "must be a real calendar date",
-        }),
-      )
-      .min(1)
-      .max(60),
+    kind: z.enum(["dates", "weekdays"]).default("dates"),
+    days: z.array(z.string()).min(1).max(60),
     from: z.string().regex(HHMM),
     to: z.string().regex(HHMM),
     slot: z
@@ -46,12 +67,26 @@ export const createPollSchema = z
     }),
     public: z.boolean().optional().default(false),
   })
-  .refine((d) => d.from < d.to, {
-    message: "from must be earlier than to",
-    path: ["from"],
+  .superRefine((d, ctx) => {
+    checkDays(d.kind, d.days, ctx);
+    if (d.from >= d.to) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["from"],
+        message: "from must be earlier than to",
+      });
+    }
   });
 
 export type CreatePollInput = z.infer<typeof createPollSchema>;
+
+// Patch days may be dates or weekdays; the handler enforces the kind and the
+// additive-only rule against the poll's existing slot grid.
+const dayString = z
+  .string()
+  .refine((s) => (ISO_DATE.test(s) && isRealDate(s)) || WEEKDAY_SET.has(s), {
+    message: "must be a real calendar date or a weekday",
+  });
 
 // Partial edit of a poll. Every field is optional, but at least one must be
 // present. The from/to ordering is enforced in the handler against the merged
@@ -59,15 +94,7 @@ export type CreatePollInput = z.infer<typeof createPollSchema>;
 export const patchPollSchema = z
   .object({
     title: z.string().trim().min(1).max(200).optional(),
-    days: z
-      .array(
-        z.string().regex(ISO_DATE).refine(isRealDate, {
-          message: "must be a real calendar date",
-        }),
-      )
-      .min(1)
-      .max(60)
-      .optional(),
+    days: z.array(dayString).min(1).max(60).optional(),
     from: z.string().regex(HHMM).optional(),
     to: z.string().regex(HHMM).optional(),
     slot: z
@@ -85,7 +112,9 @@ export const patchPollSchema = z
 
 export type PatchPollInput = z.infer<typeof patchPollSchema>;
 
-const SLOT_KEY = /^\d{4}-\d{2}-\d{2}T([01]\d|2[0-3]):[0-5]\d$/;
+// Slot keys are "YYYY-MM-DDThh:mm" (dated polls) or "monThh:mm" (weekday polls).
+const SLOT_KEY =
+  /^(\d{4}-\d{2}-\d{2}|mon|tue|wed|thu|fri|sat|sun)T([01]\d|2[0-3]):[0-5]\d$/;
 
 export const submitSlotsSchema = z.object({
   name: z.string().trim().min(1).max(80),

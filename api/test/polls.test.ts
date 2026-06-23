@@ -561,3 +561,87 @@ describe("POST /v1/polls/:id/slots", () => {
     expect(status).toBe(429); // 4th distinct respondent rejected
   });
 });
+
+describe("weekday polls", () => {
+  const weekdayPoll = {
+    title: "Weekly standup",
+    kind: "weekdays",
+    days: ["fri", "mon", "wed"],
+    from: "09:00",
+    to: "11:00",
+    slot: 30,
+    tz: "Europe/Oslo",
+    public: true,
+  };
+
+  it("creates a weekday poll, stores week-ordered days and a from-creation expiry", async () => {
+    const { id } = (await (await post(weekdayPoll)).json()) as { id: string };
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { kind: string; days: string[]; expiresAt: string };
+    expect(poll.kind).toBe("weekdays");
+    expect(poll.days).toEqual(["mon", "wed", "fri"]); // sorted by week order
+    // Expiry is a real date in the future (60 days from creation), not derived
+    // from weekday tokens.
+    expect(poll.expiresAt).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(poll.expiresAt > new Date().toISOString().slice(0, 10)).toBe(true);
+  });
+
+  it("accepts weekday slot keys and ranks them", async () => {
+    const { id } = (await (await post(weekdayPoll)).json()) as { id: string };
+    await SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({
+        name: "Ada",
+        tz: "Europe/Oslo",
+        slots: ["monT09:00", "wedT09:00"],
+      }),
+    });
+    const best = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}/best`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { results: Array<{ slot: string; count: number }> };
+    expect(best.results.map((r) => r.slot)).toContain("monT09:00");
+  });
+
+  it("rejects a weekday key outside the poll grid", async () => {
+    const { id } = (await (await post(weekdayPoll)).json()) as { id: string };
+    const res = await SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({
+        name: "Ada",
+        tz: "Europe/Oslo",
+        slots: ["tueT09:00"], // Tue isn't in the poll
+      }),
+    });
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toBe(
+      "invalid_slots",
+    );
+  });
+
+  it("rejects an invalid weekday token at creation", async () => {
+    const res = await post({ ...weekdayPoll, days: ["funday"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects a calendar date when kind is weekdays", async () => {
+    const res = await post({ ...weekdayPoll, days: ["2026-07-15"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("defaults kind to 'dates' when omitted", async () => {
+    const { id } = (await (await post(validPoll)).json()) as { id: string };
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { kind: string };
+    expect(poll.kind).toBe("dates");
+  });
+});

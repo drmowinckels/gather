@@ -10,11 +10,22 @@ import {
 import { shortId, editToken } from "./id";
 import { validSlotKeys } from "@samkoma/core";
 import { rankSlots } from "./aggregate";
-import { expiryDate, isExpired, todayUTC } from "./dates";
+import { expiryDate, addGraceDays, isExpired, todayUTC } from "./dates";
 import { rateLimit } from "./ratelimit";
 import type { Env } from "./types";
 
-const GRACE_DAYS = 14;
+const GRACE_DAYS = 14; // dated polls: days after the last day
+const WEEKDAY_GRACE_DAYS = 60; // weekday polls: days after creation
+const WEEK_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+// Canonical, de-duplicated day order: chronological for dates, week order for
+// weekdays (so stored `days` and the rendered grid line up).
+function sortDays(kind: string, days: string[]): string[] {
+  const unique = [...new Set(days)];
+  return kind === "weekdays"
+    ? unique.sort((a, b) => WEEK_ORDER.indexOf(a) - WEEK_ORDER.indexOf(b))
+    : unique.sort();
+}
 
 function badRequest(c: Context, issues: unknown) {
   return c.json({ error: "invalid_body", issues }, 400);
@@ -62,6 +73,7 @@ async function loadActivePoll(
 interface PollRow {
   id: string;
   title: string;
+  kind: string;
   days: string;
   from_time: string;
   to_time: string;
@@ -86,6 +98,7 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
   return {
     id: row.id,
     title: row.title,
+    kind: row.kind === "weekdays" ? "weekdays" : "dates",
     days: JSON.parse(row.days) as string[],
     from: row.from_time,
     to: row.to_time,
@@ -122,17 +135,22 @@ polls.post(
     const id = shortId();
     const token = editToken();
     const createdAt = new Date().toISOString();
-    const expiresAt = expiryDate(body.days, GRACE_DAYS);
+    const days = sortDays(body.kind, body.days);
+    const expiresAt =
+      body.kind === "weekdays"
+        ? addGraceDays(createdAt.slice(0, 10), WEEKDAY_GRACE_DAYS)
+        : expiryDate(days, GRACE_DAYS);
 
     await c.env.DB.prepare(
       `INSERT INTO polls
-         (id, title, days, from_time, to_time, slot_minutes, tz, is_public, edit_token, created_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, edit_token, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
         body.title,
-        JSON.stringify(body.days),
+        body.kind,
+        JSON.stringify(days),
         body.from,
         body.to,
         body.slot,
@@ -261,7 +279,7 @@ polls.patch(
 
     const next = {
       title: body.title ?? row.title,
-      days: body.days ?? (JSON.parse(row.days) as string[]),
+      days: sortDays(row.kind, body.days ?? (JSON.parse(row.days) as string[])),
       from: body.from ?? row.from_time,
       to: body.to ?? row.to_time,
       slot: row.slot_minutes,
@@ -288,7 +306,11 @@ polls.patch(
       );
     }
 
-    const expiresAt = expiryDate(next.days, GRACE_DAYS);
+    // Weekday polls expire from creation, so their expiry is unaffected by edits.
+    const expiresAt =
+      row.kind === "weekdays"
+        ? row.expires_at
+        : expiryDate(next.days, GRACE_DAYS);
     await c.env.DB.prepare(
       `UPDATE polls
          SET title = ?, days = ?, from_time = ?, to_time = ?,
