@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { timeSlots, validSlotKeys } from "../src/slots";
+import { timeSlots, validSlotKeys } from "@samkoma/core";
 
 describe("timeSlots", () => {
   it("returns block start times within [from, to)", () => {

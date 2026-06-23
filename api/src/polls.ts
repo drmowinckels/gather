@@ -8,7 +8,7 @@ import {
   patchPollSchema,
 } from "./schema";
 import { shortId, editToken } from "./id";
-import { validSlotKeys } from "./slots";
+import { validSlotKeys } from "@samkoma/core";
 import { rankSlots } from "./aggregate";
 import { expiryDate, isExpired, todayUTC } from "./dates";
 import { rateLimit } from "./ratelimit";
