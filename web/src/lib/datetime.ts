@@ -77,27 +77,9 @@ export function upcomingDays(count: number, start = new Date()): DayOption[] {
   return out;
 }
 
-function toMinutes(t: string): number {
-  const [h, m] = t.split(":").map(Number);
-  return h * 60 + m;
-}
-
-const pad = (n: number): string => String(n).padStart(2, "0");
-
-// Start times of each slot block within [from, to), stepping by slotMin.
-export function timeSlots(from: string, to: string, slotMin: number): string[] {
-  const start = toMinutes(from);
-  const end = toMinutes(to);
-  const out: string[] = [];
-  for (let t = start; t + slotMin <= end; t += slotMin) {
-    out.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
-  }
-  return out;
-}
-
-export function slotKey(day: string, time: string): string {
-  return `${day}T${time}`;
-}
+// Slot-grid helpers live in @samkoma/core (shared with the API). Re-exported so
+// the rest of the web app keeps importing them from this datetime module.
+export { timeSlots, slotKey } from "@samkoma/core";
 
 // Label shown in the time gutter — only on the hour, e.g. "9am", "12pm".
 export function hourLabel(time: string): string {

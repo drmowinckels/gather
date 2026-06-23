@@ -1,5 +1,8 @@
 // samkoma-client — a tiny, dependency-free client for the samkoma REST API.
 // Works anywhere `fetch` exists (Node 18+, browsers, Cloudflare Workers).
+// @samkoma/core is bundled into the published build (tsup), so consumers still
+// install zero runtime dependencies.
+import { pad, resolveDays as coreResolveDays } from "@samkoma/core";
 
 export const DEFAULT_BASE_URL = "https://api.samkoma.drmowinckels.io";
 
@@ -203,60 +206,15 @@ export class SamkomaClient {
 
 // --- helpers for turning a chat/issue command into a poll -------------------
 
-const WEEKDAYS: Record<string, number> = {
-  mon: 0,
-  tue: 1,
-  wed: 2,
-  thu: 3,
-  fri: 4,
-  sat: 5,
-  sun: 6,
-};
-const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const pad = (n: number) => String(n).padStart(2, "0");
-
-function toISO(d: Date): string {
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-function nextOccurrence(weekday: number, today: Date): string {
-  const todayIdx = (today.getDay() + 6) % 7; // 0 = Monday
-  const ahead = (weekday - todayIdx + 7) % 7;
-  return toISO(
-    new Date(today.getFullYear(), today.getMonth(), today.getDate() + ahead),
-  );
-}
-
 /**
  * Resolve a day spec into sorted, de-duplicated ISO dates. Tokens may be ISO
  * dates ("2026-07-15"), weekdays ("mon"), or weekday ranges ("mon-fri").
- * Weekdays resolve to their next upcoming occurrence.
+ * Weekdays resolve to their next upcoming occurrence. Shared with the CLI via
+ * @samkoma/core; wrapped here so the published package's types stay
+ * self-contained (no @samkoma/core import survives in dist).
  */
 export function resolveDays(spec: string, today: Date = new Date()): string[] {
-  const out = new Set<string>();
-  for (const raw of spec.split(",")) {
-    const token = raw.trim().toLowerCase();
-    if (!token) continue;
-    if (ISO_DATE.test(token)) {
-      out.add(token);
-      continue;
-    }
-    const range = token.match(/^([a-z]{3})-([a-z]{3})$/);
-    if (range) {
-      const start = WEEKDAYS[range[1]];
-      const end = WEEKDAYS[range[2]];
-      if (start === undefined || end === undefined || start > end) {
-        throw new Error(`Invalid day range: "${raw}"`);
-      }
-      for (let i = start; i <= end; i++) out.add(nextOccurrence(i, today));
-      continue;
-    }
-    const wd = WEEKDAYS[token];
-    if (wd === undefined) throw new Error(`Unrecognized day: "${raw}"`);
-    out.add(nextOccurrence(wd, today));
-  }
-  if (out.size === 0) throw new Error("No days found in command");
-  return [...out].sort();
+  return coreResolveDays(spec, today);
 }
 
 export interface ParsedCommand {

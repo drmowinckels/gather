@@ -10,14 +10,17 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsup",
     "dev": "node --experimental-strip-types src/index.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@samkoma/core": "*",
     "@types/node": "^22.10.2",
+    "samkoma-client": "*",
+    "tsup": "^8.3.5",
     "typescript": "^5.7.2",
     "vitest": "~2.1.8"
   }

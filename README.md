@@ -107,10 +107,11 @@ as `Authorization: Bearer <token>`.
 so the host can lock from the terminal.
 
 ```bash
-cd cli && npm install && npm run build
-node dist/index.js new "Team offsite" --days mon-fri --from 09:00 --to 17:00 --tz Europe/Oslo --public
-node dist/index.js best <id>
-node dist/index.js lock <id> 2026-07-15T09:00
+npm install                  # once, at the repo root (workspaces)
+npm run build -w samkoma-cli
+node cli/dist/index.js new "Team offsite" --days mon-fri --from 09:00 --to 17:00 --tz Europe/Oslo --public
+node cli/dist/index.js best <id>
+node cli/dist/index.js lock <id> 2026-07-15T09:00
 ```
 
 `--days` accepts ISO dates (`2026-07-15,2026-07-16`) or weekdays/ranges
@@ -127,28 +128,31 @@ API — Node, browser, or a Worker. See
 
 ## Develop
 
-Requires Node 20+.
+Requires Node 20+. This is an npm-workspaces monorepo (`core`, `api`, `web`,
+`cli`, `client`) — install once at the root, then target a package with `-w`.
+Shared domain logic (day resolution, the slot grid, ranking) lives in
+[`core/`](core) (`@samkoma/core`) and is bundled into each app at build time.
 
 ```bash
+npm install                  # once, at the repo root — links @samkoma/core
+
 # API (terminal 1)
-cd api
-npm install
-cp .dev.vars.example .dev.vars
-npm run migrate:local        # apply migrations to the local D1
-npm run dev                  # wrangler dev on http://localhost:8787
+cp api/.dev.vars.example api/.dev.vars
+npm run migrate:local -w samkoma-api   # apply migrations to the local D1
+npm run dev -w samkoma-api             # wrangler dev on http://localhost:8787
 
 # Web (terminal 2)
-cd web
-npm install
-cp .env.example .env         # VITE_API_BASE=http://localhost:8787
-npm run dev                  # vite on http://localhost:5173/
+cp web/.env.example web/.env           # VITE_API_BASE=http://localhost:8787
+npm run dev -w samkoma-web             # vite on http://localhost:5173/
 ```
 
 ### Test
 
 ```bash
-cd api && npm test           # Worker + D1 integration (vitest-pool-workers)
-cd web && npm test           # api client + form (vitest + testing-library)
+npm test                     # every workspace
+npm test -w samkoma-api      # just the Worker + D1 integration suite
+npm run typecheck            # tsc --noEmit across all packages
+npm run format:check         # prettier
 ```
 
 ## Deploy (one-time setup)

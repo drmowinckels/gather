@@ -9,6 +9,9 @@ on:
 permissions:
   contents: read
 
+# One npm-workspaces monorepo: a single root `npm ci` installs every package and
+# links @samkoma/core, so all jobs install at the root and target a workspace
+# with `-w`.
 jobs:
   format:
     name: Format (prettier)
@@ -23,6 +26,20 @@ jobs:
       - run: npm ci
       - run: npm run format:check
 
+  test-core:
+    name: Test core
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npm run typecheck -w @samkoma/core
+      - run: npm run test -w @samkoma/core
+
   test-api:
     name: Test API
     runs-on: ubuntu-latest
@@ -32,13 +49,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-        working-directory: api
-      - run: npm run typecheck
-        working-directory: api
-      - run: npm test
-        working-directory: api
+      - run: npm run typecheck -w samkoma-api
+      - run: npm run test -w samkoma-api
 
   test-web:
     name: Test & build web
@@ -49,13 +63,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-        working-directory: web
-      - run: npm test
-        working-directory: web
-      - run: npm run build
-        working-directory: web
+      - run: npm run test -w samkoma-web
+      - run: npm run build -w samkoma-web
 
   test-cli:
     name: Test & build CLI
@@ -66,13 +77,11 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: cli/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-        working-directory: cli
-      - run: npm test
-        working-directory: cli
-      - run: npm run build
-        working-directory: cli
+      - run: npm run typecheck -w samkoma-cli
+      - run: npm run test -w samkoma-cli
+      - run: npm run build -w samkoma-cli
 
   test-client:
     name: Test & build client
@@ -83,19 +92,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: client/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-        working-directory: client
-      - run: npm test
-        working-directory: client
-      - run: npm run build
-        working-directory: client
+      - run: npm run typecheck -w samkoma-client
+      - run: npm run test -w samkoma-client
+      - run: npm run build -w samkoma-client
 
   # Deploys are skipped until the one-time setup is done (see README):
   # CLOUDFLARE_* secrets for the API, and the VITE_API_BASE variable for web.
   deploy-api:
     name: Deploy API (Cloudflare)
-    needs: test-api
+    needs: [test-core, test-api]
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
@@ -107,9 +114,8 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: api/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-        working-directory: api
       - name: Apply D1 migrations and deploy
         if: ${{ env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' }}
         working-directory: api
@@ -122,7 +128,7 @@ jobs:
 
   deploy-web:
     name: Deploy web (GitHub Pages)
-    needs: test-web
+    needs: [test-core, test-web]
     if: ${{ github.ref == 'refs/heads/main' && vars.VITE_API_BASE != '' }}
     runs-on: ubuntu-latest
     permissions:
@@ -138,14 +144,12 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-        working-directory: web
       - name: Build
-        working-directory: web
         env:
           VITE_API_BASE: ${{ vars.VITE_API_BASE }}
-        run: npm run build
+        run: npm run build -w samkoma-web
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
