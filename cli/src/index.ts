@@ -17,7 +17,10 @@ Usage:
   samkoma unlock <id>                 Unlock (host only)
 
 Options for "new":
-  --days <spec>   ISO dates or weekdays, e.g. "mon-fri" or "2026-07-15,2026-07-16"
+  --days <spec>   Dates ("2026-07-15,2026-07-16") or, with --weekdays, weekday
+                  tokens/ranges ("mon-fri", "tue,thu")
+  --weekdays      Make a recurring days-of-the-week poll (times stay in --tz);
+                  without it, --days weekdays resolve to their next dates
   --from <HH:MM>  Earliest time (default 09:00)
   --to <HH:MM>    Latest time (default 17:00)
   --slot <min>    Slot size: 15, 30 or 60 (default 30)
@@ -60,6 +63,7 @@ async function main() {
       tz: { type: "string" },
       public: { type: "boolean" },
       private: { type: "boolean" },
+      weekdays: { type: "boolean" },
       limit: { type: "string" },
       api: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
@@ -88,6 +92,7 @@ async function main() {
       slot: values.slot,
       tz: values.tz ?? systemTz(),
       public: values.public ?? false,
+      weekdays: values.weekdays ?? false,
     });
     const created = await client.createPoll(body);
     saveToken(created.id, created.editToken);

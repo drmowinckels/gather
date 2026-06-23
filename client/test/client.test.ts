@@ -3,6 +3,7 @@ import {
   SamkomaClient,
   SamkomaError,
   resolveDays,
+  parseWeekdays,
   parseSamkomaCommand,
 } from "../src/index.js";
 
@@ -113,6 +114,16 @@ describe("resolveDays", () => {
   });
   it("rejects junk", () => {
     expect(() => resolveDays("nope", today)).toThrow();
+  });
+});
+
+describe("parseWeekdays", () => {
+  it("returns weekday tokens (not dates), week-ordered", () => {
+    expect(parseWeekdays("fri,mon")).toEqual(["mon", "fri"]);
+    expect(parseWeekdays("mon-wed")).toEqual(["mon", "tue", "wed"]);
+  });
+  it("rejects junk", () => {
+    expect(() => parseWeekdays("nope")).toThrow();
   });
 });
 

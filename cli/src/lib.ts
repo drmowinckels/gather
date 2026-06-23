@@ -1,6 +1,6 @@
 // Day resolution is shared with the client/bot via @samkoma/core.
-import { resolveDays } from "@samkoma/core";
-export { resolveDays };
+import { resolveDays, parseWeekdays } from "@samkoma/core";
+export { resolveDays, parseWeekdays };
 
 const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -27,10 +27,12 @@ export interface CreateOptions {
   slot?: string;
   tz: string;
   public: boolean;
+  weekdays?: boolean;
 }
 
 export interface PollBody {
   title: string;
+  kind: "dates" | "weekdays";
   days: string[];
   from: string;
   to: string;
@@ -48,9 +50,15 @@ export function buildCreateBody(
   const from = parseTime(opts.from ?? "09:00", "--from");
   const to = parseTime(opts.to ?? "17:00", "--to");
   if (from >= to) throw new Error("--from must be earlier than --to");
+  const kind = opts.weekdays ? "weekdays" : "dates";
   return {
     title,
-    days: resolveDays(opts.days, today),
+    kind,
+    // Weekday polls keep tokens (mon–fri); dated polls resolve to ISO dates.
+    days:
+      kind === "weekdays"
+        ? parseWeekdays(opts.days)
+        : resolveDays(opts.days, today),
     from,
     to,
     slot: parseSlot(opts.slot ?? "30"),

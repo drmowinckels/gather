@@ -84,6 +84,7 @@ describe("buildCreateBody", () => {
     );
     expect(body).toEqual({
       title: "Team offsite",
+      kind: "dates",
       days: ["2026-07-15"],
       from: "09:00",
       to: "17:00",
@@ -91,6 +92,18 @@ describe("buildCreateBody", () => {
       tz: "Europe/Oslo",
       public: true,
     });
+  });
+
+  it("keeps weekday tokens (no date resolution) when weekdays is set", () => {
+    const body = buildCreateBody({
+      title: "Standup",
+      days: "mon-wed",
+      tz: "UTC",
+      public: false,
+      weekdays: true,
+    });
+    expect(body.kind).toBe("weekdays");
+    expect(body.days).toEqual(["mon", "tue", "wed"]);
   });
 
   it("rejects an empty title and an inverted time range", () => {

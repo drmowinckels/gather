@@ -2,13 +2,21 @@
 // Works anywhere `fetch` exists (Node 18+, browsers, Cloudflare Workers).
 // @samkoma/core is bundled into the published build (tsup), so consumers still
 // install zero runtime dependencies.
-import { pad, resolveDays as coreResolveDays } from "@samkoma/core";
+import {
+  pad,
+  resolveDays as coreResolveDays,
+  parseWeekdays as coreParseWeekdays,
+} from "@samkoma/core";
+
+export type PollKind = "dates" | "weekdays";
 
 export const DEFAULT_BASE_URL = "https://api.samkoma.drmowinckels.io";
 
 export interface PollInput {
   title: string;
-  days: string[]; // ISO dates "YYYY-MM-DD"
+  /** "dates" (default) or "weekdays" (recurring days-of-the-week). */
+  kind?: PollKind;
+  days: string[]; // ISO dates "YYYY-MM-DD", or weekday tokens for weekday polls
   from: string; // "HH:MM"
   to: string; // "HH:MM"
   slot: number; // 15 | 30 | 60
@@ -33,6 +41,7 @@ export interface PollResponse {
 export interface Poll {
   id: string;
   title: string;
+  kind: PollKind;
   days: string[];
   from: string;
   to: string;
@@ -215,6 +224,14 @@ export class SamkomaClient {
  */
 export function resolveDays(spec: string, today: Date = new Date()): string[] {
   return coreResolveDays(spec, today);
+}
+
+/**
+ * Parse a day spec into weekday tokens (mon–sun) for a weekday poll — kept as
+ * tokens, not resolved to dates. Tokens may be weekdays or ranges ("mon-fri").
+ */
+export function parseWeekdays(spec: string): string[] {
+  return coreParseWeekdays(spec);
 }
 
 export interface ParsedCommand {
