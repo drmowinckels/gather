@@ -25,10 +25,29 @@ function isoOf(d: Date): string {
   ).padStart(2, "0")}`;
 }
 
-// Monday-first weekday headers ("Mon"…"Sun" / "man."…"søn.") in the viewer's
-// locale. 2024-01-01 was a Monday.
+// First day of the week per the viewer's locale (Monday across most of Europe,
+// Sunday in the US). Returns a JS getDay() index (0 = Sunday … 6 = Saturday),
+// falling back to Monday where Intl weekInfo is unavailable.
+export function localeFirstDay(locale: string): number {
+  try {
+    const loc = new Intl.Locale(locale) as Intl.Locale & {
+      weekInfo?: { firstDay?: number };
+      getWeekInfo?: () => { firstDay?: number };
+    };
+    const firstDay = (loc.getWeekInfo?.() ?? loc.weekInfo)?.firstDay; // 1=Mon…7=Sun
+    if (typeof firstDay === "number") return firstDay % 7; // → 0=Sun…6=Sat
+  } catch {
+    // unsupported locale tag or no weekInfo — fall back below
+  }
+  return 1; // Monday
+}
+
+const FIRST_DAY = localeFirstDay(DISPLAY_LOCALE);
+
+// Weekday headers starting on the locale's first day. 2024-01-07 was a Sunday
+// (getDay() === 0), so +dayIndex lands on each weekday name.
 const WEEKDAY_HEADERS = Array.from({ length: 7 }, (_, i) =>
-  WEEKDAY_FMT.format(new Date(2024, 0, 1 + i)),
+  WEEKDAY_FMT.format(new Date(2024, 0, 7 + ((FIRST_DAY + i) % 7))),
 );
 
 interface MonthCalendarProps {
@@ -63,7 +82,7 @@ export function MonthCalendar({
 
   const weeks = useMemo(() => {
     const first = new Date(view.year, view.month, 1);
-    const lead = (first.getDay() + 6) % 7; // Monday-first offset
+    const lead = (first.getDay() - FIRST_DAY + 7) % 7; // offset to locale's first weekday
     const start = new Date(view.year, view.month, 1 - lead);
     return Array.from({ length: 6 }, (_, w) =>
       Array.from({ length: 7 }, (_, d) => {

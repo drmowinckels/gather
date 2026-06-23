@@ -2,7 +2,19 @@ import { describe, it, expect, afterEach, vi } from "vitest";
 import { useState } from "react";
 import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MonthCalendar } from "./MonthCalendar";
+import { MonthCalendar, localeFirstDay } from "./MonthCalendar";
+
+const weekInfoSupported = (() => {
+  try {
+    const l = new Intl.Locale("en-US") as Intl.Locale & {
+      weekInfo?: unknown;
+      getWeekInfo?: () => unknown;
+    };
+    return Boolean(l.getWeekInfo?.() ?? l.weekInfo);
+  } catch {
+    return false;
+  }
+})();
 
 // Fixed "now" so the rendered month and the past/future split are deterministic.
 const NOW = new Date(2026, 6, 15); // Wed 2026-07-15
@@ -86,6 +98,16 @@ describe("MonthCalendar", () => {
     expect(cell("2026-07-20")).toHaveAttribute("aria-pressed", "true");
     await user.click(cell("2026-07-20"));
     expect(cell("2026-07-20")).toHaveAttribute("aria-pressed", "true"); // unchanged
+  });
+
+  it("derives the first day of week from the locale (Monday fallback)", () => {
+    expect(localeFirstDay("!!!-invalid")).toBe(1); // bad tag → Monday
+    expect(localeFirstDay("en-US")).toBeGreaterThanOrEqual(0);
+    expect(localeFirstDay("en-US")).toBeLessThanOrEqual(6);
+    if (weekInfoSupported) {
+      expect(localeFirstDay("en-US")).toBe(0); // Sunday
+      expect(localeFirstDay("nb-NO")).toBe(1); // Monday
+    }
   });
 
   it("navigates months and disables Previous at the reference month", async () => {
