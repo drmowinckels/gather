@@ -534,17 +534,21 @@ describe("POST /v1/polls/:id/slots", () => {
     expect(poll.responses[0]).toMatchObject({ name: "Ada", slots });
   });
 
-  it("upserts the same name instead of duplicating", async () => {
+  it("upserts the same name (with its token) instead of duplicating", async () => {
     const { id } = await newPoll();
-    await submit(id, {
-      name: "Ada",
-      tz: "Europe/Oslo",
-      slots: ["2099-07-15T09:00"],
-    });
+    const first = (await (
+      await submit(id, {
+        name: "Ada",
+        tz: "Europe/Oslo",
+        slots: ["2099-07-15T09:00"],
+      })
+    ).json()) as { responseToken: string };
+    expect(first.responseToken).toMatch(/^[0-9a-f]{48}$/);
     await submit(id, {
       name: "Ada",
       tz: "Europe/Oslo",
       slots: ["2099-07-16T10:00"],
+      secret: first.responseToken,
     });
 
     const poll = (await (
@@ -597,14 +601,25 @@ describe("POST /v1/polls/:id/slots", () => {
 
   it("rate-limits submissions beyond SUBMIT_LIMIT (10 in tests)", async () => {
     const { id } = await newPoll();
+    // First write claims the name and returns its token; re-using it (same name
+    // upserts, never hitting the distinct-respondent cap) isolates the per-IP
+    // submission throttle.
+    const token = (
+      (await (
+        await submit(id, {
+          name: "Ada",
+          tz: "Europe/Oslo",
+          slots: ["2099-07-15T09:00"],
+        })
+      ).json()) as { responseToken: string }
+    ).responseToken;
     let res!: Response;
-    // Same name upserts (never hits the distinct-respondent cap), so this
-    // isolates the per-IP submission throttle.
-    for (let i = 0; i <= 10; i++) {
+    for (let i = 0; i < 10; i++) {
       res = await submit(id, {
         name: "Ada",
         tz: "Europe/Oslo",
         slots: ["2099-07-15T09:00"],
+        secret: token,
       });
     }
     expect(res.status).toBe(429);
@@ -626,6 +641,78 @@ describe("POST /v1/polls/:id/slots", () => {
       ).status;
     }
     expect(status).toBe(429); // 4th distinct respondent rejected
+  });
+});
+
+describe("response ownership (overwrite protection)", () => {
+  async function newPoll() {
+    return (await (await post(validPoll)).json()) as { id: string };
+  }
+  function submit(id: string, body: unknown) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify(body),
+    });
+  }
+  const base = { tz: "Europe/Oslo", slots: ["2099-07-15T09:00"] };
+
+  it("auto-claims a name and returns a one-time token for the first writer", async () => {
+    const { id } = await newPoll();
+    const res = await submit(id, { name: "Ada", ...base });
+    const json = (await res.json()) as { responseToken?: string };
+    expect(res.status).toBe(200);
+    expect(json.responseToken).toMatch(/^[0-9a-f]{48}$/);
+  });
+
+  it("rejects a re-write of a claimed name without its token (403)", async () => {
+    const { id } = await newPoll();
+    await submit(id, { name: "Ada", ...base });
+    const res = await submit(id, { name: "Ada", ...base, slots: [] });
+    expect(res.status).toBe(403);
+    expect(((await res.json()) as { error: string }).error).toBe(
+      "name_protected",
+    );
+  });
+
+  it("rejects a wrong token but accepts the right one", async () => {
+    const { id } = await newPoll();
+    const token = (
+      (await (await submit(id, { name: "Ada", ...base })).json()) as {
+        responseToken: string;
+      }
+    ).responseToken;
+    expect(
+      (await submit(id, { name: "Ada", ...base, secret: "nope" })).status,
+    ).toBe(403);
+    expect(
+      (await submit(id, { name: "Ada", ...base, secret: token })).status,
+    ).toBe(200);
+  });
+
+  it("lets a respondent set their own password and re-edit with it", async () => {
+    const { id } = await newPoll();
+    const first = (await (
+      await submit(id, { name: "Ada", ...base, secret: "pw123" })
+    ).json()) as { responseToken?: string };
+    // A user-supplied secret is the claim; no auto-token is minted.
+    expect(first.responseToken).toBeUndefined();
+    expect((await submit(id, { name: "Ada", ...base })).status).toBe(403);
+    expect(
+      (await submit(id, { name: "Ada", ...base, secret: "pw123" })).status,
+    ).toBe(200);
+  });
+
+  it("does not leak secret_hash in the poll response", async () => {
+    const { id } = await newPoll();
+    await submit(id, { name: "Ada", ...base });
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { responses: Array<Record<string, unknown>> };
+    expect(poll.responses[0]).not.toHaveProperty("secret_hash");
+    expect(poll.responses[0]).not.toHaveProperty("secretHash");
   });
 });
 

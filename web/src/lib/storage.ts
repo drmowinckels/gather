@@ -1,5 +1,6 @@
 const EDIT_PREFIX = "samkoma:edit:";
 const SLOTS_PREFIX = "samkoma:slots:";
+const SECRET_PREFIX = "samkoma:secret:";
 const NAME_KEY = "samkoma:name";
 
 function read(key: string): string | null {
@@ -24,6 +25,24 @@ export function saveEditToken(pollId: string, token: string): void {
 
 export function getEditToken(pollId: string): string | null {
   return read(EDIT_PREFIX + pollId);
+}
+
+// The secret that lets this browser keep editing a response it owns — the token
+// the server minted, or the password the visitor chose. Keyed per (poll, name).
+function secretKey(pollId: string, name: string): string {
+  return `${SECRET_PREFIX}${pollId}:${name}`;
+}
+
+export function saveResponseSecret(
+  pollId: string,
+  name: string,
+  secret: string,
+): void {
+  write(secretKey(pollId, name), secret);
+}
+
+export function getResponseSecret(pollId: string, name: string): string | null {
+  return read(secretKey(pollId, name));
 }
 
 export function saveName(name: string): void {

@@ -201,6 +201,12 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
 
 - No accounts. Creating a poll returns an **edit token** stored client-side;
   anyone with the link can respond.
+- **Response ownership.** The first time a name is saved, the server returns a
+  one-time secret (auto-minted token, kept in the browser) that claims it — so
+  nobody can overwrite your row by typing your name. To edit from another device,
+  set an optional **password** when you respond. Secrets are stored only as a
+  PBKDF2 hash and verified in constant time; a re-write without the secret is
+  `403`.
 - **Abuse limits:** poll creation and slot submission are both rate-limited per
   IP (`CREATE_LIMIT`/min default 30, `SUBMIT_LIMIT`/min default 120), and each
   poll caps distinct respondents (`MAX_RESPONSES`, default 1000) — all `429`.

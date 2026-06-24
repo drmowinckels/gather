@@ -8,7 +8,14 @@ import {
 } from "../lib/api";
 import { buildGridView } from "../lib/tz";
 import { marksFrom, splitMarks, type Marks } from "../lib/paint";
-import { getName, saveName, getOwnMarks, saveOwnMarks } from "../lib/storage";
+import {
+  getName,
+  saveName,
+  getOwnMarks,
+  saveOwnMarks,
+  getResponseSecret,
+  saveResponseSecret,
+} from "../lib/storage";
 
 type SaveState =
   | { kind: "idle" }
@@ -44,6 +51,7 @@ export function RespondPanel({
   const [name, setName] = useState(initialName);
   const [marks, setMarks] = useState<Marks>(new Map());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
+  const [password, setPassword] = useState("");
 
   // Restore this person's availability once per poll: from the server (their
   // saved name matches a response), else from the local cache (private polls
@@ -66,12 +74,26 @@ export function RespondPanel({
   nameRef.current = name;
   const marksRef = useRef(marks);
   marksRef.current = marks;
+  const passwordRef = useRef(password);
+  passwordRef.current = password;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  // Serialise saves so a slow first write (which mints the ownership token)
+  // finishes before the next autosave runs — otherwise the follow-up would race
+  // without the token and be rejected as a name collision.
+  const saving = useRef(false);
+  const queued = useRef(false);
 
   async function doSave() {
     const trimmed = nameRef.current.trim();
     if (!trimmed) return;
+    if (saving.current) {
+      queued.current = true;
+      return;
+    }
+    saving.current = true;
     setSave({ kind: "saving" });
+    const pw = passwordRef.current.trim();
+    const secret = pw || getResponseSecret(poll.id, trimmed) || undefined;
     try {
       const painted = splitMarks(marksRef.current);
       const saved = await submitSlots(poll.id, {
@@ -79,7 +101,15 @@ export function RespondPanel({
         tz: viewerTz,
         slots: painted.slots,
         maybe: painted.maybe,
+        secret,
       });
+      // Persist whatever lets this browser keep editing: the freshly minted
+      // token, or the password the visitor just used.
+      if (saved.responseToken) {
+        saveResponseSecret(poll.id, trimmed, saved.responseToken);
+      } else if (pw) {
+        saveResponseSecret(poll.id, trimmed, pw);
+      }
       saveOwnMarks(poll.id, painted);
       onSaved?.(saved);
       setSave({ kind: "saved" });
@@ -87,10 +117,18 @@ export function RespondPanel({
       setSave({
         kind: "error",
         message:
-          err instanceof ApiError
-            ? "Couldn't save — please try again."
-            : "Can't reach samkoma. Check your connection.",
+          err instanceof ApiError && err.code === "name_protected"
+            ? "That name is protected. Enter its password to edit, or pick another name."
+            : err instanceof ApiError
+              ? "Couldn't save — please try again."
+              : "Can't reach samkoma. Check your connection.",
       });
+    } finally {
+      saving.current = false;
+      if (queued.current) {
+        queued.current = false;
+        void doSave();
+      }
     }
   }
 
@@ -131,6 +169,26 @@ export function RespondPanel({
           onChange={(e) => onName(e.target.value)}
           maxLength={80}
         />
+      </div>
+
+      <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
+        <label className="fieldlbl" htmlFor="resp-pw">
+          Edit password <span className="subtle">(optional)</span>
+        </label>
+        <input
+          id="resp-pw"
+          className="input"
+          type="password"
+          placeholder="to edit from another device"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          maxLength={200}
+          autoComplete="off"
+        />
+        <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
+          Leave blank to keep this response to this browser. Set one to claim
+          your name and edit it elsewhere.
+        </p>
       </div>
 
       <AvailabilityGrid

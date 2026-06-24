@@ -41,6 +41,8 @@ export interface PollResponse {
   slots: string[];
   maybe: string[];
   updatedAt: string;
+  // One-time secret returned only on the first, unprotected write of a name.
+  responseToken?: string;
 }
 
 export interface Poll {
@@ -110,6 +112,9 @@ export interface SlotsInput {
   tz: string;
   slots: string[];
   maybe: string[];
+  // The secret that owns this name (stored token or chosen password); omitted on
+  // a first write.
+  secret?: string;
 }
 
 export async function submitSlots(

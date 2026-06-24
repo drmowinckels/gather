@@ -123,6 +123,9 @@ export const submitSlotsSchema = z.object({
   }),
   slots: z.array(z.string().regex(SLOT_KEY)).max(5000),
   maybe: z.array(z.string().regex(SLOT_KEY)).max(5000).optional().default([]),
+  // The secret that owns this name: a previously-issued response token, or the
+  // respondent's chosen password. Absent on a first, unprotected write.
+  secret: z.string().min(1).max(200).optional(),
 });
 
 export type SubmitSlotsInput = z.infer<typeof submitSlotsSchema>;

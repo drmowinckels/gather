@@ -1,9 +1,16 @@
-import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RespondPanel } from "./RespondPanel";
 import { saveOwnMarks } from "../lib/storage";
-import type { Poll } from "../lib/api";
+import { submitSlots, type Poll } from "../lib/api";
+
+vi.mock("../lib/api", async (orig) => {
+  const actual = await orig<typeof import("../lib/api")>();
+  return { ...actual, submitSlots: vi.fn() };
+});
+
+const submitMock = vi.mocked(submitSlots);
 
 const tz = "Europe/Oslo";
 
@@ -25,7 +32,19 @@ const poll: Poll = {
 
 beforeEach(() => {
   localStorage.clear();
+  submitMock.mockReset();
 });
+
+function response(over: Partial<import("../lib/api").PollResponse> = {}) {
+  return {
+    name: "Ada",
+    tz,
+    slots: [],
+    maybe: [],
+    updatedAt: "x",
+    ...over,
+  };
+}
 
 describe("RespondPanel", () => {
   it("does not clobber in-progress painting when poll.responses changes", async () => {
@@ -69,5 +88,41 @@ describe("RespondPanel", () => {
     expect(
       screen.getByRole("button", { name: /09:00.*available/i }),
     ).toBeTruthy();
+  });
+
+  it("claims a name on first save, then re-sends the stored token", async () => {
+    const user = userEvent.setup();
+    submitMock.mockResolvedValueOnce(response({ responseToken: "tok123" }));
+    render(<RespondPanel poll={poll} viewerTz={tz} />);
+
+    await user.type(screen.getByLabelText(/your name/i), "Ada");
+    await user.click(
+      screen.getByRole("button", { name: /save availability/i }),
+    );
+
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
+    expect(submitMock.mock.calls[0][1].secret).toBeUndefined();
+
+    submitMock.mockResolvedValueOnce(response());
+    await user.click(
+      screen.getByRole("button", { name: /save availability/i }),
+    );
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(2));
+    expect(submitMock.mock.calls[1][1].secret).toBe("tok123");
+  });
+
+  it("sends a typed password as the secret and keeps using it", async () => {
+    const user = userEvent.setup();
+    submitMock.mockResolvedValue(response()); // password path → no token returned
+    render(<RespondPanel poll={poll} viewerTz={tz} />);
+
+    await user.type(screen.getByLabelText(/your name/i), "Ada");
+    await user.type(screen.getByLabelText(/edit password/i), "pw123");
+    await user.click(
+      screen.getByRole("button", { name: /save availability/i }),
+    );
+
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
+    expect(submitMock.mock.calls[0][1].secret).toBe("pw123");
   });
 });
