@@ -25,6 +25,9 @@ const poll: Poll = {
   tz,
   public: true,
   resultsHidden: false,
+  deadline: null,
+  closedAt: null,
+  closed: false,
   lockedSlot: null,
   expiresAt: null,
   createdAt: "2099-01-01T00:00:00Z",
@@ -110,6 +113,14 @@ describe("RespondPanel", () => {
     );
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(2));
     expect(submitMock.mock.calls[1][1].secret).toBe("tok123");
+  });
+
+  it("shows a closed notice (no save) when the poll is closed", () => {
+    render(<RespondPanel poll={{ ...poll, closed: true }} viewerTz={tz} />);
+    expect(screen.getByText(/responding is closed/i)).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: /save availability/i }),
+    ).toBeNull();
   });
 
   it("sends a typed password as the secret and keeps using it", async () => {

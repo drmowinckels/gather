@@ -19,6 +19,14 @@ export function parseTime(value: string, label: string): string {
   return value;
 }
 
+export function parseDeadline(value: string): string {
+  const ms = Date.parse(value);
+  if (Number.isNaN(ms)) {
+    throw new Error(`--deadline must be a date/time (got "${value}")`);
+  }
+  return new Date(ms).toISOString();
+}
+
 export interface CreateOptions {
   title: string;
   days: string;
@@ -29,6 +37,7 @@ export interface CreateOptions {
   public: boolean;
   weekdays?: boolean;
   hideResults?: boolean;
+  deadline?: string;
 }
 
 export interface PollBody {
@@ -41,6 +50,7 @@ export interface PollBody {
   tz: string;
   public: boolean;
   resultsHidden: boolean;
+  deadline?: string;
 }
 
 export function buildCreateBody(
@@ -67,6 +77,7 @@ export function buildCreateBody(
     tz: opts.tz,
     public: opts.public,
     resultsHidden: opts.hideResults ?? false,
+    ...(opts.deadline ? { deadline: parseDeadline(opts.deadline) } : {}),
   };
 }
 

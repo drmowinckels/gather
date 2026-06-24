@@ -205,6 +205,10 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
   reveal it (`resultsHidden`, the `--hide-results` flag, or the create toggle) —
   this curtain applies even to a public poll. The host always sees results and
   can reveal them at any time; respondents see only their own availability.
+- **Deadline & close.** A poll can carry an optional `deadline`, and the host can
+  **close** it early (`samkoma close <id>`, `--reopen` to undo). Once closed,
+  response writes return `409` but the poll stays readable (it's not deleted —
+  that's the separate 14/60-day expiry). The host can still lock a slot.
 - **Response ownership.** The first time a name is saved, the server returns a
   one-time secret (auto-minted token, kept in the browser) that claims it — so
   nobody can overwrite your row by typing your name. To edit from another device,

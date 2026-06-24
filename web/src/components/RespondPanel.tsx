@@ -147,6 +147,22 @@ export function RespondPanel({
 
   const hasName = name.trim().length > 0;
 
+  if (poll.closed) {
+    return (
+      <div
+        className="card"
+        style={{ padding: 24, margin: "26px 0", textAlign: "center" }}
+      >
+        <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
+          Responding is closed
+        </p>
+        <p className="helper" style={{ margin: "8px auto 0", maxWidth: 380 }}>
+          This poll is no longer accepting availability.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="card" style={{ padding: 24, margin: "26px 0" }}>
       <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>

@@ -103,6 +103,16 @@ describe("SamkomaClient", () => {
     });
   });
 
+  it("closes and reopens a poll via PATCH", async () => {
+    const fn = mockFetch({ id: "abc", closed: true });
+    await client.close("abc", "tok");
+    expect(fn.mock.calls[0][1].method).toBe("PATCH");
+    expect(JSON.parse(fn.mock.calls[0][1].body)).toEqual({ closed: true });
+
+    mockFetch({ id: "abc", closed: false });
+    await client.reopen("abc", "tok");
+  });
+
   it("maps an error response to SamkomaError", async () => {
     mockFetch({ error: "rate_limited" }, 429);
     await expect(

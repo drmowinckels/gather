@@ -31,6 +31,7 @@ export function CreatePoll() {
   const [tz, setTz] = useState(browserTimezone());
   const [isPublic, setIsPublic] = useState(true);
   const [resultsHidden, setResultsHidden] = useState(false);
+  const [deadline, setDeadline] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +65,7 @@ export function CreatePoll() {
         tz,
         public: isPublic,
         resultsHidden,
+        ...(deadline ? { deadline: new Date(deadline).toISOString() } : {}),
       });
       saveEditToken(created.id, created.editToken);
       navigate(`/e/${created.id}`);
@@ -271,6 +273,23 @@ export function CreatePoll() {
             </select>
             <p className="subtle" style={{ margin: "7px 0 0", fontSize: 12 }}>
               This is the poll's home timezone. Respondents paint in their own.
+            </p>
+          </div>
+
+          <div className="field">
+            <label className="fieldlbl" htmlFor="deadline">
+              Respond-by deadline <span className="subtle">(optional)</span>
+            </label>
+            <input
+              id="deadline"
+              type="datetime-local"
+              className="input"
+              value={deadline}
+              onChange={(e) => setDeadline(e.target.value)}
+            />
+            <p className="subtle" style={{ margin: "6px 0 0", fontSize: 12 }}>
+              After this, the poll stops accepting availability. You can also
+              close it by hand any time.
             </p>
           </div>
 

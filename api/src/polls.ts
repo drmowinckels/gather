@@ -87,6 +87,15 @@ interface PollRow {
   created_at: string;
   locked_slot: string | null;
   expires_at: string | null;
+  deadline: string | null;
+  closed_at: string | null;
+}
+
+// A poll is closed for new responses when the host closed it early, or once its
+// deadline has passed. Closing only freezes writes — reads still return 200.
+function pollClosed(row: PollRow): boolean {
+  if (row.closed_at) return true;
+  return row.deadline !== null && Date.now() > Date.parse(row.deadline);
 }
 
 interface ResponseRow {
@@ -115,6 +124,9 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
     tz: row.tz,
     public: row.is_public === 1,
     resultsHidden: row.results_hidden === 1,
+    deadline: row.deadline ?? null,
+    closedAt: row.closed_at ?? null,
+    closed: pollClosed(row),
     lockedSlot: row.locked_slot ?? null,
     expiresAt: row.expires_at ?? null,
     createdAt: row.created_at,
@@ -153,8 +165,8 @@ polls.post(
 
     await c.env.DB.prepare(
       `INSERT INTO polls
-         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, results_hidden, edit_token, created_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, results_hidden, edit_token, created_at, expires_at, deadline)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -170,6 +182,7 @@ polls.post(
         token,
         createdAt,
         expiresAt,
+        body.deadline ?? null,
       )
       .run();
 
@@ -323,7 +336,25 @@ polls.patch(
       slot: row.slot_minutes,
       isPublic: body.public ?? row.is_public === 1,
       resultsHidden: body.resultsHidden ?? row.results_hidden === 1,
+      deadline: body.deadline === undefined ? row.deadline : body.deadline,
+      closedAt:
+        body.closed === undefined
+          ? row.closed_at
+          : body.closed
+            ? new Date().toISOString()
+            : null,
     };
+
+    // Reopening a poll whose deadline has already passed must actually reopen
+    // it: drop the elapsed deadline (a still-future one is kept). Otherwise the
+    // poll would re-report as closed and "Reopen" would do nothing.
+    if (
+      body.closed === false &&
+      next.deadline !== null &&
+      Date.now() > Date.parse(next.deadline)
+    ) {
+      next.deadline = null;
+    }
 
     if (next.from >= next.to) return c.json({ error: "from_after_to" }, 400);
 
@@ -353,7 +384,8 @@ polls.patch(
     await c.env.DB.prepare(
       `UPDATE polls
          SET title = ?, days = ?, from_time = ?, to_time = ?,
-             is_public = ?, results_hidden = ?, expires_at = ?
+             is_public = ?, results_hidden = ?, expires_at = ?,
+             deadline = ?, closed_at = ?
        WHERE id = ?`,
     )
       .bind(
@@ -364,6 +396,8 @@ polls.patch(
         next.isPublic ? 1 : 0,
         next.resultsHidden ? 1 : 0,
         expiresAt,
+        next.deadline,
+        next.closedAt,
         id,
       )
       .run();
@@ -384,6 +418,8 @@ polls.patch(
           is_public: next.isPublic ? 1 : 0,
           results_hidden: next.resultsHidden ? 1 : 0,
           expires_at: expiresAt,
+          deadline: next.deadline,
+          closed_at: next.closedAt,
         },
         responses.results,
       ),
@@ -407,6 +443,7 @@ polls.post(
     const id = c.req.param("id");
     const poll = await loadActivePoll(c, id);
     if (poll instanceof Response) return poll;
+    if (pollClosed(poll)) return c.json({ error: "closed" }, 409);
 
     const body = c.req.valid("json");
     const slots = [...new Set(body.slots)];

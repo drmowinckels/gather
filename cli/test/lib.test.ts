@@ -3,6 +3,7 @@ import {
   resolveDays,
   parseSlot,
   parseTime,
+  parseDeadline,
   buildCreateBody,
   buildEditBody,
 } from "../src/lib";
@@ -105,6 +106,24 @@ describe("buildCreateBody", () => {
     });
     expect(body.kind).toBe("weekdays");
     expect(body.days).toEqual(["mon", "tue", "wed"]);
+  });
+
+  it("normalizes --deadline to ISO and rejects junk", () => {
+    expect(parseDeadline("2099-07-10T17:00:00Z")).toBe(
+      "2099-07-10T17:00:00.000Z",
+    );
+    expect(() => parseDeadline("not-a-date")).toThrow(/deadline/i);
+    const body = buildCreateBody(
+      {
+        title: "x",
+        days: "mon",
+        tz: "UTC",
+        public: true,
+        deadline: "2099-07-10T17:00:00Z",
+      },
+      today,
+    );
+    expect(body.deadline).toBe("2099-07-10T17:00:00.000Z");
   });
 
   it("sets resultsHidden from --hide-results", () => {
