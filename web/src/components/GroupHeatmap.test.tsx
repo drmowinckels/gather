@@ -14,6 +14,7 @@ function makePoll(responses: PollResponse[]): Poll {
     slot: 30,
     tz: "UTC",
     public: true,
+    resultsHidden: false,
     lockedSlot: null,
     expiresAt: null,
     createdAt: "2026-07-01T00:00:00Z",

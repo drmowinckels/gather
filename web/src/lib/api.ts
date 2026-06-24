@@ -27,6 +27,7 @@ export interface PollInput {
   slot: number;
   tz: string;
   public: boolean;
+  resultsHidden?: boolean;
 }
 
 export interface CreatedPoll {
@@ -55,6 +56,7 @@ export interface Poll {
   slot: number;
   tz: string;
   public: boolean;
+  resultsHidden: boolean;
   lockedSlot: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -140,6 +142,7 @@ export interface EditPollInput {
   to?: string;
   slot?: number;
   public?: boolean;
+  resultsHidden?: boolean;
 }
 
 export async function editPoll(

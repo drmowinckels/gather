@@ -201,6 +201,10 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
 
 - No accounts. Creating a poll returns an **edit token** stored client-side;
   anyone with the link can respond.
+- **Hidden results.** A host can hide the aggregate from respondents until they
+  reveal it (`resultsHidden`, the `--hide-results` flag, or the create toggle) —
+  this curtain applies even to a public poll. The host always sees results and
+  can reveal them at any time; respondents see only their own availability.
 - **Response ownership.** The first time a name is saved, the server returns a
   one-time secret (auto-minted token, kept in the browser) that claims it — so
   nobody can overwrite your row by typing your name. To edit from another device,

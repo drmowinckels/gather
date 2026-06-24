@@ -90,6 +90,27 @@ describe("CreatePoll", () => {
     expect(localStorage.getItem("samkoma:edit:9fK2qd")).toBe("secret-token");
   });
 
+  it("sends resultsHidden when the hide-results toggle is on", async () => {
+    createPoll.mockResolvedValue({ id: "h1", url: "x", editToken: "t" });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Event name"), "Standup");
+    const day = screen
+      .getAllByRole("gridcell")
+      .find(
+        (c) =>
+          !(c as HTMLButtonElement).disabled &&
+          c.getAttribute("aria-pressed") === "false",
+      )!;
+    await user.click(day);
+    await user.click(screen.getByLabelText(/hide results until i reveal/i));
+    await user.click(screen.getByRole("button", { name: /create poll/i }));
+
+    await waitFor(() => expect(createPoll).toHaveBeenCalledTimes(1));
+    expect(createPoll.mock.calls[0][0].resultsHidden).toBe(true);
+  });
+
   it("creates a weekday poll when the 'Days of the week' type is chosen", async () => {
     createPoll.mockResolvedValue({ id: "wk", url: "x", editToken: "t" });
     const user = userEvent.setup();
