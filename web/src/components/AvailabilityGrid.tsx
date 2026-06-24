@@ -9,6 +9,9 @@ interface GridProps {
   onChange: (updater: (prev: Marks) => Marks) => void;
   onCommit?: () => void;
   disabled?: boolean;
+  // Canonical slot keys that clash with the viewer's imported calendar; marked
+  // with a conflict dot.
+  busyKeys?: Set<string>;
 }
 
 const GUTTER = 46;
@@ -29,6 +32,7 @@ export function AvailabilityGrid({
   onChange,
   onCommit,
   disabled = false,
+  busyKeys,
 }: GridProps) {
   const dragging = useRef(false);
   const target = useRef<Status | undefined>(undefined);
@@ -140,6 +144,7 @@ export function AvailabilityGrid({
               );
             }
             const status = value.get(key);
+            const calBusy = busyKeys?.has(key) ?? false;
             const word =
               status === "yes"
                 ? "available"
@@ -152,7 +157,9 @@ export function AvailabilityGrid({
                 type="button"
                 className="gridcell"
                 data-key={key}
-                aria-label={`${view.dayLabels[di]}, ${t} — ${word}`}
+                aria-label={`${view.dayLabels[di]}, ${t} — ${word}${
+                  calBusy ? " — calendar conflict" : ""
+                }`}
                 disabled={disabled}
                 onPointerDown={(e) => start(key, e)}
                 onKeyDown={(e) => {
@@ -162,6 +169,7 @@ export function AvailabilityGrid({
                   }
                 }}
                 style={{
+                  position: "relative",
                   background: bgFor(status),
                   touchAction: "none",
                   boxShadow:
@@ -169,7 +177,23 @@ export function AvailabilityGrid({
                       ? "inset 0 0 0 1px var(--border-subtle)"
                       : "none",
                 }}
-              />
+              >
+                {calBusy && (
+                  <span
+                    aria-hidden="true"
+                    title="Busy in your calendar"
+                    style={{
+                      position: "absolute",
+                      top: 2,
+                      right: 2,
+                      width: 6,
+                      height: 6,
+                      borderRadius: 3,
+                      background: "#c0533f",
+                    }}
+                  />
+                )}
+              </button>
             );
           })}
         </div>

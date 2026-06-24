@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { RespondPanel } from "./RespondPanel";
 import { saveOwnMarks } from "../lib/storage";
@@ -113,6 +113,33 @@ describe("RespondPanel", () => {
     );
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(2));
     expect(submitMock.mock.calls[1][1].secret).toBe("tok123");
+  });
+
+  it("overlays busy slots from an uploaded .ics (client-side only)", async () => {
+    const { container } = render(<RespondPanel poll={poll} viewerTz={tz} />);
+    // 07:00–07:30 UTC == 09:00–09:30 Oslo (the poll's first slot).
+    const cal = [
+      "BEGIN:VCALENDAR",
+      "BEGIN:VEVENT",
+      "DTSTART:20990715T070000Z",
+      "DTEND:20990715T073000Z",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+    const file = new File([cal], "cal.ics", { type: "text/calendar" });
+    // jsdom's File lacks .text(); real browsers have it.
+    Object.defineProperty(file, "text", { value: () => Promise.resolve(cal) });
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    expect(await screen.findByText(/busy slot/i)).toBeTruthy();
+    // a conflict dot is rendered on the clashing cell
+    expect(
+      screen.getByRole("button", { name: /09:00.*calendar conflict/i }),
+    ).toBeTruthy();
+    expect(submitMock).not.toHaveBeenCalled(); // nothing uploaded
   });
 
   it("shows a closed notice (no save) when the poll is closed", () => {
