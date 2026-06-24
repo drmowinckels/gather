@@ -4,9 +4,10 @@ import { polls } from "./polls";
 import { deleteExpired } from "./cleanup";
 import { purgeRateLimits } from "./ratelimit";
 import { todayUTC } from "./dates";
+import { openApiDocument, docsHtml } from "./openapi";
 import type { Env } from "./types";
 
-const app = new Hono<{ Bindings: Env }>();
+export const app = new Hono<{ Bindings: Env }>();
 
 app.use(
   "*",
@@ -25,6 +26,14 @@ app.use(
 );
 
 app.get("/", (c) => c.json({ name: "samkoma", version: "v1" }));
+
+// Machine-readable contract + interactive docs. The spec's server URL is the
+// live origin so "Try it" hits the right host.
+app.get("/openapi.json", (c) =>
+  c.json(openApiDocument(new URL(c.req.url).origin)),
+);
+app.get("/docs", (c) => c.html(docsHtml("/openapi.json")));
+
 app.route("/v1/polls", polls);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));

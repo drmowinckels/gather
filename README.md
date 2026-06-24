@@ -85,8 +85,10 @@ names. Best-slot ranks by available first, then available-or-maybe.
 
 ## API
 
-Base: the deployed Worker URL. See [`design/HANDOFF.md`](design/HANDOFF.md) for
-the full contract and visual spec.
+Base: the deployed Worker URL. Interactive docs live at **`/docs`** and the
+machine-readable spec at **`/openapi.json`** (request bodies are generated from
+the same zod validators the routes use, so they can't drift). See
+[`design/HANDOFF.md`](design/HANDOFF.md) for the visual spec.
 
 | Method | Endpoint              | Body                                          | Returns                                |
 | ------ | --------------------- | --------------------------------------------- | -------------------------------------- |
