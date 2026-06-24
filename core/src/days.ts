@@ -1,6 +1,6 @@
 import { pad } from "./time.js";
 
-const WEEKDAY_TOKENS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+export const WEEKDAY_TOKENS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 const WEEKDAYS: Record<string, number> = Object.fromEntries(
   WEEKDAY_TOKENS.map((t, i) => [t, i]),
 );

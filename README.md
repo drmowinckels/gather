@@ -95,6 +95,7 @@ the full contract and visual spec.
 | `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[], maybe[]}`                | saved `{name, tz, slots, maybe, …}`    |
 | `GET`  | `/v1/polls/:id/best`  | `?limit=` (optional)                          | `{total, results[{slot,count,names}]}` |
 | `POST` | `/v1/polls/:id/lock`  | `{slot}` (or `{slot:null}`), host token       | updated poll                           |
+| `GET`  | `/v1/polls/:id/ics`   | —                                             | `text/calendar` for the locked slot (`409` if none) |
 
 A poll is one of two `kind`s (default `dates`):
 
@@ -104,6 +105,11 @@ A poll is one of two `kind`s (default `dates`):
 - **`weekdays`** — recurring days of the week; `days` are weekday tokens
   (`mon`…`sun`), slot keys are `monThh:mm`, and everyone uses the poll's home
   timezone (no per-viewer conversion). Polls expire 60 days after creation.
+
+Once a slot is locked, `GET /v1/polls/:id/ics` returns a calendar anyone can add
+to their own calendar app — a single absolute-time event for a `dates` poll, or a
+weekly-recurring event (`RRULE`) for a `weekdays` poll. The poll page shows an
+"Add to calendar" button on the locked banner.
 
 For a non-public poll, `GET /v1/polls/:id` returns an empty `responses` list and
 `GET /v1/polls/:id/best` returns `403` unless the request sends the edit token
@@ -120,6 +126,7 @@ npm run build -w samkoma-cli
 node cli/dist/index.js new "Team offsite" --days mon-fri --from 09:00 --to 17:00 --tz Europe/Oslo --public
 node cli/dist/index.js best <id>
 node cli/dist/index.js lock <id> 2026-07-15T09:00
+node cli/dist/index.js ics <id> --out offsite.ics   # export the locked slot
 ```
 
 `--days` accepts ISO dates (`2026-07-15,2026-07-16`) or weekdays/ranges
