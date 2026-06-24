@@ -4,7 +4,13 @@ import { Shell } from "../components/Shell";
 import { RespondPanel } from "../components/RespondPanel";
 import { GroupHeatmap } from "../components/GroupHeatmap";
 import { EditPollPanel } from "../components/EditPollPanel";
-import { getPoll, ApiError, type Poll, type PollResponse } from "../lib/api";
+import {
+  getPoll,
+  icsUrl,
+  ApiError,
+  type Poll,
+  type PollResponse,
+} from "../lib/api";
 import { getEditToken, saveEditToken } from "../lib/storage";
 import {
   formatDayRange,
@@ -262,15 +268,34 @@ export function PollPage() {
               fontSize: 15,
             }}
           >
-            📌 Locked in:{" "}
-            <strong>
-              {formatSlotLabelInTz(
-                poll.lockedSlot,
-                poll.kind,
-                poll.tz,
-                viewerTz,
-              )}
-            </strong>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flexWrap: "wrap",
+              }}
+            >
+              <span>
+                📌 Locked in:{" "}
+                <strong>
+                  {formatSlotLabelInTz(
+                    poll.lockedSlot,
+                    poll.kind,
+                    poll.tz,
+                    viewerTz,
+                  )}
+                </strong>
+              </span>
+              <a
+                className="btn btn-outline btn-sm"
+                style={{ marginLeft: "auto" }}
+                href={icsUrl(poll.id)}
+                download
+              >
+                Add to calendar
+              </a>
+            </div>
           </div>
         )}
 

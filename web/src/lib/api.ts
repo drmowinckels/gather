@@ -81,6 +81,12 @@ async function toError(res: Response): Promise<ApiError> {
   return new ApiError(code, res.status);
 }
 
+// Direct URL to the locked slot's calendar export. The endpoint sets
+// Content-Disposition: attachment, so an <a> to it downloads the .ics.
+export function icsUrl(id: string): string {
+  return `${API_BASE}/v1/polls/${encodeURIComponent(id)}/ics`;
+}
+
 export async function createPoll(input: PollInput): Promise<CreatedPoll> {
   const res = await fetch(`${API_BASE}/v1/polls`, {
     method: "POST",

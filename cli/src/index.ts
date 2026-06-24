@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { parseArgs } from "node:util";
+import { writeFileSync } from "node:fs";
 import { SamkomaClient } from "samkoma-client";
 import { buildCreateBody, buildEditBody } from "./lib.js";
 import { saveToken, getToken, TOKEN_FILE } from "./store.js";
@@ -15,6 +16,7 @@ Usage:
   samkoma best <id> [--limit N]       Show where availability converges
   samkoma lock <id> <slot>            Lock in a slot (host only)
   samkoma unlock <id>                 Unlock (host only)
+  samkoma ics <id> [--out <file>]     Export the locked slot as a calendar (.ics)
 
 Options for "new":
   --days <spec>   Dates ("2026-07-15,2026-07-16") or, with --weekdays, weekday
@@ -65,6 +67,7 @@ async function main() {
       private: { type: "boolean" },
       weekdays: { type: "boolean" },
       limit: { type: "string" },
+      out: { type: "string" },
       api: { type: "string" },
       help: { type: "boolean", short: "h", default: false },
     },
@@ -153,6 +156,19 @@ async function main() {
       console.log(
         `  ${prettySlot(r.slot)}  ${r.count}/${best.total}  (${r.names.join(", ")})`,
       );
+    }
+    return;
+  }
+
+  if (command === "ics") {
+    const id = positionals[1];
+    if (!id) throw new Error("Usage: samkoma ics <id> [--out <file>]");
+    const ics = await client.getIcs(id);
+    if (values.out) {
+      writeFileSync(values.out, ics);
+      console.log(`✓ wrote ${values.out}`);
+    } else {
+      process.stdout.write(ics);
     }
     return;
   }

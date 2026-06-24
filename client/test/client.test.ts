@@ -81,6 +81,28 @@ describe("SamkomaClient", () => {
     expect(() => client.editPoll("abc", { title: "x" })).toThrow(SamkomaError);
   });
 
+  it("fetches the locked slot as raw .ics text", async () => {
+    const calendar = "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n";
+    const fn = vi.fn().mockResolvedValue(
+      new Response(calendar, {
+        status: 200,
+        headers: { "Content-Type": "text/calendar" },
+      }),
+    );
+    vi.stubGlobal("fetch", fn);
+    const text = await client.getIcs("abc");
+    expect(fn.mock.calls[0][0]).toBe("https://api.example/v1/polls/abc/ics");
+    expect(text).toBe(calendar);
+  });
+
+  it("maps a not_locked .ics response to SamkomaError", async () => {
+    mockFetch({ error: "not_locked" }, 409);
+    await expect(client.getIcs("abc")).rejects.toMatchObject({
+      code: "not_locked",
+      status: 409,
+    });
+  });
+
   it("maps an error response to SamkomaError", async () => {
     mockFetch({ error: "rate_limited" }, 429);
     await expect(

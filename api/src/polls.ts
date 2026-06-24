@@ -8,7 +8,7 @@ import {
   patchPollSchema,
 } from "./schema";
 import { shortId, editToken } from "./id";
-import { validSlotKeys } from "@samkoma/core";
+import { validSlotKeys, buildLockedIcs, icsFilename } from "@samkoma/core";
 import { rankSlots } from "./aggregate";
 import { expiryDate, addGraceDays, isExpired, todayUTC } from "./dates";
 import { rateLimit } from "./ratelimit";
@@ -94,11 +94,17 @@ interface ResponseRow {
   updated_at: string;
 }
 
+// Normalise the raw DB `kind` string to the typed union (single source of truth
+// for the dates/weekdays vocabulary).
+function pollKind(row: PollRow): "dates" | "weekdays" {
+  return row.kind === "weekdays" ? "weekdays" : "dates";
+}
+
 function serializePoll(row: PollRow, responses: ResponseRow[]) {
   return {
     id: row.id,
     title: row.title,
-    kind: row.kind === "weekdays" ? "weekdays" : "dates",
+    kind: pollKind(row),
     days: JSON.parse(row.days) as string[],
     from: row.from_time,
     to: row.to_time,
@@ -211,6 +217,33 @@ polls.get("/:id/best", async (c) => {
   }));
 
   return c.json(rankSlots(responses, limit));
+});
+
+// Calendar export: the locked slot as a single-event iCalendar. Public (the
+// locked slot is already shown to everyone), so anyone with the link can add it
+// to their own calendar. 409 if the host hasn't locked a slot yet.
+polls.get("/:id/ics", async (c) => {
+  const id = c.req.param("id");
+  const row = await loadActivePoll(c, id);
+  if (row instanceof Response) return row;
+  if (!row.locked_slot) return c.json({ error: "not_locked" }, 409);
+
+  const ics = buildLockedIcs(
+    {
+      id: row.id,
+      title: row.title,
+      kind: pollKind(row),
+      tz: row.tz,
+      slotMinutes: row.slot_minutes,
+      lockedSlot: row.locked_slot,
+    },
+    { url: `${c.env.WEB_BASE_URL}/#/e/${row.id}` },
+  );
+
+  return c.body(ics, 200, {
+    "Content-Type": "text/calendar; charset=utf-8",
+    "Content-Disposition": `attachment; filename="${icsFilename(row.title)}"`,
+  });
 });
 
 polls.post(

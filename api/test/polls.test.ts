@@ -240,6 +240,73 @@ describe("POST /v1/polls/:id/lock", () => {
   });
 });
 
+describe("GET /v1/polls/:id/ics", () => {
+  function lock(id: string, slot: string | null, token: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/lock`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: ORIGIN,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ slot }),
+    });
+  }
+  function ics(id: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/ics`, {
+      headers: { Origin: ORIGIN },
+    });
+  }
+
+  it("exports the locked slot as a calendar (correct tz, attachment headers)", async () => {
+    const { id, editToken } = (await (await post(validPoll)).json()) as {
+      id: string;
+      editToken: string;
+    };
+    await lock(id, "2099-07-15T09:00", editToken);
+
+    const res = await ics(id);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/calendar");
+    expect(res.headers.get("content-disposition")).toContain(".ics");
+    const body = await res.text();
+    expect(body).toContain("BEGIN:VEVENT");
+    // 09:00 Oslo (CEST) -> 07:00 UTC
+    expect(body).toContain("DTSTART:20990715T070000Z");
+    expect(body).toContain("SUMMARY:Team offsite");
+  });
+
+  it("409s when no slot is locked", async () => {
+    const { id } = (await (await post(validPoll)).json()) as { id: string };
+    const res = await ics(id);
+    expect(res.status).toBe(409);
+    expect(((await res.json()) as { error: string }).error).toBe("not_locked");
+  });
+
+  it("emits a weekly RRULE for a locked weekday poll", async () => {
+    const created = (await (
+      await post({
+        title: "Weekly standup",
+        kind: "weekdays",
+        days: ["mon", "wed"],
+        from: "09:00",
+        to: "11:00",
+        slot: 30,
+        tz: "Europe/Oslo",
+        public: true,
+      })
+    ).json()) as { id: string; editToken: string };
+    await lock(created.id, "monT09:00", created.editToken);
+
+    const body = await (await ics(created.id)).text();
+    expect(body).toContain("RRULE:FREQ=WEEKLY;BYDAY=MO");
+  });
+
+  it("404s for an unknown poll", async () => {
+    expect((await ics("nope00")).status).toBe(404);
+  });
+});
+
 describe("private poll results gating", () => {
   const privatePoll = { ...validPoll, public: false };
 

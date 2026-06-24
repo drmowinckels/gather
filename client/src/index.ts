@@ -156,6 +156,19 @@ export class SamkomaClient {
     });
   }
 
+  /**
+   * Fetch the locked slot as an iCalendar (.ics) document. The poll must have a
+   * locked slot, or the API responds 409 (`not_locked`). Public — no edit token
+   * needed. Returns the raw calendar text.
+   */
+  async getIcs(id: string): Promise<string> {
+    const res = await fetch(
+      `${this.baseUrl}/v1/polls/${encodeURIComponent(id)}/ics`,
+    );
+    if (!res.ok) throw await toError(res);
+    return res.text();
+  }
+
   /** Ranked best slots. Pass the edit token for a private poll. */
   getBest(
     id: string,

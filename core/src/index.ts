@@ -1,5 +1,12 @@
 export { pad, toMinutes, timeSlots, slotKey, validSlotKeys } from "./time.js";
 export { resolveDays, parseWeekdays } from "./days.js";
+export { zonedTimeToUtc, partsInTz, existsInTz } from "./zone.js";
+export {
+  buildLockedIcs,
+  icsFilename,
+  type IcsPoll,
+  type IcsOptions,
+} from "./ics.js";
 export {
   tallySlots,
   rankCells,
