@@ -69,6 +69,8 @@ export const createPollSchema = z
     // Hide the aggregate from respondents until the host reveals it (applies
     // even when `public` is true).
     resultsHidden: z.boolean().optional().default(false),
+    // Optional "respond by" instant (ISO 8601). Past it, responses are frozen.
+    deadline: z.string().datetime({ offset: true }).optional(),
   })
   .superRefine((d, ctx) => {
     checkDays(d.kind, d.days, ctx);
@@ -109,6 +111,10 @@ export const patchPollSchema = z
       .optional(),
     public: z.boolean().optional(),
     resultsHidden: z.boolean().optional(),
+    // Set (string) or clear (null) the response deadline.
+    deadline: z.string().datetime({ offset: true }).nullable().optional(),
+    // Close the poll now (true) or reopen it (false); the server stamps the time.
+    closed: z.boolean().optional(),
   })
   .refine((d) => Object.keys(d).length > 0, {
     message: "provide at least one field to update",

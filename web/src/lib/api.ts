@@ -28,6 +28,7 @@ export interface PollInput {
   tz: string;
   public: boolean;
   resultsHidden?: boolean;
+  deadline?: string; // ISO 8601; responses freeze once passed
 }
 
 export interface CreatedPoll {
@@ -57,6 +58,9 @@ export interface Poll {
   tz: string;
   public: boolean;
   resultsHidden: boolean;
+  deadline: string | null;
+  closedAt: string | null;
+  closed: boolean;
   lockedSlot: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -143,6 +147,8 @@ export interface EditPollInput {
   slot?: number;
   public?: boolean;
   resultsHidden?: boolean;
+  deadline?: string | null; // set or clear the response deadline
+  closed?: boolean; // close now (true) / reopen (false)
 }
 
 export async function editPoll(

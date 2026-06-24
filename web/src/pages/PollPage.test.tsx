@@ -35,6 +35,9 @@ const hiddenPoll: Poll = {
   tz: "Europe/Oslo",
   public: true,
   resultsHidden: true,
+  deadline: null,
+  closedAt: null,
+  closed: false,
   lockedSlot: null,
   expiresAt: null,
   createdAt: "2099-01-01T00:00:00Z",
@@ -78,6 +81,25 @@ describe("PollPage hidden-results reveal", () => {
         { resultsHidden: false },
         "tok",
       ),
+    );
+  });
+
+  it("lets the host close the poll", async () => {
+    localStorage.setItem("samkoma:edit:p1", "tok");
+    getPoll.mockResolvedValue({ ...hiddenPoll, resultsHidden: false });
+    editPoll.mockResolvedValue({
+      ...hiddenPoll,
+      resultsHidden: false,
+      closed: true,
+      closedAt: "2099-01-02T00:00:00Z",
+    });
+    const user = userEvent.setup();
+    renderAt();
+
+    const close = await screen.findByRole("button", { name: /close now/i });
+    await user.click(close);
+    await waitFor(() =>
+      expect(editPoll).toHaveBeenCalledWith("p1", { closed: true }, "tok"),
     );
   });
 

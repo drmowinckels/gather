@@ -11,6 +11,7 @@ import {
   ApiError,
   type Poll,
   type PollResponse,
+  type EditPollInput,
 } from "../lib/api";
 import { getEditToken, saveEditToken } from "../lib/storage";
 import {
@@ -46,6 +47,7 @@ export function PollPage() {
   const [hostCopied, setHostCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [revealError, setRevealError] = useState(false);
+  const [closeError, setCloseError] = useState(false);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -78,14 +80,30 @@ export function PollPage() {
     };
   }, [id]);
 
-  async function revealResults(token: string) {
-    setRevealError(false);
+  // Shared host PATCH: apply the change and re-render, or signal failure so the
+  // host can retry.
+  async function patchPoll(
+    token: string,
+    patch: EditPollInput,
+    onError: () => void,
+  ) {
     try {
-      const updated = await editPoll(id, { resultsHidden: false }, token);
-      setState({ kind: "ready", poll: updated });
+      setState({ kind: "ready", poll: await editPoll(id, patch, token) });
     } catch {
-      setRevealError(true); // leave the curtain up; the host can retry
+      onError();
     }
+  }
+
+  function revealResults(token: string) {
+    setRevealError(false);
+    return patchPoll(token, { resultsHidden: false }, () =>
+      setRevealError(true),
+    );
+  }
+
+  function setClosed(token: string, closed: boolean) {
+    setCloseError(false);
+    return patchPoll(token, { closed }, () => setCloseError(true));
   }
 
   function mergeResponse(r: PollResponse) {
@@ -270,6 +288,43 @@ export function PollPage() {
           >
             Weekday times are shown in the poll's home timezone, {poll.tz}.
           </p>
+        )}
+
+        {(poll.closed || poll.deadline || isHost) && (
+          <div
+            className="helper"
+            style={{
+              marginTop: 12,
+              fontSize: 13,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>
+              {poll.closed
+                ? "🔒 Responding is closed"
+                : poll.deadline
+                  ? `Responding closes ${new Intl.DateTimeFormat(undefined, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    }).format(new Date(poll.deadline))}`
+                  : "Responding is open"}
+            </span>
+            {isHost && hostToken && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setClosed(hostToken, !poll.closed)}
+              >
+                {poll.closed ? "Reopen" : "Close now"}
+              </button>
+            )}
+            {closeError && (
+              <span style={{ color: "#c0533f" }}>Couldn't update — retry.</span>
+            )}
+          </div>
         )}
 
         {poll.lockedSlot && (

@@ -24,6 +24,8 @@ export interface PollInput {
   public: boolean;
   /** Hide the aggregate from respondents until the host reveals it. */
   resultsHidden?: boolean;
+  /** Optional "respond by" instant (ISO 8601); responses freeze once passed. */
+  deadline?: string;
 }
 
 export interface CreatedPoll {
@@ -57,6 +59,9 @@ export interface Poll {
   tz: string;
   public: boolean;
   resultsHidden: boolean;
+  deadline: string | null;
+  closedAt: string | null;
+  closed: boolean;
   lockedSlot: string | null;
   expiresAt: string | null;
   createdAt: string;
@@ -101,6 +106,10 @@ export interface EditPollInput {
   public?: boolean;
   /** Set/clear the hidden-results curtain (the reveal action). */
   resultsHidden?: boolean;
+  /** Set (ISO string) or clear (null) the response deadline. */
+  deadline?: string | null;
+  /** Close the poll now (true) or reopen it (false). */
+  closed?: boolean;
 }
 
 export class SamkomaError extends Error {
@@ -216,6 +225,16 @@ export class SamkomaClient {
       },
       body: JSON.stringify(input),
     });
+  }
+
+  /** Close the poll to new responses (host only). */
+  close(id: string, editToken = this.editToken): Promise<Poll> {
+    return this.editPoll(id, { closed: true }, editToken);
+  }
+
+  /** Reopen a closed poll (host only). */
+  reopen(id: string, editToken = this.editToken): Promise<Poll> {
+    return this.editPoll(id, { closed: false }, editToken);
   }
 
   lock(id: string, slot: string, editToken = this.editToken): Promise<Poll> {

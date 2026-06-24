@@ -16,6 +16,7 @@ Usage:
   samkoma best <id> [--limit N]       Show where availability converges
   samkoma lock <id> <slot>            Lock in a slot (host only)
   samkoma unlock <id>                 Unlock (host only)
+  samkoma close <id> [--reopen]       Close the poll to new responses (host only)
   samkoma ics <id> [--out <file>]     Export the locked slot as a calendar (.ics)
 
 Options for "new":
@@ -29,6 +30,7 @@ Options for "new":
   --tz <IANA>     Timezone (default: your system timezone)
   --public        Make group results public
   --hide-results  Hide the aggregate from respondents until you reveal it
+  --deadline <when>  Freeze responses after this date/time (ISO 8601)
 
 Options for "edit" (only the flags you pass are changed; editing is additive —
 you can add days or widen the window, but not drop slots people may have voted on):
@@ -70,6 +72,8 @@ async function main() {
       weekdays: { type: "boolean" },
       "hide-results": { type: "boolean" },
       reveal: { type: "boolean" },
+      deadline: { type: "string" },
+      reopen: { type: "boolean" },
       limit: { type: "string" },
       out: { type: "string" },
       api: { type: "string" },
@@ -101,6 +105,7 @@ async function main() {
       public: values.public ?? false,
       weekdays: values.weekdays ?? false,
       hideResults: values["hide-results"] ?? false,
+      deadline: values.deadline,
     });
     const created = await client.createPoll(body);
     saveToken(created.id, created.editToken);
@@ -171,6 +176,22 @@ async function main() {
         `  ${prettySlot(r.slot)}  ${r.count}/${best.total}  (${r.names.join(", ")})`,
       );
     }
+    return;
+  }
+
+  if (command === "close") {
+    const id = positionals[1];
+    if (!id) throw new Error("Usage: samkoma close <id> [--reopen]");
+    const token = getToken(id);
+    if (!token) {
+      throw new Error(
+        `No edit token for "${id}" in ${TOKEN_FILE} — only the host can close it.`,
+      );
+    }
+    const poll = values.reopen
+      ? await client.reopen(id, token)
+      : await client.close(id, token);
+    console.log(poll.closed ? "✓ closed to new responses" : "✓ reopened");
     return;
   }
 

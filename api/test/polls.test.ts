@@ -438,6 +438,134 @@ describe("hidden results (host curtain)", () => {
   });
 });
 
+describe("response deadline + manual close", () => {
+  function submit(id: string, name = "Ada") {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({
+        name,
+        tz: "Europe/Oslo",
+        slots: ["2099-07-15T09:00"],
+      }),
+    });
+  }
+  function patch(id: string, body: unknown, token: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Origin: ORIGIN,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  it("freezes responses once the host closes the poll, and reopens", async () => {
+    const created = (await (await post(validPoll)).json()) as {
+      id: string;
+      editToken: string;
+    };
+    expect((await submit(created.id)).status).toBe(200);
+
+    const closed = (await (
+      await patch(created.id, { closed: true }, created.editToken)
+    ).json()) as { closed: boolean; closedAt: string };
+    expect(closed.closed).toBe(true);
+    expect(closed.closedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+
+    const blocked = await submit(created.id);
+    expect(blocked.status).toBe(409);
+    expect(((await blocked.json()) as { error: string }).error).toBe("closed");
+
+    // still readable (200, not 410)
+    expect(
+      (
+        await SELF.fetch(`https://api.test/v1/polls/${created.id}`, {
+          headers: { Origin: ORIGIN },
+        })
+      ).status,
+    ).toBe(200);
+
+    // host can still lock a slot on a closed poll
+    expect(
+      (
+        await SELF.fetch(`https://api.test/v1/polls/${created.id}/lock`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Origin: ORIGIN,
+            Authorization: `Bearer ${created.editToken}`,
+          },
+          body: JSON.stringify({ slot: "2099-07-15T09:00" }),
+        })
+      ).status,
+    ).toBe(200);
+
+    await patch(created.id, { closed: false }, created.editToken);
+    // A fresh name (Ada is now claimed by the ownership feature) confirms writes
+    // are unfrozen after reopening.
+    expect((await submit(created.id, "Bob")).status).toBe(200);
+  });
+
+  it("freezes responses once a deadline has passed", async () => {
+    const past = (await (
+      await post({ ...validPoll, deadline: "2020-01-01T00:00:00Z" })
+    ).json()) as { id: string };
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${past.id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { closed: boolean; deadline: string };
+    expect(poll.deadline).toBe("2020-01-01T00:00:00Z");
+    expect(poll.closed).toBe(true);
+    expect((await submit(past.id)).status).toBe(409);
+  });
+
+  it("stays open before a future deadline", async () => {
+    const future = (await (
+      await post({ ...validPoll, deadline: "2099-12-31T00:00:00Z" })
+    ).json()) as { id: string };
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${future.id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { closed: boolean };
+    expect(poll.closed).toBe(false);
+    expect((await submit(future.id)).status).toBe(200);
+  });
+
+  it("reopening a deadline-closed poll clears the elapsed deadline", async () => {
+    const created = (await (
+      await post({ ...validPoll, deadline: "2020-01-01T00:00:00Z" })
+    ).json()) as { id: string; editToken: string };
+    expect((await submit(created.id)).status).toBe(409);
+
+    const reopened = (await (
+      await patch(created.id, { closed: false }, created.editToken)
+    ).json()) as { closed: boolean; deadline: string | null };
+    expect(reopened.deadline).toBeNull();
+    expect(reopened.closed).toBe(false);
+    expect((await submit(created.id, "Bo")).status).toBe(200);
+  });
+
+  it("reopening keeps a still-future deadline", async () => {
+    const created = (await (
+      await post({ ...validPoll, deadline: "2099-12-31T00:00:00Z" })
+    ).json()) as { id: string; editToken: string };
+    const reopened = (await (
+      await patch(created.id, { closed: false }, created.editToken)
+    ).json()) as { deadline: string | null };
+    expect(reopened.deadline).toBe("2099-12-31T00:00:00Z");
+  });
+
+  it("forbids a non-host from closing", async () => {
+    const { id } = (await (await post(validPoll)).json()) as { id: string };
+    expect((await patch(id, { closed: true }, "nope")).status).toBe(403);
+  });
+});
+
 describe("PATCH /v1/polls/:id", () => {
   function patch(id: string, body: unknown, token?: string) {
     return SELF.fetch(`https://api.test/v1/polls/${id}`, {
