@@ -103,6 +103,18 @@ describe("PollPage hidden-results reveal", () => {
     );
   });
 
+  it("toggles a share QR code", async () => {
+    getPoll.mockResolvedValue({ ...hiddenPoll, resultsHidden: false });
+    const user = userEvent.setup();
+    renderAt();
+
+    const qrBtn = await screen.findByRole("button", { name: /^qr$/i });
+    await user.click(qrBtn);
+    expect(
+      screen.getByRole("img", { name: /qr code linking to this poll/i }),
+    ).toBeTruthy();
+  });
+
   it("shows the curtain (no reveal button) to a non-host", async () => {
     getPoll.mockResolvedValue(hiddenPoll); // no edit token in storage
     renderAt();

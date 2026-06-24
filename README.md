@@ -207,6 +207,8 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
   reveal it (`resultsHidden`, the `--hide-results` flag, or the create toggle) —
   this curtain applies even to a public poll. The host always sees results and
   can reveal them at any time; respondents see only their own availability.
+- **QR share.** The poll page can show a QR code for the share link (downloadable
+  as SVG/PNG), generated in the browser — the URL is never sent to a QR service.
 - **Calendar overlay (no accounts).** A respondent can upload their own `.ics`
   to overlay busy times on the grid (conflict dots) and one-click "block out" the
   clashing slots. Parsed **entirely in the browser** — nothing is uploaded.

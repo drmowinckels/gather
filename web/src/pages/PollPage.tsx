@@ -22,6 +22,7 @@ import {
 } from "../lib/datetime";
 import { formatSlotLabelInTz } from "../lib/tz";
 import { parseHostToken, buildHostLink } from "../lib/hostlink";
+import { QrCode } from "../components/QrCode";
 
 type State =
   | { kind: "loading" }
@@ -44,6 +45,7 @@ export function PollPage() {
     [],
   );
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [hostCopied, setHostCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [revealError, setRevealError] = useState(false);
@@ -386,7 +388,21 @@ export function PollPage() {
             >
               {copied ? "Copied" : "Copy"}
             </button>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              aria-expanded={showQr}
+              onClick={() => setShowQr((v) => !v)}
+            >
+              {showQr ? "Hide QR" : "QR"}
+            </button>
           </div>
+          {showQr && (
+            <QrCode
+              value={window.location.href}
+              label="QR code linking to this poll"
+            />
+          )}
           <p className="subtle" style={{ fontSize: 13, margin: "12px 0 0" }}>
             Anyone with this link can add their availability — no account
             needed.
