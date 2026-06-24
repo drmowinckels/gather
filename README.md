@@ -207,6 +207,10 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
   reveal it (`resultsHidden`, the `--hide-results` flag, or the create toggle) —
   this curtain applies even to a public poll. The host always sees results and
   can reveal them at any time; respondents see only their own availability.
+- **Calendar overlay (no accounts).** A respondent can upload their own `.ics`
+  to overlay busy times on the grid (conflict dots) and one-click "block out" the
+  clashing slots. Parsed **entirely in the browser** — nothing is uploaded.
+  Supports UTC/zoned/floating/all-day events and simple weekly/daily recurrence.
 - **Deadline & close.** A poll can carry an optional `deadline`, and the host can
   **close** it early (`samkoma close <id>`, `--reopen` to undo). Once closed,
   response writes return `409` but the poll stays readable (it's not deleted —

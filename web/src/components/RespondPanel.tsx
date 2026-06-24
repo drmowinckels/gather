@@ -8,6 +8,7 @@ import {
 } from "../lib/api";
 import { buildGridView } from "../lib/tz";
 import { marksFrom, splitMarks, type Marks } from "../lib/paint";
+import { parseIcsBusy, busySlotKeys, overlayWindow } from "../lib/icsImport";
 import {
   getName,
   saveName,
@@ -52,6 +53,8 @@ export function RespondPanel({
   const [marks, setMarks] = useState<Marks>(new Map());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [password, setPassword] = useState("");
+  const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set());
+  const [overlayNote, setOverlayNote] = useState<string | null>(null);
 
   // Restore this person's availability once per poll: from the server (their
   // saved name matches a response), else from the local cache (private polls
@@ -145,6 +148,45 @@ export function RespondPanel({
     saveName(v);
   }
 
+  // Parse an uploaded .ics entirely in the browser — nothing is sent anywhere —
+  // and overlay the busy slots so the viewer paints around their commitments.
+  async function loadCalendar(file: File) {
+    if (file.size > 5_000_000) {
+      setOverlayNote("That calendar file is too large (over 5 MB).");
+      return;
+    }
+    try {
+      const text = await file.text();
+      const { busy, skipped } = parseIcsBusy(
+        text,
+        viewerTz,
+        overlayWindow(poll),
+      );
+      const keys = busySlotKeys(poll, busy);
+      setBusyKeys(keys);
+      setOverlayNote(
+        busy.length === 0
+          ? "No events found in this poll's range."
+          : `Marked ${keys.size} busy slot(s) from your calendar — nothing was uploaded.` +
+              (skipped
+                ? ` (${skipped} recurring event${skipped > 1 ? "s" : ""} couldn't be expanded.)`
+                : ""),
+      );
+    } catch {
+      setOverlayNote("Couldn't read that file — is it a .ics calendar?");
+    }
+  }
+
+  function blockOutBusy() {
+    if (busyKeys.size === 0) return;
+    setMarks((prev) => {
+      const next = new Map(prev);
+      for (const k of busyKeys) next.delete(k);
+      return next;
+    });
+    scheduleSave();
+  }
+
   const hasName = name.trim().length > 0;
 
   if (poll.closed) {
@@ -207,11 +249,50 @@ export function RespondPanel({
         </p>
       </div>
 
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          margin: "4px 0 14px",
+          flexWrap: "wrap",
+        }}
+      >
+        <label className="btn btn-outline btn-sm" style={{ cursor: "pointer" }}>
+          Overlay my calendar (.ics)
+          <input
+            type="file"
+            accept=".ics,text/calendar"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) loadCalendar(f);
+              e.target.value = "";
+            }}
+          />
+        </label>
+        {busyKeys.size > 0 && (
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={blockOutBusy}
+          >
+            Block out busy times
+          </button>
+        )}
+        {overlayNote && (
+          <span className="subtle" style={{ fontSize: 12 }}>
+            {overlayNote}
+          </span>
+        )}
+      </div>
+
       <AvailabilityGrid
         view={view}
         value={marks}
         onChange={setMarks}
         onCommit={scheduleSave}
+        busyKeys={busyKeys}
       />
 
       <div
