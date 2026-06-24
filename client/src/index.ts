@@ -36,6 +36,12 @@ export interface PollResponse {
   slots: string[];
   maybe: string[];
   updatedAt: string;
+  /**
+   * A one-time secret returned only on the first, unprotected write of a name:
+   * store it and pass it back as {@link SlotsInput.secret} to edit that response
+   * later. Absent when the response already had a secret (a token or password).
+   */
+  responseToken?: string;
 }
 
 export interface Poll {
@@ -70,6 +76,12 @@ export interface SlotsInput {
   tz: string;
   slots: string[];
   maybe?: string[]; // "might be available" slots (optional)
+  /**
+   * The secret that owns this name — a previously-issued {@link
+   * PollResponse.responseToken} or the respondent's chosen password. Omit on a
+   * first write; required to overwrite a name that's already been claimed.
+   */
+  secret?: string;
 }
 
 /**

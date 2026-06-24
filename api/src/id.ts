@@ -14,7 +14,10 @@ export function shortId(len = 6): string {
   return out;
 }
 
-export function editToken(): string {
-  const bytes = crypto.getRandomValues(new Uint8Array(24));
+export function toHex(bytes: Uint8Array): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+export function editToken(): string {
+  return toHex(crypto.getRandomValues(new Uint8Array(24)));
 }

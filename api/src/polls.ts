@@ -8,6 +8,7 @@ import {
   patchPollSchema,
 } from "./schema";
 import { shortId, editToken } from "./id";
+import { mintResponseToken, hashSecret, verifySecret } from "./secret";
 import { validSlotKeys, buildLockedIcs, icsFilename } from "@samkoma/core";
 import { rankSlots } from "./aggregate";
 import { expiryDate, addGraceDays, isExpired, todayUTC } from "./dates";
@@ -419,25 +420,64 @@ polls.post(
       );
     }
 
-    // Cap distinct respondents per poll (existing names just upsert).
-    const cap = Number.parseInt(c.env.MAX_RESPONSES, 10) || 1000;
-    const counts = await c.env.DB.prepare(
-      `SELECT COUNT(*) AS c, COALESCE(SUM(CASE WHEN name = ? THEN 1 ELSE 0 END), 0) AS mine
-         FROM responses WHERE poll_id = ?`,
+    // Ownership: once a name has a secret, only a writer who presents it may
+    // overwrite it. The first writer claims the name — with their own password,
+    // or an auto-minted token returned once for seamless same-browser editing.
+    const existing = await c.env.DB.prepare(
+      `SELECT secret_hash FROM responses WHERE poll_id = ? AND name = ?`,
     )
-      .bind(body.name, id)
-      .first<{ c: number; mine: number }>();
-    if (counts && counts.c >= cap && counts.mine === 0) {
-      return c.json({ error: "poll_full" }, 429);
+      .bind(id, body.name)
+      .first<{ secret_hash: string | null }>();
+
+    let secretHash: string;
+    let mintedToken: string | undefined;
+    if (existing?.secret_hash) {
+      // A 403 here also reveals that the name is claimed (200 vs 403 is a
+      // claimed/unclaimed oracle). That's an accepted tradeoff: on a public poll
+      // the names are already listed, and writes are rate-limited per IP.
+      if (
+        !body.secret ||
+        !(await verifySecret(body.secret, existing.secret_hash))
+      ) {
+        return c.json({ error: "name_protected" }, 403);
+      }
+      secretHash = existing.secret_hash;
+    } else if (body.secret) {
+      secretHash = await hashSecret(body.secret);
+    } else {
+      mintedToken = mintResponseToken();
+      secretHash = await hashSecret(mintedToken);
     }
 
+    // Cap distinct respondents per poll (only a brand-new name adds one).
+    if (!existing) {
+      const cap = Number.parseInt(c.env.MAX_RESPONSES, 10) || 1000;
+      const counts = await c.env.DB.prepare(
+        `SELECT COUNT(*) AS c FROM responses WHERE poll_id = ?`,
+      )
+        .bind(id)
+        .first<{ c: number }>();
+      if (counts && counts.c >= cap) {
+        return c.json({ error: "poll_full" }, 429);
+      }
+    }
+
+    // Atomic write: the guard makes the SELECT-then-write race-safe. The row is
+    // only touched when it's unclaimed (secret_hash IS NULL) or owned by this
+    // caller (the hash we verified above). If a concurrent first-write claimed
+    // the name between our SELECT and here, the guard fails, nothing is written,
+    // and RETURNING yields no row — so we never clobber the winner's data nor
+    // hand back a token that doesn't match the stored hash.
     const now = new Date().toISOString();
-    await c.env.DB.prepare(
-      `INSERT INTO responses (poll_id, name, tz, slots, maybe, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
+    const written = await c.env.DB.prepare(
+      `INSERT INTO responses (poll_id, name, tz, slots, maybe, secret_hash, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(poll_id, name)
        DO UPDATE SET tz = excluded.tz, slots = excluded.slots,
-                     maybe = excluded.maybe, updated_at = excluded.updated_at`,
+                     maybe = excluded.maybe, updated_at = excluded.updated_at,
+                     secret_hash = COALESCE(responses.secret_hash, excluded.secret_hash)
+       WHERE responses.secret_hash IS NULL OR responses.secret_hash = ?
+       RETURNING secret_hash`,
     )
       .bind(
         id,
@@ -445,16 +485,24 @@ polls.post(
         body.tz,
         JSON.stringify(slots),
         JSON.stringify(maybe),
+        secretHash,
         now,
+        existing?.secret_hash ?? secretHash,
       )
-      .run();
+      .first<{ secret_hash: string }>();
 
+    // Lost a concurrent claim race — the name's owner got there first.
+    if (!written) return c.json({ error: "name_protected" }, 403);
+
+    // The guard only writes a row carrying our hash, so a minted token is valid
+    // exactly when the write succeeded.
     return c.json({
       name: body.name,
       tz: body.tz,
       slots,
       maybe,
       updatedAt: now,
+      ...(mintedToken ? { responseToken: mintedToken } : {}),
     });
   },
 );
