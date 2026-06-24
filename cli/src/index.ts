@@ -28,6 +28,7 @@ Options for "new":
   --slot <min>    Slot size: 15, 30 or 60 (default 30)
   --tz <IANA>     Timezone (default: your system timezone)
   --public        Make group results public
+  --hide-results  Hide the aggregate from respondents until you reveal it
 
 Options for "edit" (only the flags you pass are changed; editing is additive —
 you can add days or widen the window, but not drop slots people may have voted on):
@@ -36,6 +37,7 @@ you can add days or widen the window, but not drop slots people may have voted o
   --from <HH:MM>  Widen the window earlier (must stay on the slot grid)
   --to <HH:MM>    Widen the window later
   --public        Make results public      --private  Make results private
+  --hide-results  Hide results from respondents   --reveal  Reveal them
 
   --api <url>     API base (default: $SAMKOMA_API or ${DEFAULT_API})
 `;
@@ -66,6 +68,8 @@ async function main() {
       public: { type: "boolean" },
       private: { type: "boolean" },
       weekdays: { type: "boolean" },
+      "hide-results": { type: "boolean" },
+      reveal: { type: "boolean" },
       limit: { type: "string" },
       out: { type: "string" },
       api: { type: "string" },
@@ -96,6 +100,7 @@ async function main() {
       tz: values.tz ?? systemTz(),
       public: values.public ?? false,
       weekdays: values.weekdays ?? false,
+      hideResults: values["hide-results"] ?? false,
     });
     const created = await client.createPoll(body);
     saveToken(created.id, created.editToken);
@@ -120,7 +125,15 @@ async function main() {
     if (values.public && values.private) {
       throw new Error("Pass either --public or --private, not both");
     }
+    if (values["hide-results"] && values.reveal) {
+      throw new Error("Pass either --hide-results or --reveal, not both");
+    }
     const isPublic = values.public ? true : values.private ? false : undefined;
+    const resultsHidden = values["hide-results"]
+      ? true
+      : values.reveal
+        ? false
+        : undefined;
     const body = buildEditBody({
       title: values.title,
       days: values.days,
@@ -128,6 +141,7 @@ async function main() {
       to: values.to,
       slot: values.slot,
       public: isPublic,
+      resultsHidden,
     });
     const poll = await client.editPoll(id, body, token);
     console.log("✓ poll updated");

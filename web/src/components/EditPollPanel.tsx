@@ -30,6 +30,7 @@ export function EditPollPanel({
   const [from, setFrom] = useState(poll.from);
   const [to, setTo] = useState(poll.to);
   const [isPublic, setIsPublic] = useState(poll.public);
+  const [resultsHidden, setResultsHidden] = useState(poll.resultsHidden);
   const [confirmPublic, setConfirmPublic] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -61,6 +62,7 @@ export function EditPollPanel({
   if (from !== poll.from) patch.from = from;
   if (to !== poll.to) patch.to = to;
   if (isPublic !== poll.public) patch.public = isPublic;
+  if (resultsHidden !== poll.resultsHidden) patch.resultsHidden = resultsHidden;
   const dirty = Object.keys(patch).length > 0;
 
   async function onSubmit(e: React.FormEvent) {
@@ -230,20 +232,33 @@ export function EditPollPanel({
           flexWrap: "wrap",
         }}
       >
-        <label className="switch">
-          <input
-            type="checkbox"
-            checked={isPublic}
-            onChange={(e) => {
-              setIsPublic(e.target.checked);
-              if (!e.target.checked) setConfirmPublic(false);
-            }}
-          />
-          <span className="switch-track">
-            <span className="switch-knob" />
-          </span>
-          Make results public
-        </label>
+        <div style={{ display: "grid", gap: 12 }}>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={isPublic}
+              onChange={(e) => {
+                setIsPublic(e.target.checked);
+                if (!e.target.checked) setConfirmPublic(false);
+              }}
+            />
+            <span className="switch-track">
+              <span className="switch-knob" />
+            </span>
+            Make results public
+          </label>
+          <label className="switch">
+            <input
+              type="checkbox"
+              checked={resultsHidden}
+              onChange={(e) => setResultsHidden(e.target.checked)}
+            />
+            <span className="switch-track">
+              <span className="switch-knob" />
+            </span>
+            Hide results until I reveal them
+          </label>
+        </div>
         <button
           type="submit"
           className="btn btn-primary"

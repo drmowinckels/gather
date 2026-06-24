@@ -7,6 +7,7 @@ interface CliProps {
   slot: number;
   tz: string;
   isPublic: boolean;
+  resultsHidden: boolean;
 }
 
 export function CliEquivalent({
@@ -18,6 +19,7 @@ export function CliEquivalent({
   slot,
   tz,
   isPublic,
+  resultsHidden,
 }: CliProps) {
   const daysArg =
     days.length === 0
@@ -84,6 +86,7 @@ export function CliEquivalent({
         {"  "}--from {from} --to {to} --slot {slot}m \{"\n"}
         {"  "}--tz {tz}
         {isPublic ? " --public" : ""}
+        {resultsHidden ? " --hide-results" : ""}
       </pre>
     </div>
   );

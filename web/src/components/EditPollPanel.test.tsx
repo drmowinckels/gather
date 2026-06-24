@@ -29,6 +29,7 @@ const poll: Poll = {
   slot: 30,
   tz: "Europe/Oslo",
   public: false,
+  resultsHidden: false,
   lockedSlot: null,
   expiresAt: null,
   createdAt: "2099-01-01T00:00:00Z",

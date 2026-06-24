@@ -356,6 +356,88 @@ describe("private poll results gating", () => {
   });
 });
 
+describe("hidden results (host curtain)", () => {
+  function submit(id: string, name: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({
+        name,
+        tz: "Europe/Oslo",
+        slots: ["2099-07-15T09:00"],
+      }),
+    });
+  }
+  function get(id: string, token?: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}`, {
+      headers: {
+        Origin: ORIGIN,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  }
+  function best(id: string, token?: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/best`, {
+      headers: {
+        Origin: ORIGIN,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  }
+
+  it("curtains results from non-hosts on a public poll, but the host still sees them", async () => {
+    const created = (await (
+      await post({ ...validPoll, resultsHidden: true })
+    ).json()) as { id: string; editToken: string };
+    await submit(created.id, "Ada");
+
+    const anon = (await (await get(created.id)).json()) as {
+      resultsHidden: boolean;
+      responses: unknown[];
+    };
+    expect(anon.resultsHidden).toBe(true);
+    expect(anon.responses).toEqual([]);
+    expect((await best(created.id)).status).toBe(403);
+
+    expect((await best(created.id, created.editToken)).status).toBe(200);
+    const host = (await (await get(created.id, created.editToken)).json()) as {
+      responses: unknown[];
+    };
+    expect(host.responses).toHaveLength(1);
+  });
+
+  it("reveals results when the host clears the flag", async () => {
+    const created = (await (
+      await post({ ...validPoll, resultsHidden: true })
+    ).json()) as { id: string; editToken: string };
+    await submit(created.id, "Ada");
+    expect((await best(created.id)).status).toBe(403);
+
+    const patched = await SELF.fetch(
+      `https://api.test/v1/polls/${created.id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Origin: ORIGIN,
+          Authorization: `Bearer ${created.editToken}`,
+        },
+        body: JSON.stringify({ resultsHidden: false }),
+      },
+    );
+    expect(
+      ((await patched.json()) as { resultsHidden: boolean }).resultsHidden,
+    ).toBe(false);
+    expect((await best(created.id)).status).toBe(200);
+  });
+
+  it("defaults resultsHidden to false", async () => {
+    const { id } = (await (await post(validPoll)).json()) as { id: string };
+    const poll = (await (await get(id)).json()) as { resultsHidden: boolean };
+    expect(poll.resultsHidden).toBe(false);
+  });
+});
+
 describe("PATCH /v1/polls/:id", () => {
   function patch(id: string, body: unknown, token?: string) {
     return SELF.fetch(`https://api.test/v1/polls/${id}`, {

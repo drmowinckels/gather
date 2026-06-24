@@ -30,6 +30,7 @@ export function CreatePoll() {
   const [slot, setSlot] = useState(30);
   const [tz, setTz] = useState(browserTimezone());
   const [isPublic, setIsPublic] = useState(true);
+  const [resultsHidden, setResultsHidden] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,6 +63,7 @@ export function CreatePoll() {
         slot,
         tz,
         public: isPublic,
+        resultsHidden,
       });
       saveEditToken(created.id, created.editToken);
       navigate(`/e/${created.id}`);
@@ -283,17 +285,30 @@ export function CreatePoll() {
               flexWrap: "wrap",
             }}
           >
-            <label className="switch">
-              <input
-                type="checkbox"
-                checked={isPublic}
-                onChange={(e) => setIsPublic(e.target.checked)}
-              />
-              <span className="switch-track">
-                <span className="switch-knob" />
-              </span>
-              Make results public
-            </label>
+            <div style={{ display: "grid", gap: 12 }}>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={isPublic}
+                  onChange={(e) => setIsPublic(e.target.checked)}
+                />
+                <span className="switch-track">
+                  <span className="switch-knob" />
+                </span>
+                Make results public
+              </label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={resultsHidden}
+                  onChange={(e) => setResultsHidden(e.target.checked)}
+                />
+                <span className="switch-track">
+                  <span className="switch-knob" />
+                </span>
+                Hide results until I reveal them
+              </label>
+            </div>
             <button
               type="submit"
               className="btn btn-primary"
@@ -317,6 +332,7 @@ export function CreatePoll() {
             slot={slot}
             tz={tz}
             isPublic={isPublic}
+            resultsHidden={resultsHidden}
           />
           <p className="subtle" style={{ fontSize: 13, margin: "14px 2px 0" }}>
             The form and the CLI hit the same endpoint. Anything you can click,

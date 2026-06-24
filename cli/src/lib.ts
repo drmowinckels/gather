@@ -28,6 +28,7 @@ export interface CreateOptions {
   tz: string;
   public: boolean;
   weekdays?: boolean;
+  hideResults?: boolean;
 }
 
 export interface PollBody {
@@ -39,6 +40,7 @@ export interface PollBody {
   slot: number;
   tz: string;
   public: boolean;
+  resultsHidden: boolean;
 }
 
 export function buildCreateBody(
@@ -64,6 +66,7 @@ export function buildCreateBody(
     slot: parseSlot(opts.slot ?? "30"),
     tz: opts.tz,
     public: opts.public,
+    resultsHidden: opts.hideResults ?? false,
   };
 }
 
@@ -74,6 +77,7 @@ export interface EditOptions {
   to?: string;
   slot?: string;
   public?: boolean; // tri-state: true → public, false → private, undefined → unchanged
+  resultsHidden?: boolean; // tri-state: true → hide, false → reveal, undefined → unchanged
 }
 
 export interface EditBody {
@@ -83,6 +87,7 @@ export interface EditBody {
   to?: string;
   slot?: number;
   public?: boolean;
+  resultsHidden?: boolean;
 }
 
 // Build a partial edit body from only the flags the host actually passed. The
@@ -103,6 +108,7 @@ export function buildEditBody(
   if (opts.to !== undefined) body.to = parseTime(opts.to, "--to");
   if (opts.slot !== undefined) body.slot = parseSlot(opts.slot);
   if (opts.public !== undefined) body.public = opts.public;
+  if (opts.resultsHidden !== undefined) body.resultsHidden = opts.resultsHidden;
   if (
     body.from !== undefined &&
     body.to !== undefined &&
@@ -112,7 +118,7 @@ export function buildEditBody(
   }
   if (Object.keys(body).length === 0) {
     throw new Error(
-      "Nothing to edit — pass --title, --days, --from, --to, --slot, --public or --private",
+      "Nothing to edit — pass --title, --days, --from, --to, --slot, --public/--private or --hide-results/--reveal",
     );
   }
   return body;

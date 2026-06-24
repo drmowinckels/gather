@@ -66,6 +66,9 @@ export const createPollSchema = z
       message: "tz must be a valid IANA timezone",
     }),
     public: z.boolean().optional().default(false),
+    // Hide the aggregate from respondents until the host reveals it (applies
+    // even when `public` is true).
+    resultsHidden: z.boolean().optional().default(false),
   })
   .superRefine((d, ctx) => {
     checkDays(d.kind, d.days, ctx);
@@ -105,6 +108,7 @@ export const patchPollSchema = z
       })
       .optional(),
     public: z.boolean().optional(),
+    resultsHidden: z.boolean().optional(),
   })
   .refine((d) => Object.keys(d).length > 0, {
     message: "provide at least one field to update",

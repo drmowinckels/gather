@@ -48,12 +48,13 @@ function constantTimeEqual(a: string, b: string): boolean {
   return diff === 0;
 }
 
-// Aggregated results are visible when the poll is public, or to the host
-// (proves ownership via the edit token in an Authorization: Bearer header).
+// The host (proves ownership via the edit token) always sees results. Everyone
+// else sees them only when the poll is public AND not curtained by the host's
+// hidden-results mode.
 function canSeeResults(c: Context, row: PollRow): boolean {
-  if (row.is_public === 1) return true;
   const token = bearerToken(c);
-  return token !== null && constantTimeEqual(token, row.edit_token);
+  if (token !== null && constantTimeEqual(token, row.edit_token)) return true;
+  return row.is_public === 1 && row.results_hidden === 0;
 }
 
 // Fetch a poll, or return the matching error response (404 unknown, 410 expired).
@@ -81,6 +82,7 @@ interface PollRow {
   slot_minutes: number;
   tz: string;
   is_public: number;
+  results_hidden: number;
   edit_token: string;
   created_at: string;
   locked_slot: string | null;
@@ -112,6 +114,7 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
     slot: row.slot_minutes,
     tz: row.tz,
     public: row.is_public === 1,
+    resultsHidden: row.results_hidden === 1,
     lockedSlot: row.locked_slot ?? null,
     expiresAt: row.expires_at ?? null,
     createdAt: row.created_at,
@@ -150,8 +153,8 @@ polls.post(
 
     await c.env.DB.prepare(
       `INSERT INTO polls
-         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, edit_token, created_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, results_hidden, edit_token, created_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -163,6 +166,7 @@ polls.post(
         body.slot,
         body.tz,
         body.public ? 1 : 0,
+        body.resultsHidden ? 1 : 0,
         token,
         createdAt,
         expiresAt,
@@ -318,6 +322,7 @@ polls.patch(
       to: body.to ?? row.to_time,
       slot: row.slot_minutes,
       isPublic: body.public ?? row.is_public === 1,
+      resultsHidden: body.resultsHidden ?? row.results_hidden === 1,
     };
 
     if (next.from >= next.to) return c.json({ error: "from_after_to" }, 400);
@@ -348,7 +353,7 @@ polls.patch(
     await c.env.DB.prepare(
       `UPDATE polls
          SET title = ?, days = ?, from_time = ?, to_time = ?,
-             is_public = ?, expires_at = ?
+             is_public = ?, results_hidden = ?, expires_at = ?
        WHERE id = ?`,
     )
       .bind(
@@ -357,6 +362,7 @@ polls.patch(
         next.from,
         next.to,
         next.isPublic ? 1 : 0,
+        next.resultsHidden ? 1 : 0,
         expiresAt,
         id,
       )
@@ -376,6 +382,7 @@ polls.patch(
           from_time: next.from,
           to_time: next.to,
           is_public: next.isPublic ? 1 : 0,
+          results_hidden: next.resultsHidden ? 1 : 0,
           expires_at: expiresAt,
         },
         responses.results,

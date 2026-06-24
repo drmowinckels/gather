@@ -91,6 +91,7 @@ describe("buildCreateBody", () => {
       slot: 30,
       tz: "Europe/Oslo",
       public: true,
+      resultsHidden: false,
     });
   });
 
@@ -104,6 +105,14 @@ describe("buildCreateBody", () => {
     });
     expect(body.kind).toBe("weekdays");
     expect(body.days).toEqual(["mon", "tue", "wed"]);
+  });
+
+  it("sets resultsHidden from --hide-results", () => {
+    const body = buildCreateBody(
+      { title: "x", days: "mon", tz: "UTC", public: true, hideResults: true },
+      today,
+    );
+    expect(body.resultsHidden).toBe(true);
   });
 
   it("rejects an empty title and an inverted time range", () => {
@@ -140,6 +149,12 @@ describe("buildEditBody", () => {
     expect(buildEditBody({ from: "08:00" }, today)).toEqual({ from: "08:00" });
     expect(buildEditBody({ public: true }, today)).toEqual({ public: true });
     expect(buildEditBody({ public: false }, today)).toEqual({ public: false });
+    expect(buildEditBody({ resultsHidden: true }, today)).toEqual({
+      resultsHidden: true,
+    });
+    expect(buildEditBody({ resultsHidden: false }, today)).toEqual({
+      resultsHidden: false,
+    });
   });
 
   it("throws when nothing is passed", () => {
