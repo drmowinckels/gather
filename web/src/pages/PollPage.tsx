@@ -336,7 +336,6 @@ export function PollPage() {
               padding: "16px 20px",
               marginTop: 18,
               background: "var(--bg-tinted)",
-              borderLeft: "3px solid var(--brand)",
               fontSize: 15,
             }}
           >
@@ -432,7 +431,7 @@ export function PollPage() {
                 style={{
                   padding: 22,
                   margin: "26px 0",
-                  borderLeft: "3px solid var(--border-strong)",
+                  background: "var(--bg-tinted)",
                 }}
               >
                 <span className="fieldlbl">🔑 Your host link</span>

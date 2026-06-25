@@ -90,7 +90,6 @@ export function EditPollPanel({
       style={{
         padding: 22,
         margin: "26px 0",
-        borderLeft: "3px solid var(--brand)",
       }}
       onSubmit={onSubmit}
     >
