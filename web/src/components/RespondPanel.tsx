@@ -258,12 +258,15 @@ export function RespondPanel({
           flexWrap: "wrap",
         }}
       >
-        <label className="btn btn-outline btn-sm" style={{ cursor: "pointer" }}>
+        <label
+          className="btn btn-outline btn-sm file-label"
+          style={{ cursor: "pointer" }}
+        >
           Overlay my calendar (.ics)
           <input
             type="file"
             accept=".ics,text/calendar"
-            style={{ display: "none" }}
+            className="sr-only"
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) loadCalendar(f);
@@ -280,11 +283,14 @@ export function RespondPanel({
             Block out busy times
           </button>
         )}
-        {overlayNote && (
-          <span className="subtle" style={{ fontSize: 12 }}>
-            {overlayNote}
-          </span>
-        )}
+        <span
+          className="subtle"
+          role="status"
+          aria-live="polite"
+          style={{ fontSize: 12 }}
+        >
+          {overlayNote}
+        </span>
       </div>
 
       <AvailabilityGrid
@@ -323,8 +329,17 @@ export function RespondPanel({
           </span>
         )}
         {save.kind === "error" && (
-          <span style={{ fontSize: 13, color: "#c0533f" }}>{save.message}</span>
+          <span role="alert" style={{ fontSize: 13, color: "var(--danger)" }}>
+            {save.message}
+          </span>
         )}
+        <span className="sr-only" role="status" aria-live="polite">
+          {save.kind === "saving"
+            ? "Saving your availability"
+            : save.kind === "saved"
+              ? "Availability saved"
+              : ""}
+        </span>
       </div>
     </div>
   );
