@@ -70,6 +70,7 @@ export const DOCUMENTED_PATHS = [
   "/v1/polls/{id}/best",
   "/v1/polls/{id}/lock",
   "/v1/polls/{id}/ics",
+  "/v1/metrics",
 ];
 
 export function openApiDocument(serverUrl: string): Json {
@@ -86,7 +87,7 @@ export function openApiDocument(serverUrl: string): Json {
         "`YYYY-MM-DDThh:mm`) or `weekdays` (recurring, slot keys `monThh:mm`).",
     },
     servers: [{ url: serverUrl }],
-    tags: [{ name: "polls" }],
+    tags: [{ name: "polls" }, { name: "metrics" }],
     components: {
       securitySchemes: {
         editToken: {
@@ -206,6 +207,38 @@ export function openApiDocument(serverUrl: string): Json {
             },
             "409": err("not_locked"),
             ...NOT_FOUND_OR_EXPIRED,
+          },
+        },
+      },
+      "/v1/metrics": {
+        get: {
+          tags: ["metrics"],
+          summary: "Usage counters (lifetime totals + recent daily series)",
+          description:
+            "Aggregate-only counts of polls created and responses submitted. " +
+            "These outlive the polls themselves (which are deleted at expiry), " +
+            "so they record activity over time. No per-poll detail is exposed.",
+          parameters: [
+            {
+              name: "days",
+              in: "query",
+              required: false,
+              schema: {
+                type: "integer",
+                minimum: 1,
+                maximum: 365,
+                default: 90,
+              },
+              description:
+                "Length in days of the returned daily series. Lifetime totals " +
+                "are unaffected.",
+            },
+          ],
+          responses: {
+            "200": ok(
+              "{ totals: { pollsCreated, responsesSubmitted }, daily: " +
+                "[{ day, pollsCreated, responsesSubmitted }] }.",
+            ),
           },
         },
       },

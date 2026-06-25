@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { polls } from "./polls";
+import { metrics } from "./metrics";
 import { deleteExpired } from "./cleanup";
 import { purgeRateLimits } from "./ratelimit";
 import { todayUTC } from "./dates";
@@ -35,6 +36,7 @@ app.get("/openapi.json", (c) =>
 app.get("/docs", (c) => c.html(docsHtml("/openapi.json")));
 
 app.route("/v1/polls", polls);
+app.route("/v1/metrics", metrics);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 app.onError((err, c) => {

@@ -13,6 +13,7 @@ import { validSlotKeys, buildLockedIcs, icsFilename } from "@samkoma/core";
 import { rankSlots } from "./aggregate";
 import { expiryDate, addGraceDays, isExpired, todayUTC } from "./dates";
 import { rateLimit } from "./ratelimit";
+import { recordEvent } from "./stats";
 import type { Env } from "./types";
 
 const GRACE_DAYS = 14; // dated polls: days after the last day
@@ -185,6 +186,8 @@ polls.post(
         body.deadline ?? null,
       )
       .run();
+
+    await recordEvent(c.env.DB, "polls_created", createdAt.slice(0, 10));
 
     return c.json(
       { id, url: `${c.env.WEB_BASE_URL}/#/e/${id}`, editToken: token },
@@ -537,6 +540,8 @@ polls.post(
 
     // Lost a concurrent claim race — the name's owner got there first.
     if (!written) return c.json({ error: "name_protected" }, 403);
+
+    await recordEvent(c.env.DB, "responses_submitted", now.slice(0, 10));
 
     // The guard only writes a row carrying our hash, so a minted token is valid
     // exactly when the write succeeded.
