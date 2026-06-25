@@ -12,13 +12,13 @@ product
 ## Users
 
 - **Hosts** — someone organising a meeting for a group (a team offsite, a study
-  group, an R-Ladies+ chapter call). Their context: they want a time settled in
+  group, an RLadies+ chapter call). Their context: they want a time settled in
   two minutes, with no account and no back-and-forth. The job: share one link,
   let people mark availability, read off the winning slot.
 - **Respondents** — anyone the host shares the link with. They land cold, often on
   a phone, often interrupted. The job: paint when they're free in their own
   timezone and leave. No sign-up, no app install.
-- **Developers & bots** — integrators like **Jinx** (the R-Ladies+ GitHub bot) and
+- **Developers & bots** — integrators like **Jinx** (the RLadies+ GitHub bot) and
   CLI users. The job: create polls and read results programmatically. The web UI is
   one client of the same public REST API they use.
 

@@ -63,8 +63,8 @@ export function About() {
           <div className="prose" style={{ marginTop: 14 }}>
             <p>
               samkoma began as the scheduling brain behind <strong>Jinx</strong>
-              , the R-Ladies+ community bot — but it's built to stand on its
-              own. Jinx is simply one consumer of the public API; anyone can be
+              , the RLadies+ community bot — but it's built to stand on its own.
+              Jinx is simply one consumer of the public API; anyone can be
               another. The product is deliberately <strong>independent</strong>:
               not tied to any single community or company, and not anyone's
               growth funnel.

@@ -183,7 +183,7 @@ export function Api() {
           <h2 className="h2">Built for bots</h2>
           <p className="section-lead">
             Because the API is the product, automation isn't a bolt-on. Jinx,
-            the R-Ladies+ bot, turns a comment on a GitHub issue into a poll —
+            the RLadies+ bot, turns a comment on a GitHub issue into a poll —
             then edits its own reply with the winning slot once everyone's in.
           </p>
           <div className="bot-reply">
