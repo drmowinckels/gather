@@ -15,6 +15,18 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
 
   return (
     <div className="page">
+      <a
+        className="skip-link"
+        href="#main"
+        onClick={(e) => {
+          e.preventDefault();
+          const main = document.getElementById("main");
+          main?.focus();
+          main?.scrollIntoView();
+        }}
+      >
+        Skip to content
+      </a>
       <header className="shell">
         <nav className="nav" aria-label="Primary">
           <Logo />
@@ -52,7 +64,12 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
         </nav>
       </header>
 
-      <main className="shell" style={{ flex: 1, width: "100%" }}>
+      <main
+        id="main"
+        tabIndex={-1}
+        className="shell"
+        style={{ flex: 1, width: "100%", outline: "none" }}
+      >
         {children}
       </main>
 

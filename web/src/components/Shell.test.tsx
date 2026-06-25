@@ -53,6 +53,15 @@ describe("Shell", () => {
     ).toContain("/docs");
   });
 
+  it("offers a skip link that targets the main landmark", () => {
+    renderShell();
+    const skip = screen.getByRole("link", { name: /skip to content/i });
+    expect(skip).toHaveAttribute("href", "#main");
+    const main = screen.getByRole("main");
+    expect(main).toHaveAttribute("id", "main");
+    expect(main).toHaveAttribute("tabindex", "-1");
+  });
+
   it("toggles the colour theme", async () => {
     const user = userEvent.setup();
     renderShell();
