@@ -1,7 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { hourLabel } from "../lib/datetime";
 import { cycleNext, applyMark, type Status, type Marks } from "../lib/paint";
 import type { GridView } from "../lib/tz";
+
+function statusWord(status: Status | undefined): string {
+  return status === "yes" ? "available" : status === "maybe" ? "maybe" : "busy";
+}
 
 interface GridProps {
   view: GridView;
@@ -39,6 +43,9 @@ export function AvailabilityGrid({
   const lastPainted = useRef<string | null>(null);
   const commitRef = useRef(onCommit);
   commitRef.current = onCommit;
+  // Announced to screen readers after a keyboard toggle, since the button keeps
+  // focus and its changed label isn't reliably re-read.
+  const [announce, setAnnounce] = useState("");
 
   useEffect(() => {
     const end = () => {
@@ -82,15 +89,19 @@ export function AvailabilityGrid({
     if (key) paintAt(key);
   }
 
-  function toggleKey(key: string) {
+  function toggleKey(key: string, human: string) {
     if (disabled) return;
     const next = cycleNext(value.get(key));
     onChange((prev) => applyMark(prev, key, next));
+    setAnnounce(`${human} — ${statusWord(next)}`);
     commitRef.current?.();
   }
 
   return (
     <div style={{ userSelect: "none" }} onPointerMove={onPointerMove}>
+      <div className="sr-only" role="status" aria-live="polite">
+        {announce}
+      </div>
       <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
         <div style={{ width: GUTTER, flex: "none" }} />
         {view.days.map((d, i) => (
@@ -165,7 +176,7 @@ export function AvailabilityGrid({
                 onKeyDown={(e) => {
                   if (e.key === " " || e.key === "Enter") {
                     e.preventDefault();
-                    toggleKey(key);
+                    toggleKey(key, `${view.dayLabels[di]}, ${t}`);
                   }
                 }}
                 style={{
@@ -189,7 +200,7 @@ export function AvailabilityGrid({
                       width: 6,
                       height: 6,
                       borderRadius: 3,
-                      background: "#c0533f",
+                      background: "var(--danger)",
                     }}
                   />
                 )}
