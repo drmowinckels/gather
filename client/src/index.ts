@@ -10,7 +10,7 @@ import {
 
 export type PollKind = "dates" | "weekdays";
 
-export const DEFAULT_BASE_URL = "https://api.samkoma.drmowinckels.io";
+export const DEFAULT_BASE_URL = "https://api.samkoma.org";
 
 export interface PollInput {
   title: string;

@@ -6,11 +6,15 @@ compatibility_date = "2025-02-04"
 # values are overridden by `.dev.vars`; tests override them in vitest.config.ts.
 # ALLOWED_ORIGINS is a comma-separated allowlist for CORS.
 [vars]
-ALLOWED_ORIGINS = "https://samkoma.drmowinckels.io"
-WEB_BASE_URL = "https://samkoma.drmowinckels.io"
+ALLOWED_ORIGINS = "https://samkoma.org"
+WEB_BASE_URL = "https://samkoma.org"
 CREATE_LIMIT = "30"      # max poll creations per IP per minute
 SUBMIT_LIMIT = "120"     # max slot submissions per IP per minute
 MAX_RESPONSES = "1000"   # max distinct respondents per poll
+
+# Worker custom domain. Requires samkoma.org to be a zone on this Cloudflare
+# account; on deploy wrangler provisions the api.samkoma.org hostname + cert.
+routes = [{ pattern = "api.samkoma.org", custom_domain = true }]
 
 [[d1_databases]]
 binding = "DB"

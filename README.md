@@ -31,8 +31,8 @@ browser ──fetch──▶  samkoma-api.<sub>.workers.dev  ──▶  D1 (SQLi
 
 ## Live
 
-- **App:** https://samkoma.drmowinckels.io
-- **API:** https://api.samkoma.drmowinckels.io
+- **App:** https://samkoma.org
+- **API:** https://api.samkoma.org
 
 ## Status
 
@@ -175,7 +175,7 @@ npm run format:check         # prettier
 ## Deploy (one-time setup)
 
 > **Already configured for this repo.** The D1 database, the GitHub Actions
-> secrets/variables, and Pages (custom domain `drmowinckels.io`) are all set up;
+> secrets/variables, and Pages (custom domain `samkoma.org`) are all set up;
 > pushing to `main` deploys both tiers. The steps below document how, for
 > reference or a fresh fork.
 
@@ -194,10 +194,15 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
    GitHub Actions **variable** `VITE_API_BASE` = that URL and re-run the workflow
    so the web build points at the live API.
 
-> The frontend is served at the root of the custom domain `samkoma.drmowinckels.io`
-> (Vite `base` is `/`). The API has a Cloudflare Worker custom domain
-> `api.samkoma.drmowinckels.io`. `ALLOWED_ORIGINS` / `WEB_BASE_URL` in
+> The frontend is served at the root of the apex custom domain `samkoma.org`
+> (Vite `base` is `/`; `web/public/CNAME` carries the domain into the Pages
+> build). The API has a Cloudflare Worker custom domain `api.samkoma.org`
+> (declared as a `custom_domain` route in `api/wrangler.toml`, so `wrangler
+> deploy` provisions it). `ALLOWED_ORIGINS` / `WEB_BASE_URL` in
 > `api/wrangler.toml` and the `VITE_API_BASE` repo variable all point at these.
+>
+> DNS lives in a Cloudflare zone for `samkoma.org`: the apex points at GitHub
+> Pages (A/AAAA records, DNS-only) and `api` is the Worker custom domain.
 
 ## Notes
 

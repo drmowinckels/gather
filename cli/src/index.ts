@@ -5,8 +5,7 @@ import { SamkomaClient } from "samkoma-client";
 import { buildCreateBody, buildEditBody } from "./lib.js";
 import { saveToken, getToken, TOKEN_FILE } from "./store.js";
 
-const DEFAULT_API =
-  process.env.SAMKOMA_API ?? "https://api.samkoma.drmowinckels.io";
+const DEFAULT_API = process.env.SAMKOMA_API ?? "https://api.samkoma.org";
 
 const HELP = `samkoma — group scheduling from the command line
 
