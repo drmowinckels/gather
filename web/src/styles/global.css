@@ -486,6 +486,15 @@ button.heatcell {
     grid-template-columns: 1fr;
   }
 }
+/* Keep the best-slot panel in view while scanning a tall heatmap (desktop only;
+   on mobile the panel flows below the grid). */
+@media (min-width: 761px) {
+  .results-side {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+}
 
 .copy-row {
   display: flex;
