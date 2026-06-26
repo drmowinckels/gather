@@ -6,6 +6,8 @@ import {
   parseDeadline,
   buildCreateBody,
   buildEditBody,
+  buildCreateBodyFromPoll,
+  type SourcePoll,
 } from "../src/lib";
 
 const today = new Date(2026, 5, 20); // local midnight, weekday-agnostic anchor
@@ -190,5 +192,76 @@ describe("buildEditBody", () => {
   it("rejects an empty title and a bad slot", () => {
     expect(() => buildEditBody({ title: "   " }, today)).toThrow();
     expect(() => buildEditBody({ slot: "45" }, today)).toThrow();
+  });
+});
+
+describe("buildCreateBodyFromPoll", () => {
+  const datesSource: SourcePoll = {
+    title: "Team offsite",
+    kind: "dates",
+    days: ["2026-07-15", "2026-07-16"],
+    from: "09:00",
+    to: "17:00",
+    slot: 30,
+    tz: "Europe/Oslo",
+    public: true,
+    resultsHidden: false,
+  };
+  const weekdaysSource: SourcePoll = {
+    ...datesSource,
+    title: "Weekly standup",
+    kind: "weekdays",
+    days: ["mon", "wed"],
+    public: false,
+    resultsHidden: true,
+  };
+
+  it("reuses a weekday source's tokens and settings without new --days", () => {
+    const body = buildCreateBodyFromPoll(weekdaysSource, {}, today);
+    expect(body).toEqual({
+      title: "Weekly standup",
+      kind: "weekdays",
+      days: ["mon", "wed"],
+      from: "09:00",
+      to: "17:00",
+      slot: 30,
+      tz: "Europe/Oslo",
+      public: false,
+      resultsHidden: true,
+    });
+  });
+
+  it("requires new --days when duplicating a dated poll", () => {
+    expect(() => buildCreateBodyFromPoll(datesSource, {}, today)).toThrow(
+      /needs new dates/i,
+    );
+    const body = buildCreateBodyFromPoll(
+      datesSource,
+      { days: "2026-08-10,2026-08-11" },
+      today,
+    );
+    expect(body.kind).toBe("dates");
+    expect(body.days).toEqual(["2026-08-10", "2026-08-11"]);
+  });
+
+  it("lets explicit flags override the source", () => {
+    const body = buildCreateBodyFromPoll(
+      weekdaysSource,
+      { title: "Renamed", from: "10:00", slot: "60", tz: "UTC", public: true },
+      today,
+    );
+    expect(body).toMatchObject({
+      title: "Renamed",
+      from: "10:00",
+      slot: 60,
+      tz: "UTC",
+      public: true,
+    });
+  });
+
+  it("validates an inverted window from merged values", () => {
+    expect(() =>
+      buildCreateBodyFromPoll(weekdaysSource, { from: "20:00" }, today),
+    ).toThrow(/earlier/i);
   });
 });
