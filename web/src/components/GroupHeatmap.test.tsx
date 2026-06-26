@@ -125,6 +125,11 @@ describe("GroupHeatmap — accessibility", () => {
     ).toBeInTheDocument();
   });
 
+  it("pins the best-slot panel for sticky scrolling", () => {
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    expect(document.querySelector(".results-side")).toBeInTheDocument();
+  });
+
   it("renders no host-selection buttons for a plain viewer", () => {
     render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
     expect(

@@ -364,7 +364,7 @@ export function GroupHeatmap({
           </div>
         </div>
 
-        <div>
+        <div className="results-side">
           <div
             style={{
               background: "var(--brand)",
