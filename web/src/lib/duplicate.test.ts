@@ -20,6 +20,7 @@ function makePoll(overrides: Partial<Poll> = {}): Poll {
     lockedSlot: "2026-07-15T09:00",
     expiresAt: "2026-07-30",
     capacity: null,
+    defaultAvailable: false,
     createdAt: "2026-07-01T00:00:00Z",
     responses: [],
     ...overrides,

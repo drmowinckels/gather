@@ -30,6 +30,7 @@ export interface PollInput {
   resultsHidden?: boolean;
   deadline?: string; // ISO 8601; responses freeze once passed
   capacity?: number; // optional per-slot capacity (indicative "full")
+  defaultAvailable?: boolean; // respondents start fully available
 }
 
 export interface CreatedPoll {
@@ -67,6 +68,7 @@ export interface Poll {
   lockedSlot: string | null;
   expiresAt: string | null;
   capacity: number | null;
+  defaultAvailable: boolean;
   createdAt: string;
   responses: PollResponse[];
 }

@@ -31,6 +31,7 @@ const poll: Poll = {
   lockedSlot: null,
   expiresAt: null,
   capacity: null,
+  defaultAvailable: false,
   createdAt: "2099-01-01T00:00:00Z",
   responses: [],
 };
@@ -185,6 +186,35 @@ describe("RespondPanel", () => {
 
     await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
     expect(submitMock.mock.calls[0][1].group).toBe("Design team");
+  });
+
+  it("starts a fresh respondent fully available when the host inverted the default", () => {
+    render(
+      <RespondPanel poll={{ ...poll, defaultAvailable: true }} viewerTz={tz} />,
+    );
+    expect(
+      screen.getByRole("button", { name: /09:00.*available/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: /09:30.*available/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/you start marked free everywhere/i),
+    ).toBeInTheDocument();
+  });
+
+  it("does not override a restored response when default-available is on", () => {
+    saveOwnMarks(poll.id, { slots: ["2099-07-15T09:00"], maybe: [] });
+    render(
+      <RespondPanel poll={{ ...poll, defaultAvailable: true }} viewerTz={tz} />,
+    );
+    expect(
+      screen.getByRole("button", { name: /09:00.*available/i }),
+    ).toBeInTheDocument();
+    // 09:30 wasn't in the saved response → stays busy, not auto-filled
+    expect(
+      screen.getByRole("button", { name: /09:30.*busy/i }),
+    ).toBeInTheDocument();
   });
 
   it("keeps the calendar-overlay file input keyboard-reachable", () => {

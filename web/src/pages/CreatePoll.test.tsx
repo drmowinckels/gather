@@ -129,6 +129,23 @@ describe("CreatePoll", () => {
     expect(createPoll.mock.calls[0][0].capacity).toBe(8);
   });
 
+  it("sends defaultAvailable when the invert toggle is on", async () => {
+    createPoll.mockResolvedValue({ id: "da1", url: "x", editToken: "t" });
+    const user = userEvent.setup();
+    renderForm();
+
+    await user.type(screen.getByLabelText("Event name"), "Standup");
+    const day = [
+      ...document.querySelectorAll<HTMLButtonElement>("[data-iso]"),
+    ].find((c) => !c.disabled && c.getAttribute("aria-pressed") === "false")!;
+    await user.click(day);
+    await user.click(screen.getByLabelText(/start everyone available/i));
+    await user.click(screen.getByRole("button", { name: /create poll/i }));
+
+    await waitFor(() => expect(createPoll).toHaveBeenCalledTimes(1));
+    expect(createPoll.mock.calls[0][0].defaultAvailable).toBe(true);
+  });
+
   it("creates a weekday poll when the 'Days of the week' type is chosen", async () => {
     createPoll.mockResolvedValue({ id: "wk", url: "x", editToken: "t" });
     const user = userEvent.setup();

@@ -96,8 +96,11 @@ export function RespondPanel({
       ? { slots: mine.slots, maybe: mine.maybe }
       : getOwnMarks(poll.id);
     if (restored) setMarks(marksFrom(restored.slots, restored.maybe));
+    // No prior response and the host inverted the default → start all-available
+    // so the respondent paints their busy times instead.
+    else if (poll.defaultAvailable) setMarks(fillAll(allKeys, "yes"));
     if (mine?.group) setGroup(mine.group);
-  }, [initialName, poll.id, poll.responses]);
+  }, [initialName, poll.id, poll.responses, poll.defaultAvailable, allKeys]);
 
   const nameRef = useRef(name);
   nameRef.current = name;
@@ -254,8 +257,9 @@ export function RespondPanel({
         Your availability
       </h2>
       <p className="helper" style={{ margin: "6px 0 18px", fontSize: 14 }}>
-        Click or drag to mark when you're free. Each tap cycles a slot:
-        available → maybe → clear.
+        {poll.defaultAvailable
+          ? "You start marked free everywhere — paint the times you're busy. Each tap cycles a slot: available → maybe → clear."
+          : "Click or drag to mark when you're free. Each tap cycles a slot: available → maybe → clear."}
       </p>
 
       <div className="field" style={{ maxWidth: 320 }}>

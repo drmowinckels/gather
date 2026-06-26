@@ -36,6 +36,7 @@ const poll: Poll = {
   lockedSlot: null,
   expiresAt: null,
   capacity: null,
+  defaultAvailable: false,
   createdAt: "2099-01-01T00:00:00Z",
   responses: [],
 };

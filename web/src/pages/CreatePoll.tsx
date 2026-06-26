@@ -42,6 +42,7 @@ export function CreatePoll() {
   );
   const [deadline, setDeadline] = useState("");
   const [capacity, setCapacity] = useState("");
+  const [defaultAvailable, setDefaultAvailable] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +78,7 @@ export function CreatePoll() {
         resultsHidden,
         ...(deadline ? { deadline: new Date(deadline).toISOString() } : {}),
         ...(Number(capacity) > 0 ? { capacity: Number(capacity) } : {}),
+        ...(defaultAvailable ? { defaultAvailable: true } : {}),
       });
       saveEditToken(created.id, created.editToken);
       navigate(`/e/${created.id}`);
@@ -359,6 +361,17 @@ export function CreatePoll() {
                   <span className="switch-knob" />
                 </span>
                 Hide results until I reveal them
+              </label>
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={defaultAvailable}
+                  onChange={(e) => setDefaultAvailable(e.target.checked)}
+                />
+                <span className="switch-track">
+                  <span className="switch-knob" />
+                </span>
+                Start everyone available (they mark busy)
               </label>
             </div>
             <button

@@ -22,6 +22,7 @@ function makePoll(responses: PollResponse[]): Poll {
     lockedSlot: null,
     expiresAt: null,
     capacity: null,
+    defaultAvailable: false,
     createdAt: "2026-07-01T00:00:00Z",
     responses,
   };
