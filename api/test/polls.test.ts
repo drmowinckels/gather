@@ -47,6 +47,29 @@ describe("POST /v1/polls", () => {
     expect(res.status).toBe(400);
   });
 
+  it("round-trips an optional per-slot capacity", async () => {
+    const { id } = (await (
+      await post({ ...validPoll, capacity: 8 })
+    ).json()) as { id: string };
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { capacity: number | null };
+    expect(poll.capacity).toBe(8);
+  });
+
+  it("defaults capacity to null and rejects a non-positive value", async () => {
+    const { id } = (await (await post(validPoll)).json()) as { id: string };
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { capacity: number | null };
+    expect(poll.capacity).toBeNull();
+    expect((await post({ ...validPoll, capacity: 0 })).status).toBe(400);
+  });
+
   it("rejects impossible calendar dates", async () => {
     const res = await post({ ...validPoll, days: ["2026-13-45"] });
     expect(res.status).toBe(400);

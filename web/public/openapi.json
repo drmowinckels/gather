@@ -89,6 +89,12 @@
                   "deadline": {
                     "type": "string",
                     "format": "date-time"
+                  },
+                  "capacity": {
+                    "type": "integer",
+                    "exclusiveMinimum": true,
+                    "minimum": 0,
+                    "maximum": 10000
                   }
                 },
                 "required": [

@@ -96,6 +96,7 @@ interface PollRow {
   expires_at: string | null;
   deadline: string | null;
   closed_at: string | null;
+  capacity: number | null;
 }
 
 // A poll is closed for new responses when the host closed it early, or once its
@@ -137,6 +138,7 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
     closed: pollClosed(row),
     lockedSlot: row.locked_slot ?? null,
     expiresAt: row.expires_at ?? null,
+    capacity: row.capacity ?? null,
     createdAt: row.created_at,
     responses: responses.map((r) => ({
       name: r.name,
@@ -174,8 +176,8 @@ polls.post(
 
     await c.env.DB.prepare(
       `INSERT INTO polls
-         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, results_hidden, edit_token, created_at, expires_at, deadline)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         (id, title, kind, days, from_time, to_time, slot_minutes, tz, is_public, results_hidden, edit_token, created_at, expires_at, deadline, capacity)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
       .bind(
         id,
@@ -192,6 +194,7 @@ polls.post(
         createdAt,
         expiresAt,
         body.deadline ?? null,
+        body.capacity ?? null,
       )
       .run();
 

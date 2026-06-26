@@ -71,6 +71,9 @@ export const createPollSchema = z
     resultsHidden: z.boolean().optional().default(false),
     // Optional "respond by" instant (ISO 8601). Past it, responses are frozen.
     deadline: z.string().datetime({ offset: true }).optional(),
+    // Optional per-slot capacity: a slot reads as "full" at or above this many
+    // available respondents. Indicative only.
+    capacity: z.number().int().positive().max(10000).optional(),
   })
   .superRefine((d, ctx) => {
     checkDays(d.kind, d.days, ctx);
