@@ -58,7 +58,19 @@ describe("MonthCalendar", () => {
   it("renders the reference month and 42 day cells", () => {
     render(<Harness />);
     expect(screen.getByText(/2026/)).toBeTruthy();
-    expect(screen.getAllByRole("gridcell")).toHaveLength(42);
+    expect(document.querySelectorAll("[data-iso]")).toHaveLength(42);
+  });
+
+  it("disables days from adjacent months shown in the frame", () => {
+    render(<Harness />);
+    const outOfMonth = [
+      ...document.querySelectorAll<HTMLButtonElement>("[data-iso]"),
+    ].filter((b) => !b.dataset.iso!.startsWith("2026-07"));
+    expect(outOfMonth.length).toBeGreaterThan(0);
+    for (const b of outOfMonth) {
+      expect(b).toBeDisabled();
+      expect(b).toHaveAttribute("aria-hidden", "true");
+    }
   });
 
   it("toggles a future day on and off", async () => {

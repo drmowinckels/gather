@@ -103,8 +103,13 @@ export function MonthCalendar({
   function locked(iso: string): boolean {
     return lockedDays?.has(iso) ?? false;
   }
+  // A day from an adjacent month, shown to fill the 6-week frame.
+  function outOfView(iso: string): boolean {
+    const [y, m] = iso.split("-").map(Number);
+    return y !== view.year || m !== view.month + 1;
+  }
   function disabled(iso: string): boolean {
-    return iso < floor || locked(iso);
+    return iso < floor || locked(iso) || outOfView(iso);
   }
 
   function paint(iso: string) {
@@ -219,7 +224,10 @@ export function MonthCalendar({
       </div>
 
       <div
-        role="grid"
+        role="group"
+        aria-label={`Choose dates in ${MONTH_TITLE_FMT.format(
+          new Date(view.year, view.month, 1),
+        )}`}
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
@@ -236,9 +244,9 @@ export function MonthCalendar({
             <button
               key={iso}
               type="button"
-              role="gridcell"
               data-iso={iso}
               aria-pressed={isSelected}
+              aria-hidden={!inMonth}
               aria-label={FULL_DATE_FMT.format(date)}
               disabled={isDisabled && !isLocked}
               title={

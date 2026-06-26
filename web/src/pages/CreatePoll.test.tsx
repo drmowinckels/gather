@@ -42,13 +42,13 @@ describe("CreatePoll", () => {
     await user.type(screen.getByLabelText("Event name"), "Standup");
     expect(submit).toBeDisabled();
 
-    const day = screen
-      .getAllByRole("gridcell")
-      .find(
-        (c) =>
-          !(c as HTMLButtonElement).disabled &&
-          c.getAttribute("aria-pressed") === "false",
-      )!;
+    const day = [
+      ...document.querySelectorAll<HTMLButtonElement>("[data-iso]"),
+    ].find(
+      (c) =>
+        !(c as HTMLButtonElement).disabled &&
+        c.getAttribute("aria-pressed") === "false",
+    )!;
     await user.click(day);
 
     expect(submit).toBeEnabled();
@@ -64,13 +64,13 @@ describe("CreatePoll", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Event name"), "Standup");
-    const day = screen
-      .getAllByRole("gridcell")
-      .find(
-        (c) =>
-          !(c as HTMLButtonElement).disabled &&
-          c.getAttribute("aria-pressed") === "false",
-      )!;
+    const day = [
+      ...document.querySelectorAll<HTMLButtonElement>("[data-iso]"),
+    ].find(
+      (c) =>
+        !(c as HTMLButtonElement).disabled &&
+        c.getAttribute("aria-pressed") === "false",
+    )!;
     await user.click(day);
 
     await user.click(screen.getByRole("button", { name: /create poll/i }));
@@ -97,13 +97,13 @@ describe("CreatePoll", () => {
     renderForm();
 
     await user.type(screen.getByLabelText("Event name"), "Standup");
-    const day = screen
-      .getAllByRole("gridcell")
-      .find(
-        (c) =>
-          !(c as HTMLButtonElement).disabled &&
-          c.getAttribute("aria-pressed") === "false",
-      )!;
+    const day = [
+      ...document.querySelectorAll<HTMLButtonElement>("[data-iso]"),
+    ].find(
+      (c) =>
+        !(c as HTMLButtonElement).disabled &&
+        c.getAttribute("aria-pressed") === "false",
+    )!;
     await user.click(day);
     await user.click(screen.getByLabelText(/hide results until i reveal/i));
     await user.click(screen.getByRole("button", { name: /create poll/i }));

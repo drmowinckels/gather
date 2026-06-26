@@ -12,9 +12,11 @@
   --border-strong: #0e5857;
   --brand: #0e5857;
   --brand-2: #1a7270;
-  --botanical: #3f8a6e;
+  --botanical: #2c7458;
   --on-brand: #ffffff;
   --heat-base: transparent;
+  /* Cap a cell's tint so the count digit (always --fg) keeps AA contrast. */
+  --heat-cap: 60%;
   --danger: #b6462f;
   --danger-tint: #fbeeea;
   --danger-border: #e7c4ba;
@@ -47,6 +49,7 @@
   --botanical: #6fbf9e;
   --on-brand: #06181a;
   --heat-base: var(--bg-inset);
+  --heat-cap: 50%;
   --danger: #e8917d;
   --danger-tint: #2a1714;
   --danger-border: #4a2a23;

@@ -324,7 +324,9 @@ export function PollPage() {
               </button>
             )}
             {closeError && (
-              <span style={{ color: "#c0533f" }}>Couldn't update — retry.</span>
+              <span role="alert" style={{ color: "var(--danger)" }}>
+                Couldn't update — retry.
+              </span>
             )}
           </div>
         )}
@@ -396,6 +398,9 @@ export function PollPage() {
               {showQr ? "Hide QR" : "QR"}
             </button>
           </div>
+          <span className="sr-only" role="status" aria-live="polite">
+            {copied ? "Link copied to clipboard" : ""}
+          </span>
           {showQr && (
             <QrCode
               value={window.location.href}
@@ -484,7 +489,7 @@ export function PollPage() {
                 <span>
                   🙈 Results are hidden from respondents until you reveal them.
                   {revealError && (
-                    <span style={{ color: "#c0533f" }}>
+                    <span role="alert" style={{ color: "var(--danger)" }}>
                       {" "}
                       Couldn't reveal — try again.
                     </span>

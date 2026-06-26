@@ -150,6 +150,40 @@ describe("RespondPanel", () => {
     ).toBeNull();
   });
 
+  it("keeps the calendar-overlay file input keyboard-reachable", () => {
+    const { container } = render(<RespondPanel poll={poll} viewerTz={tz} />);
+    const input = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    // display:none would drop it from the tab order; sr-only keeps it focusable.
+    expect(input.style.display).not.toBe("none");
+    expect(input).toHaveClass("sr-only");
+  });
+
+  it("announces save progress in a polite live region", async () => {
+    const user = userEvent.setup();
+    let resolveSave: (v: ReturnType<typeof response>) => void = () => {};
+    submitMock.mockImplementation(
+      () =>
+        new Promise((res) => {
+          resolveSave = res;
+        }),
+    );
+    render(<RespondPanel poll={poll} viewerTz={tz} />);
+
+    await user.type(screen.getByLabelText(/your name/i), "Ada");
+    await user.click(
+      screen.getByRole("button", { name: /save availability/i }),
+    );
+
+    const live = screen.getByText(/saving your availability/i);
+    expect(live).toHaveAttribute("aria-live", "polite");
+    resolveSave(response({ responseToken: "t" }));
+    await waitFor(() =>
+      expect(screen.getByText(/availability saved/i)).toBeInTheDocument(),
+    );
+  });
+
   it("sends a typed password as the secret and keeps using it", async () => {
     const user = userEvent.setup();
     submitMock.mockResolvedValue(response()); // password path → no token returned
