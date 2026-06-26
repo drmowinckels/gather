@@ -411,6 +411,11 @@
                     "maxItems": 5000,
                     "default": []
                   },
+                  "group": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 60
+                  },
                   "secret": {
                     "type": "string",
                     "minLength": 1,

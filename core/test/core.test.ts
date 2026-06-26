@@ -112,6 +112,7 @@ describe("responsesToCsv", () => {
         name: "Ada",
         slots: ["2026-07-15T09:00", "2026-07-15T09:30"],
         maybe: [],
+        group: "Eng",
       },
       {
         name: "Kari",
@@ -120,11 +121,11 @@ describe("responsesToCsv", () => {
       },
     ]);
     expect(csv).toBe(
-      "name,slot,status\r\n" +
-        "Ada,2026-07-15T09:00,available\r\n" +
-        "Kari,2026-07-15T09:00,available\r\n" +
-        "Ada,2026-07-15T09:30,available\r\n" +
-        "Kari,2026-07-15T09:30,maybe\r\n",
+      "name,slot,status,group\r\n" +
+        "Ada,2026-07-15T09:00,available,Eng\r\n" +
+        "Kari,2026-07-15T09:00,available,\r\n" +
+        "Ada,2026-07-15T09:30,available,Eng\r\n" +
+        "Kari,2026-07-15T09:30,maybe,\r\n",
     );
   });
 
@@ -137,7 +138,7 @@ describe("responsesToCsv", () => {
 
   it("returns just the header when there are no painted slots", () => {
     expect(responsesToCsv([{ name: "Ada", slots: [], maybe: [] }])).toBe(
-      "name,slot,status\r\n",
+      "name,slot,status,group\r\n",
     );
   });
 });

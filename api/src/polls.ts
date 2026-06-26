@@ -110,6 +110,7 @@ interface ResponseRow {
   tz: string;
   slots: string;
   maybe: string | null;
+  group_name: string | null;
   updated_at: string;
 }
 
@@ -142,6 +143,7 @@ function serializePoll(row: PollRow, responses: ResponseRow[]) {
       tz: r.tz,
       slots: JSON.parse(r.slots) as string[],
       maybe: JSON.parse(r.maybe ?? "[]") as string[],
+      ...(r.group_name ? { group: r.group_name } : {}),
       updatedAt: r.updated_at,
     })),
   };
@@ -210,7 +212,7 @@ polls.get("/:id", async (c) => {
   let responses: ResponseRow[] = [];
   if (canSeeResults(c, row)) {
     const result = await c.env.DB.prepare(
-      `SELECT name, tz, slots, maybe, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+      `SELECT name, tz, slots, maybe, group_name, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
     )
       .bind(id)
       .all<ResponseRow>();
@@ -256,14 +258,20 @@ polls.get("/:id/csv", async (c) => {
   if (!canSeeResults(c, row)) return c.json({ error: "forbidden" }, 403);
 
   const result = await c.env.DB.prepare(
-    `SELECT name, slots, maybe FROM responses WHERE poll_id = ? ORDER BY id`,
+    `SELECT name, slots, maybe, group_name FROM responses WHERE poll_id = ? ORDER BY id`,
   )
     .bind(id)
-    .all<{ name: string; slots: string; maybe: string | null }>();
+    .all<{
+      name: string;
+      slots: string;
+      maybe: string | null;
+      group_name: string | null;
+    }>();
   const responses = result.results.map((r) => ({
     name: r.name,
     slots: JSON.parse(r.slots) as string[],
     maybe: JSON.parse(r.maybe ?? "[]") as string[],
+    group: r.group_name ?? undefined,
   }));
 
   return c.body(responsesToCsv(responses), 200, {
@@ -330,7 +338,7 @@ polls.post(
       .run();
 
     const responses = await c.env.DB.prepare(
-      `SELECT name, tz, slots, maybe, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+      `SELECT name, tz, slots, maybe, group_name, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
     )
       .bind(id)
       .all<ResponseRow>();
@@ -438,7 +446,7 @@ polls.patch(
       .run();
 
     const responses = await c.env.DB.prepare(
-      `SELECT name, tz, slots, maybe, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
+      `SELECT name, tz, slots, maybe, group_name, updated_at FROM responses WHERE poll_id = ? ORDER BY id`,
     )
       .bind(id)
       .all<ResponseRow>();
@@ -485,6 +493,7 @@ polls.post(
     const slotSet = new Set(slots);
     // "maybe" is distinct from "available"; a definite slot wins.
     const maybe = [...new Set(body.maybe)].filter((s) => !slotSet.has(s));
+    const group = body.group?.trim() || null;
     const valid = validSlotKeys(
       JSON.parse(poll.days) as string[],
       poll.from_time,
@@ -549,11 +558,12 @@ polls.post(
     // hand back a token that doesn't match the stored hash.
     const now = new Date().toISOString();
     const written = await c.env.DB.prepare(
-      `INSERT INTO responses (poll_id, name, tz, slots, maybe, secret_hash, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO responses (poll_id, name, tz, slots, maybe, group_name, secret_hash, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(poll_id, name)
        DO UPDATE SET tz = excluded.tz, slots = excluded.slots,
-                     maybe = excluded.maybe, updated_at = excluded.updated_at,
+                     maybe = excluded.maybe, group_name = excluded.group_name,
+                     updated_at = excluded.updated_at,
                      secret_hash = COALESCE(responses.secret_hash, excluded.secret_hash)
        WHERE responses.secret_hash IS NULL OR responses.secret_hash = ?
        RETURNING secret_hash`,
@@ -564,6 +574,7 @@ polls.post(
         body.tz,
         JSON.stringify(slots),
         JSON.stringify(maybe),
+        group,
         secretHash,
         now,
         existing?.secret_hash ?? secretHash,
@@ -582,6 +593,7 @@ polls.post(
       tz: body.tz,
       slots,
       maybe,
+      ...(group ? { group } : {}),
       updatedAt: now,
       ...(mintedToken ? { responseToken: mintedToken } : {}),
     });
