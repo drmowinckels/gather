@@ -74,6 +74,8 @@ export const createPollSchema = z
     // Optional per-slot capacity: a slot reads as "full" at or above this many
     // available respondents. Indicative only.
     capacity: z.number().int().positive().max(10000).optional(),
+    // When true, respondents start fully available and paint their busy times.
+    defaultAvailable: z.boolean().optional().default(false),
   })
   .superRefine((d, ctx) => {
     checkDays(d.kind, d.days, ctx);

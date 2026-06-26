@@ -47,6 +47,26 @@ describe("POST /v1/polls", () => {
     expect(res.status).toBe(400);
   });
 
+  it("round-trips the default-available flag (off by default)", async () => {
+    const a = (await (await post(validPoll)).json()) as { id: string };
+    const pollA = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${a.id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { defaultAvailable: boolean };
+    expect(pollA.defaultAvailable).toBe(false);
+
+    const b = (await (
+      await post({ ...validPoll, defaultAvailable: true })
+    ).json()) as { id: string };
+    const pollB = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${b.id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { defaultAvailable: boolean };
+    expect(pollB.defaultAvailable).toBe(true);
+  });
+
   it("round-trips an optional per-slot capacity", async () => {
     const { id } = (await (
       await post({ ...validPoll, capacity: 8 })

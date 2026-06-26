@@ -95,6 +95,10 @@
                     "exclusiveMinimum": true,
                     "minimum": 0,
                     "maximum": 10000
+                  },
+                  "defaultAvailable": {
+                    "type": "boolean",
+                    "default": false
                   }
                 },
                 "required": [

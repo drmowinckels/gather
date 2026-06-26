@@ -28,6 +28,8 @@ export interface PollInput {
   deadline?: string;
   /** Optional per-slot capacity; a slot reads as "full" at or above it. */
   capacity?: number;
+  /** When true, respondents start fully available and paint busy times. */
+  defaultAvailable?: boolean;
 }
 
 export interface CreatedPoll {
@@ -69,6 +71,7 @@ export interface Poll {
   lockedSlot: string | null;
   expiresAt: string | null;
   capacity: number | null;
+  defaultAvailable: boolean;
   createdAt: string;
   responses: PollResponse[];
 }
