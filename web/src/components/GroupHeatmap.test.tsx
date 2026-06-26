@@ -210,6 +210,71 @@ describe("GroupHeatmap — groups", () => {
     render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
     expect(screen.queryByText(/by group/i)).not.toBeInTheDocument();
   });
+
+  it("scopes the tally to a group via the filter", async () => {
+    const user = userEvent.setup();
+    const responses: PollResponse[] = [
+      {
+        name: "Ada",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Eng",
+        updatedAt: "",
+      },
+      {
+        name: "Kari",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Eng",
+        updatedAt: "",
+      },
+      {
+        name: "Cy",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Design",
+        updatedAt: "",
+      },
+    ];
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    expect(screen.getByText("3 responses")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /filter people/i }));
+    // drop the Design bucket → count Eng only
+    await user.click(screen.getByRole("button", { name: /^Design 1\/1/ }));
+
+    expect(screen.getByText("2 of 3 responses")).toBeInTheDocument();
+    expect(screen.getByText("Available · 2")).toBeInTheDocument();
+  });
+
+  it("offers an Ungrouped bucket and toggles it", async () => {
+    const user = userEvent.setup();
+    const responses: PollResponse[] = [
+      {
+        name: "Ada",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Eng",
+        updatedAt: "",
+      },
+      {
+        name: "Bea",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        updatedAt: "",
+      },
+    ];
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    await user.click(screen.getByRole("button", { name: /filter people/i }));
+    await user.click(screen.getByRole("button", { name: /^Ungrouped 1\/1/ }));
+
+    expect(screen.getByText("1 of 2 responses")).toBeInTheDocument();
+  });
 });
 
 describe("GroupHeatmap — capacity", () => {

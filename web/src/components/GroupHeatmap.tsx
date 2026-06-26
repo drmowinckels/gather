@@ -95,6 +95,41 @@ export function GroupHeatmap({
     });
   }
 
+  // Buckets for group-level filtering: one per group plus "Ungrouped". Built
+  // from all responses (so a group keeps its toggle even when fully excluded).
+  const filterGroups = useMemo(() => {
+    const buckets = new Map<string, string[]>();
+    for (const r of poll.responses) {
+      const key = r.group?.trim() || "Ungrouped";
+      const list = buckets.get(key) ?? [];
+      list.push(r.name);
+      buckets.set(key, list);
+    }
+    const ordered = [...buckets.entries()].sort((a, b) => {
+      if (a[0] === "Ungrouped") return 1;
+      if (b[0] === "Ungrouped") return -1;
+      return a[0].localeCompare(b[0]);
+    });
+    return ordered.map(([labelText, members]) => ({
+      label: labelText,
+      members,
+    }));
+  }, [poll.responses]);
+
+  // Toggle a whole bucket: if any member is currently counted, drop them all;
+  // otherwise add them all back.
+  function toggleGroup(members: string[]) {
+    setExcluded((prev) => {
+      const anyIncluded = members.some((m) => !prev.has(m));
+      const next = new Set(prev);
+      for (const m of members) {
+        if (anyIncluded) next.add(m);
+        else next.delete(m);
+      }
+      return next;
+    });
+  }
+
   // Export every response (not just the current subset) — the file is the full
   // record. Built in the browser from data already loaded, so it works for a
   // host viewing a private poll too.
@@ -147,7 +182,9 @@ export function GroupHeatmap({
       <PeopleFilter
         names={names}
         excluded={excluded}
+        groups={filterGroups}
         onToggle={toggleName}
+        onToggleGroup={toggleGroup}
         onReset={() => setExcluded(new Set())}
       />
     ) : null;
