@@ -1,8 +1,11 @@
 import { useMemo, useState } from "react";
+import { responsesToCsv, csvFilename } from "@samkoma/core";
 import { lockSlot, type Poll } from "../lib/api";
 import { aggregate } from "../lib/heatmap";
 import { hourLabel } from "../lib/datetime";
+import { downloadText } from "../lib/download";
 import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
+import { PeopleFilter } from "./PeopleFilter";
 
 const BEST_SHADOW =
   "0 0 0 2px var(--brand), 0 0 14px color-mix(in oklab, var(--brand) 60%, transparent)";
@@ -53,25 +56,107 @@ export function GroupHeatmap({
       ),
     [poll.kind, poll.days, poll.from, poll.to, poll.slot, poll.tz, viewerTz],
   );
-  const agg = useMemo(() => aggregate(poll.responses), [poll.responses]);
+  // Subset filter: anyone the host has toggled off is dropped from the tally.
+  // Tracked as *excluded* names so a respondent who arrives later is counted by
+  // default. The heatmap, ranking and counts all recompute over the subset.
+  const [excluded, setExcluded] = useState<Set<string>>(new Set());
+  const names = useMemo(
+    () => poll.responses.map((r) => r.name),
+    [poll.responses],
+  );
+  const filtered = useMemo(
+    () => poll.responses.filter((r) => !excluded.has(r.name)),
+    [poll.responses, excluded],
+  );
+  const agg = useMemo(() => aggregate(filtered), [filtered]);
+  const filtering = excluded.size > 0;
   const label = (key: string) =>
     formatSlotLabelInTz(key, poll.kind, poll.tz, viewerTz);
 
-  // Empty state covers both "no responses" and "responses but nobody is free in
-  // any slot" — in the latter, agg.ranked is empty and there's no best slot.
+  function toggleName(name: string) {
+    setExcluded((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+  }
+
+  // Export every response (not just the current subset) — the file is the full
+  // record. Built in the browser from data already loaded, so it works for a
+  // host viewing a private poll too.
+  function exportCsv() {
+    downloadText(
+      csvFilename(poll.title),
+      responsesToCsv(poll.responses),
+      "text/csv;charset=utf-8",
+    );
+  }
+
+  const header = (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+        gap: 12,
+        marginBottom: 18,
+        flexWrap: "wrap",
+      }}
+    >
+      <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
+        Group availability
+      </h2>
+      <span
+        style={{ display: "flex", alignItems: "center", gap: 12 }}
+        className="subtle"
+      >
+        <span style={{ fontSize: 12 }}>
+          {filtering
+            ? `${agg.total} of ${names.length} responses`
+            : `${agg.total} ${agg.total === 1 ? "response" : "responses"}`}
+        </span>
+        {poll.responses.length > 0 && (
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={exportCsv}
+          >
+            Download CSV
+          </button>
+        )}
+      </span>
+    </div>
+  );
+
+  const filterBar =
+    names.length >= 2 ? (
+      <PeopleFilter
+        names={names}
+        excluded={excluded}
+        onToggle={toggleName}
+        onReset={() => setExcluded(new Set())}
+      />
+    ) : null;
+
+  // Empty state covers "no responses", "responses but nobody is free in any
+  // slot", and "you filtered everyone out" — agg.ranked is empty in all three.
+  // The filter bar stays rendered so a host who over-filtered can recover.
   if (agg.ranked.length === 0) {
     return (
-      <div
-        className="card"
-        style={{ padding: "36px 28px", textAlign: "center", margin: "26px 0" }}
-      >
-        <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
-          No availability yet
-        </p>
-        <p className="helper" style={{ margin: "8px auto 0", maxWidth: 360 }}>
-          Once people paint their free times, the group's best slot lights up
-          here.
-        </p>
+      <div className="card" style={{ padding: 24, margin: "26px 0" }}>
+        {header}
+        {filterBar}
+        <div style={{ textAlign: "center", padding: "24px 4px" }}>
+          <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
+            {filtering ? "No one in this selection" : "No availability yet"}
+          </p>
+          <p className="helper" style={{ margin: "8px auto 0", maxWidth: 360 }}>
+            {filtering
+              ? "Add someone back in to see where they overlap."
+              : "Once people paint their free times, the group's best slot lights up here."}
+          </p>
+        </div>
       </div>
     );
   }
@@ -79,28 +164,53 @@ export function GroupHeatmap({
   const best = agg.ranked[0];
   const runnerUps = agg.ranked.slice(1, 5);
 
+  // Screen-reader equivalent of the colour grid: every slot with any
+  // availability, as plain text. The visual grid is aria-hidden for non-hosts,
+  // so this table is their canonical source of the per-slot tally.
+  const srRows = view.times.flatMap((t) =>
+    view.days.flatMap((d) => {
+      const key = view.keyAt(d, t);
+      if (key === null) return [];
+      const cell = agg.cells.get(key);
+      const count = cell?.count ?? 0;
+      const maybeN = cell?.maybe ?? 0;
+      if (count === 0 && maybeN === 0) return [];
+      return [{ key, count, maybeN }];
+    }),
+  );
+
   return (
     <div className="card" style={{ padding: 24, margin: "26px 0" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "baseline",
-          gap: 12,
-          marginBottom: 18,
-          flexWrap: "wrap",
-        }}
-      >
-        <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
-          Group availability
-        </h2>
-        <span className="subtle" style={{ fontSize: 12 }}>
-          {agg.total} {agg.total === 1 ? "response" : "responses"}
-        </span>
-      </div>
+      {header}
+      {filterBar}
+
+      <table className="sr-only">
+        <caption>
+          Group availability by slot, {agg.total} of {names.length} responses
+          counted. Best slot {label(best.slot)} with {best.count} available.
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Time slot</th>
+            <th scope="col">Available</th>
+            <th scope="col">Maybe</th>
+          </tr>
+        </thead>
+        <tbody>
+          {srRows.map(({ key, count, maybeN }) => (
+            <tr key={key}>
+              <th scope="row">{label(key)}</th>
+              <td>
+                {count} of {agg.total}
+              </td>
+              <td>{maybeN}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
 
       <div className="results-grid">
-        <div onMouseLeave={() => setHovered(null)}>
+        <div onMouseLeave={() => setHovered(null)} aria-hidden={!isHost}>
           <div style={{ display: "flex", gap: 5, marginBottom: 5 }}>
             <div style={{ width: 46, flex: "none" }} />
             {view.days.map((d, i) => (
@@ -163,35 +273,49 @@ export function GroupHeatmap({
                 const empty = count === 0 && maybeN === 0;
                 const base =
                   count > 0
-                    ? `color-mix(in oklab, var(--brand) ${pct}%, var(--heat-base))`
+                    ? `color-mix(in oklab, var(--brand) min(${pct}%, var(--heat-cap)), var(--heat-base))`
                     : "transparent";
-                return (
+                const desc = empty
+                  ? `${label(key)} — nobody yet`
+                  : `${label(key)} — ${count} of ${agg.total} available${maybeN ? `, ${maybeN} maybe` : ""}`;
+                const cellStyle = {
+                  cursor: isHost ? "pointer" : "default",
+                  background: maybeN > 0 ? `${HATCH}, ${base}` : base,
+                  boxShadow: isLocked
+                    ? LOCK_SHADOW
+                    : isSelected
+                      ? SELECT_SHADOW
+                      : empty
+                        ? "inset 0 0 0 1px var(--border-subtle)"
+                        : isBest
+                          ? BEST_SHADOW
+                          : "none",
+                  color: "var(--fg)",
+                } as const;
+                const content = count > 0 ? count : maybeN > 0 ? maybeN : "";
+                return isHost ? (
+                  <button
+                    key={d}
+                    type="button"
+                    className="heatcell"
+                    aria-pressed={isSelected}
+                    aria-label={`${desc}. Select to lock in.`}
+                    onMouseEnter={() => setHovered(key)}
+                    onClick={() => setSelected(key)}
+                    title={desc}
+                    style={cellStyle}
+                  >
+                    {content}
+                  </button>
+                ) : (
                   <div
                     key={d}
                     className="heatcell"
                     onMouseEnter={() => setHovered(key)}
-                    onClick={isHost ? () => setSelected(key) : undefined}
-                    title={
-                      empty
-                        ? `${label(key)} — nobody yet`
-                        : `${label(key)} — ${count} available${maybeN ? `, ${maybeN} maybe` : ""}`
-                    }
-                    style={{
-                      cursor: isHost ? "pointer" : "default",
-                      background: maybeN > 0 ? `${HATCH}, ${base}` : base,
-                      boxShadow: isLocked
-                        ? LOCK_SHADOW
-                        : isSelected
-                          ? SELECT_SHADOW
-                          : empty
-                            ? "inset 0 0 0 1px var(--border-subtle)"
-                            : isBest
-                              ? BEST_SHADOW
-                              : "none",
-                      color: pct >= 55 ? "var(--on-brand)" : "var(--fg-subtle)",
-                    }}
+                    title={desc}
+                    style={cellStyle}
                   >
-                    {count > 0 ? count : maybeN > 0 ? maybeN : ""}
+                    {content}
                   </div>
                 );
               })}

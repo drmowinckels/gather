@@ -740,6 +740,89 @@
         }
       }
     },
+    "/v1/polls/{id}/csv": {
+      "get": {
+        "tags": [
+          "polls"
+        ],
+        "summary": "Data export (.csv) of every painted slot",
+        "description": "A tidy CSV with one row per respondent+slot (`name,slot,status`), `status` being `available` or `maybe`. Slot keys are canonical (the poll's home tz). Gated like the aggregate: public on a public, non-hidden poll; otherwise host-only.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "The poll's short id."
+          }
+        ],
+        "security": [
+          {},
+          {
+            "editToken": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A CSV of the responses.",
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "not_found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "expired",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/polls/{id}/ics": {
       "get": {
         "tags": [

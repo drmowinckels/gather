@@ -68,6 +68,7 @@ export const DOCUMENTED_PATHS = [
   "/v1/polls/{id}",
   "/v1/polls/{id}/slots",
   "/v1/polls/{id}/best",
+  "/v1/polls/{id}/csv",
   "/v1/polls/{id}/lock",
   "/v1/polls/{id}/ics",
   "/v1/metrics",
@@ -190,6 +191,27 @@ export function openApiDocument(serverUrl: string): Json {
           responses: {
             "200": ok("Updated poll."),
             "400": err("invalid_slots"),
+            "403": err("forbidden"),
+            ...NOT_FOUND_OR_EXPIRED,
+          },
+        },
+      },
+      "/v1/polls/{id}/csv": {
+        get: {
+          tags: ["polls"],
+          summary: "Data export (.csv) of every painted slot",
+          description:
+            "A tidy CSV with one row per respondent+slot (`name,slot,status`), " +
+            "`status` being `available` or `maybe`. Slot keys are canonical (the " +
+            "poll's home tz). Gated like the aggregate: public on a public, " +
+            "non-hidden poll; otherwise host-only.",
+          parameters: [ID_PARAM],
+          security: OPTIONAL_AUTH,
+          responses: {
+            "200": {
+              description: "A CSV of the responses.",
+              content: { "text/csv": { schema: { type: "string" } } },
+            },
             "403": err("forbidden"),
             ...NOT_FOUND_OR_EXPIRED,
           },

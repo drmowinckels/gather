@@ -129,3 +129,64 @@ describe("CreatePoll", () => {
     expect(payload.days).toEqual(["mon", "wed"]); // week order
   });
 });
+
+describe("CreatePoll — duplicate prefill", () => {
+  function renderWithTemplate(template: unknown) {
+    return render(
+      <MemoryRouter
+        initialEntries={[{ pathname: "/new", state: { template } }]}
+      >
+        <CreatePoll />
+      </MemoryRouter>,
+    );
+  }
+
+  it("prefills settings and clears the dates of a dates poll", () => {
+    renderWithTemplate({
+      title: "Team offsite",
+      kind: "dates",
+      days: [],
+      from: "10:00",
+      to: "16:00",
+      slot: 60,
+      tz: "Europe/Oslo",
+      public: false,
+      resultsHidden: true,
+    });
+    expect(
+      screen.getByRole("heading", { name: /duplicate poll/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Event name")).toHaveValue("Team offsite");
+    expect(screen.getByLabelText(/no earlier than/i)).toHaveValue("10:00");
+    expect(screen.getByLabelText(/no later than/i)).toHaveValue("16:00");
+    expect(screen.getByText("No days selected yet.")).toBeInTheDocument();
+  });
+
+  it("carries weekday tokens through and submits them unchanged", async () => {
+    createPoll.mockResolvedValue({ id: "d1", url: "x", editToken: "t" });
+    const user = userEvent.setup();
+    renderWithTemplate({
+      title: "Weekly standup",
+      kind: "weekdays",
+      days: ["mon", "wed"],
+      from: "09:00",
+      to: "10:00",
+      slot: 30,
+      tz: "UTC",
+      public: true,
+      resultsHidden: false,
+    });
+    expect(screen.getByRole("button", { name: "Mon" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await user.click(screen.getByRole("button", { name: /create poll/i }));
+    await waitFor(() => expect(createPoll).toHaveBeenCalledTimes(1));
+    expect(createPoll.mock.calls[0][0]).toMatchObject({
+      kind: "weekdays",
+      days: ["mon", "wed"],
+      from: "09:00",
+      public: true,
+    });
+  });
+});

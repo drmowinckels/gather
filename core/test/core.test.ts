@@ -7,6 +7,8 @@ import {
   slotKey,
   tallySlots,
   rankCells,
+  responsesToCsv,
+  csvFilename,
 } from "../src/index";
 
 describe("resolveDays", () => {
@@ -100,5 +102,54 @@ describe("ranking", () => {
       maybe: 1,
       maybeNames: ["Kari"],
     });
+  });
+});
+
+describe("responsesToCsv", () => {
+  it("emits a tidy row per painted slot, ordered by slot then status then name", () => {
+    const csv = responsesToCsv([
+      {
+        name: "Ada",
+        slots: ["2026-07-15T09:00", "2026-07-15T09:30"],
+        maybe: [],
+      },
+      {
+        name: "Kari",
+        slots: ["2026-07-15T09:00"],
+        maybe: ["2026-07-15T09:30"],
+      },
+    ]);
+    expect(csv).toBe(
+      "name,slot,status\r\n" +
+        "Ada,2026-07-15T09:00,available\r\n" +
+        "Kari,2026-07-15T09:00,available\r\n" +
+        "Ada,2026-07-15T09:30,available\r\n" +
+        "Kari,2026-07-15T09:30,maybe\r\n",
+    );
+  });
+
+  it("quotes fields with commas, quotes or newlines (RFC 4180)", () => {
+    const csv = responsesToCsv([
+      { name: 'O"Hara, Inc', slots: ["2026-07-15T09:00"] },
+    ]);
+    expect(csv).toContain('"O""Hara, Inc",2026-07-15T09:00,available');
+  });
+
+  it("returns just the header when there are no painted slots", () => {
+    expect(responsesToCsv([{ name: "Ada", slots: [], maybe: [] }])).toBe(
+      "name,slot,status\r\n",
+    );
+  });
+});
+
+describe("csvFilename", () => {
+  it("slugs the title into a safe -availability.csv name", () => {
+    expect(csvFilename("Team Offsite — September!")).toBe(
+      "team-offsite-september-availability.csv",
+    );
+  });
+
+  it("falls back to a default for an empty slug", () => {
+    expect(csvFilename("✨")).toBe("poll-availability.csv");
   });
 });

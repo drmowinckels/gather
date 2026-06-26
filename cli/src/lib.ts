@@ -81,6 +81,72 @@ export function buildCreateBody(
   };
 }
 
+// The source poll's reusable settings, as returned by `getPoll`.
+export interface SourcePoll {
+  title: string;
+  kind: "dates" | "weekdays";
+  days: string[];
+  from: string;
+  to: string;
+  slot: number;
+  tz: string;
+  public: boolean;
+  resultsHidden: boolean;
+}
+
+export interface LikeOptions {
+  title?: string;
+  days?: string; // override the day spec
+  from?: string;
+  to?: string;
+  slot?: string;
+  tz?: string;
+  public?: boolean; // --public forces the duplicate public
+  hideResults?: boolean; // --hide-results forces the duplicate's results hidden
+  deadline?: string;
+}
+
+// Build a create body from an existing poll (`samkoma new --like <id>`), with
+// any explicitly-passed flags overriding the source. Specific calendar dates are
+// NOT reused — they'd be in the past and create an already-expired poll — so a
+// dated duplicate must supply new --days; recurring weekday tokens carry over.
+export function buildCreateBodyFromPoll(
+  source: SourcePoll,
+  opts: LikeOptions,
+  today: Date = new Date(),
+): PollBody {
+  const title = (opts.title ?? source.title).trim();
+  if (!title) throw new Error("A title is required");
+  const from = parseTime(opts.from ?? source.from, "--from");
+  const to = parseTime(opts.to ?? source.to, "--to");
+  if (from >= to) throw new Error("--from must be earlier than --to");
+
+  let days: string[];
+  if (opts.days !== undefined) {
+    days =
+      source.kind === "weekdays"
+        ? parseWeekdays(opts.days)
+        : resolveDays(opts.days, today);
+  } else if (source.kind === "weekdays") {
+    days = source.days;
+  } else {
+    throw new Error("Duplicating a dated poll needs new dates — pass --days");
+  }
+
+  return {
+    title,
+    kind: source.kind,
+    days,
+    from,
+    to,
+    slot: opts.slot !== undefined ? parseSlot(opts.slot) : source.slot,
+    tz: opts.tz ?? source.tz,
+    public: opts.public ? true : source.public,
+    resultsHidden: opts.hideResults ? true : source.resultsHidden,
+    ...(opts.deadline ? { deadline: parseDeadline(opts.deadline) } : {}),
+  };
+}
+
 export interface EditOptions {
   title?: string;
   days?: string;

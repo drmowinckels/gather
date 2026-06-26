@@ -9,7 +9,13 @@ import {
 } from "./schema";
 import { shortId, editToken } from "./id";
 import { mintResponseToken, hashSecret, verifySecret } from "./secret";
-import { validSlotKeys, buildLockedIcs, icsFilename } from "@samkoma/core";
+import {
+  validSlotKeys,
+  buildLockedIcs,
+  icsFilename,
+  responsesToCsv,
+  csvFilename,
+} from "@samkoma/core";
 import { rankSlots } from "./aggregate";
 import { expiryDate, addGraceDays, isExpired, todayUTC } from "./dates";
 import { rateLimit } from "./ratelimit";
@@ -238,6 +244,32 @@ polls.get("/:id/best", async (c) => {
   }));
 
   return c.json(rankSlots(responses, limit));
+});
+
+// Data export: every painted slot as a tidy CSV (one row per respondent+slot).
+// Gated exactly like the aggregate reads — visible to the host, or to anyone on
+// a public, non-hidden poll; 403 otherwise.
+polls.get("/:id/csv", async (c) => {
+  const id = c.req.param("id");
+  const row = await loadActivePoll(c, id);
+  if (row instanceof Response) return row;
+  if (!canSeeResults(c, row)) return c.json({ error: "forbidden" }, 403);
+
+  const result = await c.env.DB.prepare(
+    `SELECT name, slots, maybe FROM responses WHERE poll_id = ? ORDER BY id`,
+  )
+    .bind(id)
+    .all<{ name: string; slots: string; maybe: string | null }>();
+  const responses = result.results.map((r) => ({
+    name: r.name,
+    slots: JSON.parse(r.slots) as string[],
+    maybe: JSON.parse(r.maybe ?? "[]") as string[],
+  }));
+
+  return c.body(responsesToCsv(responses), 200, {
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="${csvFilename(row.title)}"`,
+  });
 });
 
 // Calendar export: the locked slot as a single-event iCalendar. Public (the

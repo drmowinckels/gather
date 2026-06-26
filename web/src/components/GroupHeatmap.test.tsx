@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { GroupHeatmap } from "./GroupHeatmap";
 import type { Poll, PollResponse } from "../lib/api";
 
@@ -48,5 +49,155 @@ describe("GroupHeatmap", () => {
     // appears in the best-slot card and the hovered/best detail panel
     expect(screen.getAllByText(/Wed 15, 09:00/).length).toBeGreaterThan(0);
     expect(screen.getByText("Available · 1")).toBeInTheDocument();
+  });
+});
+
+describe("GroupHeatmap — people filter", () => {
+  const responses: PollResponse[] = [
+    {
+      name: "Ada",
+      tz: "UTC",
+      slots: ["2026-07-15T09:00", "2026-07-15T09:30"],
+      maybe: [],
+      updatedAt: "",
+    },
+    {
+      name: "Kari",
+      tz: "UTC",
+      slots: ["2026-07-15T09:00"],
+      maybe: [],
+      updatedAt: "",
+    },
+  ];
+
+  it("hides the filter with fewer than two respondents", () => {
+    render(
+      <GroupHeatmap poll={makePoll(responses.slice(0, 1))} viewerTz="UTC" />,
+    );
+    expect(
+      screen.queryByRole("button", { name: /filter people/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("recomputes the tally over the selected subset", async () => {
+    const user = userEvent.setup();
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    expect(screen.getByText("2 responses")).toBeInTheDocument();
+    expect(screen.getByText("Available · 2")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /filter people/i }));
+    await user.click(screen.getByRole("button", { name: "Kari" }));
+
+    expect(screen.getByText("1 of 2 responses")).toBeInTheDocument();
+    expect(screen.getByText("Available · 1")).toBeInTheDocument();
+  });
+
+  it("shows a recoverable empty state when everyone is filtered out", async () => {
+    const user = userEvent.setup();
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    await user.click(screen.getByRole("button", { name: /filter people/i }));
+    await user.click(screen.getByRole("button", { name: "Ada" }));
+    await user.click(screen.getByRole("button", { name: "Kari" }));
+
+    expect(screen.getByText("No one in this selection")).toBeInTheDocument();
+    // the chips remain so the host can add someone back
+    expect(screen.getByRole("button", { name: "Ada" })).toBeInTheDocument();
+  });
+});
+
+describe("GroupHeatmap — accessibility", () => {
+  const responses: PollResponse[] = [
+    {
+      name: "Ada",
+      tz: "UTC",
+      slots: ["2026-07-15T09:00"],
+      maybe: [],
+      updatedAt: "",
+    },
+  ];
+
+  it("exposes a screen-reader table of the per-slot tally", () => {
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    const table = screen.getByRole("table");
+    expect(table).toHaveTextContent(/Group availability by slot/i);
+    expect(
+      within(table).getByRole("rowheader", { name: /Wed 15, 09:00/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders no host-selection buttons for a plain viewer", () => {
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    expect(
+      screen.queryByRole("button", { name: /select to lock in/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("makes host cells keyboard-operable buttons that drive the lock target", async () => {
+    const user = userEvent.setup();
+    render(
+      <GroupHeatmap
+        poll={makePoll(responses)}
+        viewerTz="UTC"
+        isHost
+        editToken="tok"
+      />,
+    );
+    const cells = screen.getAllByRole("button", { name: /select to lock in/i });
+    expect(cells.length).toBeGreaterThan(0);
+
+    // Pick an empty slot via keyboard; the lock button retargets to it.
+    const tenAm = screen.getByRole("button", {
+      name: /Wed 15, 10:00.*select to lock in/i,
+    });
+    tenAm.focus();
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: /lock in .*Wed 15, 10:00/i }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("GroupHeatmap — CSV export", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("downloads all responses as CSV from the header button", async () => {
+    const parts: string[] = [];
+    vi.stubGlobal(
+      "Blob",
+      class {
+        constructor(chunks: string[]) {
+          parts.push(chunks.join(""));
+        }
+      },
+    );
+    const createObjectURL = vi.fn(() => "blob:mock");
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL: vi.fn() });
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    const user = userEvent.setup();
+
+    const responses: PollResponse[] = [
+      {
+        name: "Ada",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        updatedAt: "",
+      },
+    ];
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    await user.click(screen.getByRole("button", { name: /download csv/i }));
+
+    expect(createObjectURL).toHaveBeenCalledOnce();
+    expect(parts[0]).toContain("Ada,2026-07-15T09:00,available");
+  });
+
+  it("offers no CSV button before anyone has responded", () => {
+    render(<GroupHeatmap poll={makePoll([])} viewerTz="UTC" />);
+    expect(
+      screen.queryByRole("button", { name: /download csv/i }),
+    ).not.toBeInTheDocument();
   });
 });

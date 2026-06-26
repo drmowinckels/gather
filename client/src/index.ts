@@ -195,6 +195,22 @@ export class SamkomaClient {
     return res.text();
   }
 
+  /**
+   * Fetch every painted slot as a tidy CSV (`name,slot,status`). Gated like the
+   * aggregate: public on a public, non-hidden poll; otherwise pass the edit
+   * token. The API responds 403 (`forbidden`) when the caller can't see results.
+   * Returns the raw CSV text.
+   */
+  async getCsv(id: string, opts: { editToken?: string } = {}): Promise<string> {
+    const token = opts.editToken ?? this.editToken;
+    const res = await fetch(
+      `${this.baseUrl}/v1/polls/${encodeURIComponent(id)}/csv`,
+      { headers: token ? { Authorization: `Bearer ${token}` } : undefined },
+    );
+    if (!res.ok) throw await toError(res);
+    return res.text();
+  }
+
   /** Ranked best slots. Pass the edit token for a private poll. */
   getBest(
     id: string,

@@ -96,6 +96,7 @@ the same zod validators the routes use, so they can't drift). See
 | `GET`  | `/v1/polls/:id`       | —                                             | poll + aggregated responses            |
 | `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[], maybe[]}`                | saved `{name, tz, slots, maybe, …}`    |
 | `GET`  | `/v1/polls/:id/best`  | `?limit=` (optional)                          | `{total, results[{slot,count,names}]}` |
+| `GET`  | `/v1/polls/:id/csv`   | —                                             | `text/csv` of every response (gated like `best`) |
 | `POST` | `/v1/polls/:id/lock`  | `{slot}` (or `{slot:null}`), host token       | updated poll                           |
 | `GET`  | `/v1/polls/:id/ics`   | —                                             | `text/calendar` for the locked slot (`409` if none) |
 
@@ -126,9 +127,11 @@ so the host can lock from the terminal.
 npm install                  # once, at the repo root (workspaces)
 npm run build -w samkoma-cli
 node cli/dist/index.js new "Team offsite" --days mon-fri --from 09:00 --to 17:00 --tz Europe/Oslo --public
+node cli/dist/index.js new --like <id> --days 2026-09-01,2026-09-02   # duplicate an existing poll
 node cli/dist/index.js best <id>
 node cli/dist/index.js lock <id> 2026-07-15T09:00
 node cli/dist/index.js ics <id> --out offsite.ics   # export the locked slot
+node cli/dist/index.js csv <id> --out responses.csv # export every response as CSV
 ```
 
 `--days` accepts ISO dates (`2026-07-15,2026-07-16`) or weekdays/ranges
@@ -217,6 +220,20 @@ The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
   can reveal them at any time; respondents see only their own availability.
 - **QR share.** The poll page can show a QR code for the share link (downloadable
   as SVG/PNG), generated in the browser — the URL is never sent to a QR service.
+- **Compare subsets.** On the results, a "Filter people" control toggles
+  respondents in or out of the tally, so the heatmap and best slot recompute over
+  just the people you pick — "what works if we drop Alice and Bob?". Anyone who
+  responds later is counted by default; it's a client-side view, no API change.
+- **CSV export.** "Download CSV" on the results gives a tidy file
+  (`name,slot,status`, status `available`/`maybe`) for any external analysis. The
+  web builds it in the browser from data already loaded (so it works for a host on
+  a private poll too); `GET /v1/polls/:id/csv` and `samkoma csv <id>` expose the
+  same export programmatically, gated like the aggregate.
+- **Duplicate a poll.** "Duplicate" prefills the create form from an existing
+  poll's settings (times, timezone, slot size, visibility). Recurring weekday
+  tokens carry over; specific calendar dates are cleared so you pick fresh ones
+  (reusing past dates would create an already-expired poll). The CLI mirrors it
+  with `samkoma new --like <id>`.
 - **Calendar overlay (no accounts).** A respondent can upload their own `.ics`
   to overlay busy times on the grid (conflict dots) and one-click "block out" the
   clashing slots. Parsed **entirely in the browser** — nothing is uploaded.

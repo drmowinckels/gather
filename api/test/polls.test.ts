@@ -182,6 +182,58 @@ describe("GET /v1/polls/:id/best", () => {
   });
 });
 
+describe("GET /v1/polls/:id/csv", () => {
+  function submit(id: string, name: string, slots: string[], maybe?: string[]) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/slots`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: ORIGIN },
+      body: JSON.stringify({ name, tz: "Europe/Oslo", slots, maybe }),
+    });
+  }
+  function csv(id: string, token?: string) {
+    return SELF.fetch(`https://api.test/v1/polls/${id}/csv`, {
+      headers: {
+        Origin: ORIGIN,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+    });
+  }
+
+  it("exports a tidy CSV with attachment headers (public poll)", async () => {
+    const { id } = (await (await post(validPoll)).json()) as { id: string };
+    await submit(id, "Ada", ["2099-07-15T09:00"], ["2099-07-15T09:30"]);
+    await submit(id, "Kari", ["2099-07-15T09:00"]);
+
+    const res = await csv(id);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/csv");
+    expect(res.headers.get("content-disposition")).toContain(
+      "team-offsite-availability.csv",
+    );
+    const body = await res.text();
+    expect(body).toBe(
+      "name,slot,status\r\n" +
+        "Ada,2099-07-15T09:00,available\r\n" +
+        "Kari,2099-07-15T09:00,available\r\n" +
+        "Ada,2099-07-15T09:30,maybe\r\n",
+    );
+  });
+
+  it("forbids the export on a private poll without the edit token", async () => {
+    const created = (await (
+      await post({ ...validPoll, public: false })
+    ).json()) as { id: string; editToken: string };
+    await submit(created.id, "Ada", ["2099-07-15T09:00"]);
+
+    expect((await csv(created.id)).status).toBe(403);
+    expect((await csv(created.id, created.editToken)).status).toBe(200);
+  });
+
+  it("404s for an unknown poll", async () => {
+    expect((await csv("nope00")).status).toBe(404);
+  });
+});
+
 describe("POST /v1/polls/:id/lock", () => {
   function lock(id: string, slot: string | null, token?: string) {
     return SELF.fetch(`https://api.test/v1/polls/${id}/lock`, {

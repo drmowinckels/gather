@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import type { Poll } from "../lib/api";
 
 const getPoll = vi.fn();
@@ -124,5 +124,38 @@ describe("PollPage hidden-results reveal", () => {
     expect(
       screen.queryByRole("button", { name: /reveal results/i }),
     ).toBeNull();
+  });
+});
+
+function NewProbe() {
+  const loc = useLocation();
+  const template = (loc.state as { template?: { title?: string } } | null)
+    ?.template;
+  return (
+    <div data-testid="new-page">
+      {template ? `dup:${template.title}` : "fresh"}
+    </div>
+  );
+}
+
+describe("PollPage duplicate", () => {
+  it("navigates to /new with a template built from the poll", async () => {
+    getPoll.mockResolvedValue({ ...hiddenPoll, resultsHidden: false });
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter initialEntries={["/e/p1"]}>
+        <Routes>
+          <Route path="/e/:id" element={<PollPage />} />
+          <Route path="/new" element={<NewProbe />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const dup = await screen.findByRole("button", { name: /duplicate/i });
+    await user.click(dup);
+
+    expect(await screen.findByTestId("new-page")).toHaveTextContent(
+      "dup:Team offsite",
+    );
   });
 });

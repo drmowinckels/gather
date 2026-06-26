@@ -2,7 +2,11 @@
 import { parseArgs } from "node:util";
 import { writeFileSync } from "node:fs";
 import { SamkomaClient } from "samkoma-client";
-import { buildCreateBody, buildEditBody } from "./lib.js";
+import {
+  buildCreateBody,
+  buildEditBody,
+  buildCreateBodyFromPoll,
+} from "./lib.js";
 import { saveToken, getToken, TOKEN_FILE } from "./store.js";
 
 const DEFAULT_API = process.env.SAMKOMA_API ?? "https://api.samkoma.org";
@@ -17,8 +21,12 @@ Usage:
   samkoma unlock <id>                 Unlock (host only)
   samkoma close <id> [--reopen]       Close the poll to new responses (host only)
   samkoma ics <id> [--out <file>]     Export the locked slot as a calendar (.ics)
+  samkoma csv <id> [--out <file>]     Export every response as CSV (host for a private poll)
 
 Options for "new":
+  --like <id>     Start from an existing poll's settings (a duplicate). Reuses
+                  its times/tz/slot/visibility; reuses weekday tokens, but a
+                  dated poll needs new --days. Other flags override the source.
   --days <spec>   Dates ("2026-07-15,2026-07-16") or, with --weekdays, weekday
                   tokens/ranges ("mon-fri", "tue,thu")
   --weekdays      Make a recurring days-of-the-week poll (times stay in --tz);
@@ -66,6 +74,7 @@ async function main() {
       to: { type: "string" },
       slot: { type: "string" },
       tz: { type: "string" },
+      like: { type: "string" },
       public: { type: "boolean" },
       private: { type: "boolean" },
       weekdays: { type: "boolean" },
@@ -91,21 +100,42 @@ async function main() {
 
   if (command === "new") {
     const title = positionals[1];
-    if (!title) throw new Error('Usage: samkoma new "<title>" --days <spec>');
-    if (!values.days)
-      throw new Error("--days is required (e.g. --days mon-fri)");
-    const body = buildCreateBody({
-      title,
-      days: values.days,
-      from: values.from,
-      to: values.to,
-      slot: values.slot,
-      tz: values.tz ?? systemTz(),
-      public: values.public ?? false,
-      weekdays: values.weekdays ?? false,
-      hideResults: values["hide-results"] ?? false,
-      deadline: values.deadline,
-    });
+    let body;
+    if (values.like) {
+      // Duplicate: pull the source poll's settings (host token if we have one,
+      // so a private source still resolves), then apply any overriding flags.
+      const source = await client.getPoll(
+        values.like,
+        getToken(values.like) ?? undefined,
+      );
+      body = buildCreateBodyFromPoll(source, {
+        title,
+        days: values.days,
+        from: values.from,
+        to: values.to,
+        slot: values.slot,
+        tz: values.tz,
+        public: values.public,
+        hideResults: values["hide-results"],
+        deadline: values.deadline,
+      });
+    } else {
+      if (!title) throw new Error('Usage: samkoma new "<title>" --days <spec>');
+      if (!values.days)
+        throw new Error("--days is required (e.g. --days mon-fri)");
+      body = buildCreateBody({
+        title,
+        days: values.days,
+        from: values.from,
+        to: values.to,
+        slot: values.slot,
+        tz: values.tz ?? systemTz(),
+        public: values.public ?? false,
+        weekdays: values.weekdays ?? false,
+        hideResults: values["hide-results"] ?? false,
+        deadline: values.deadline,
+      });
+    }
     const created = await client.createPoll(body);
     saveToken(created.id, created.editToken);
     console.log("✓ poll created");
@@ -203,6 +233,22 @@ async function main() {
       console.log(`✓ wrote ${values.out}`);
     } else {
       process.stdout.write(ics);
+    }
+    return;
+  }
+
+  if (command === "csv") {
+    const id = positionals[1];
+    if (!id) throw new Error("Usage: samkoma csv <id> [--out <file>]");
+    // Pass the stored host token if we have one, so a private poll still exports.
+    const csv = await client.getCsv(id, {
+      editToken: getToken(id) ?? undefined,
+    });
+    if (values.out) {
+      writeFileSync(values.out, csv);
+      console.log(`✓ wrote ${values.out}`);
+    } else {
+      process.stdout.write(csv);
     }
     return;
   }

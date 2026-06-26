@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { CliEquivalent } from "../components/CliEquivalent";
 import { MonthCalendar } from "../components/MonthCalendar";
@@ -7,12 +7,17 @@ import { createPoll, ApiError, type PollKind } from "../lib/api";
 import { saveEditToken } from "../lib/storage";
 import { browserTimezone, listTimezones, tzOffsetLabel } from "../lib/datetime";
 import { weekdayLabel } from "../lib/tz";
+import type { PollTemplate } from "../lib/duplicate";
 
 const SLOT_SIZES = [15, 30, 60];
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
 export function CreatePoll() {
   const navigate = useNavigate();
+  const location = useLocation();
+  // A "Duplicate" navigation carries a template to prefill the form from.
+  const template = (location.state as { template?: PollTemplate } | null)
+    ?.template;
   const tzOptions = useMemo(
     () =>
       listTimezones().map((z) => {
@@ -22,15 +27,19 @@ export function CreatePoll() {
     [],
   );
 
-  const [title, setTitle] = useState("");
-  const [kind, setKind] = useState<PollKind>("dates");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [from, setFrom] = useState("09:00");
-  const [to, setTo] = useState("17:00");
-  const [slot, setSlot] = useState(30);
-  const [tz, setTz] = useState(browserTimezone());
-  const [isPublic, setIsPublic] = useState(true);
-  const [resultsHidden, setResultsHidden] = useState(false);
+  const [title, setTitle] = useState(template?.title ?? "");
+  const [kind, setKind] = useState<PollKind>(template?.kind ?? "dates");
+  const [selected, setSelected] = useState<Set<string>>(
+    new Set(template?.days ?? []),
+  );
+  const [from, setFrom] = useState(template?.from ?? "09:00");
+  const [to, setTo] = useState(template?.to ?? "17:00");
+  const [slot, setSlot] = useState(template?.slot ?? 30);
+  const [tz, setTz] = useState(template?.tz ?? browserTimezone());
+  const [isPublic, setIsPublic] = useState(template?.public ?? true);
+  const [resultsHidden, setResultsHidden] = useState(
+    template?.resultsHidden ?? false,
+  );
   const [deadline, setDeadline] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -96,10 +105,13 @@ export function CreatePoll() {
           style={{ padding: "32px 36px" }}
           onSubmit={onSubmit}
         >
-          <h1 className="h2">New poll</h1>
+          <h1 className="h2">{template ? "Duplicate poll" : "New poll"}</h1>
           <p className="helper" style={{ margin: "6px 0 28px" }}>
-            Two minutes, no account. You'll get a link to share and an edit link
-            to keep.
+            {template
+              ? template.kind === "dates"
+                ? "Copied the settings from your poll — now pick the new dates."
+                : "Copied the settings from your poll — tweak anything below."
+              : "Two minutes, no account. You'll get a link to share and an edit link to keep."}
           </p>
 
           {error && (

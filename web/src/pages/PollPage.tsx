@@ -22,6 +22,7 @@ import {
 } from "../lib/datetime";
 import { formatSlotLabelInTz } from "../lib/tz";
 import { parseHostToken, buildHostLink } from "../lib/hostlink";
+import { pollToTemplate } from "../lib/duplicate";
 import { QrCode } from "../components/QrCode";
 
 type State =
@@ -223,16 +224,26 @@ export function PollPage() {
         >
           <h1 className="h2">{poll.title}</h1>
           {isHost && <span className="tag">You host this</span>}
-          {isHost && !editing && (
+          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+            {isHost && !editing && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setEditing(true)}
+              >
+                Edit poll
+              </button>
+            )}
             <button
               type="button"
               className="btn btn-outline btn-sm"
-              style={{ marginLeft: "auto" }}
-              onClick={() => setEditing(true)}
+              onClick={() =>
+                navigate("/new", { state: { template: pollToTemplate(poll) } })
+              }
             >
-              Edit poll
+              Duplicate
             </button>
-          )}
+          </div>
         </div>
         <p className="helper">
           {formatDayRange(poll.days)} · {poll.from}–{poll.to} · {poll.slot}-min

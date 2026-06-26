@@ -103,6 +103,31 @@ describe("SamkomaClient", () => {
     });
   });
 
+  it("fetches responses as raw CSV, forwarding the edit token", async () => {
+    const csv = "name,slot,status\r\nAda,2026-07-15T09:00,available\r\n";
+    const fn = vi.fn().mockResolvedValue(
+      new Response(csv, {
+        status: 200,
+        headers: { "Content-Type": "text/csv" },
+      }),
+    );
+    vi.stubGlobal("fetch", fn);
+    const text = await client.getCsv("abc", { editToken: "tok" });
+    expect(fn.mock.calls[0][0]).toBe("https://api.example/v1/polls/abc/csv");
+    expect(fn.mock.calls[0][1].headers).toEqual({
+      Authorization: "Bearer tok",
+    });
+    expect(text).toBe(csv);
+  });
+
+  it("maps a forbidden .csv response to SamkomaError", async () => {
+    mockFetch({ error: "forbidden" }, 403);
+    await expect(client.getCsv("abc")).rejects.toMatchObject({
+      code: "forbidden",
+      status: 403,
+    });
+  });
+
   it("closes and reopens a poll via PATCH", async () => {
     const fn = mockFetch({ id: "abc", closed: true });
     await client.close("abc", "tok");
