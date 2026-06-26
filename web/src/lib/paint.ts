@@ -19,6 +19,11 @@ export function applyMark(
   return next;
 }
 
+// Mark every given slot with a single status — backs the "select all" control.
+export function fillAll(keys: string[], status: Status): Marks {
+  return new Map(keys.map((k) => [k, status]));
+}
+
 // Build the paint state from a saved response's two arrays.
 export function marksFrom(slots: string[], maybe: string[]): Marks {
   const m: Marks = new Map();

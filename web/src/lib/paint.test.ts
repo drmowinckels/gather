@@ -4,6 +4,7 @@ import {
   applyMark,
   marksFrom,
   splitMarks,
+  fillAll,
   type Marks,
 } from "./paint";
 import { timeSlots, slotKey, hourLabel } from "./datetime";
@@ -35,6 +36,18 @@ describe("paint cycle", () => {
     const { slots, maybe } = splitMarks(marks);
     expect(slots).toEqual(["x"]);
     expect(maybe).toEqual(["y"]);
+  });
+});
+
+describe("fillAll", () => {
+  it("marks every key with the given status", () => {
+    const m = fillAll(["a", "b", "c"], "yes");
+    expect(m.size).toBe(3);
+    expect([...m.values()]).toEqual(["yes", "yes", "yes"]);
+  });
+
+  it("returns an empty map for no keys", () => {
+    expect(fillAll([], "yes").size).toBe(0);
   });
 });
 

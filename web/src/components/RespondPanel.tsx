@@ -7,7 +7,7 @@ import {
   type PollResponse,
 } from "../lib/api";
 import { buildGridView } from "../lib/tz";
-import { marksFrom, splitMarks, type Marks } from "../lib/paint";
+import { marksFrom, splitMarks, fillAll, type Marks } from "../lib/paint";
 import { parseIcsBusy, busySlotKeys, overlayWindow } from "../lib/icsImport";
 import {
   getName,
@@ -49,12 +49,24 @@ export function RespondPanel({
 
   const initialName = useMemo(() => getName(), []);
 
+  // Every paintable slot key — backs "select all" / "clear all".
+  const allKeys = useMemo(() => {
+    const keys: string[] = [];
+    for (const t of view.times)
+      for (const d of view.days) {
+        const k = view.keyAt(d, t);
+        if (k !== null) keys.push(k);
+      }
+    return keys;
+  }, [view]);
+
   const [name, setName] = useState(initialName);
   const [marks, setMarks] = useState<Marks>(new Map());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [password, setPassword] = useState("");
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set());
   const [overlayNote, setOverlayNote] = useState<string | null>(null);
+  const [bulkNote, setBulkNote] = useState("");
 
   // Restore this person's availability once per poll: from the server (their
   // saved name matches a response), else from the local cache (private polls
@@ -187,6 +199,20 @@ export function RespondPanel({
     scheduleSave();
   }
 
+  // Start from "all available" (then paint busy), or wipe the grid. Handy for
+  // "tell me when you're *not* free" style polls.
+  function selectAll() {
+    setMarks(fillAll(allKeys, "yes"));
+    setBulkNote("All slots marked available.");
+    scheduleSave();
+  }
+
+  function clearAll() {
+    setMarks(new Map());
+    setBulkNote("All slots cleared.");
+    scheduleSave();
+  }
+
   const hasName = name.trim().length > 0;
 
   if (poll.closed) {
@@ -290,6 +316,37 @@ export function RespondPanel({
           style={{ fontSize: 12 }}
         >
           {overlayNote}
+        </span>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          marginBottom: 10,
+          flexWrap: "wrap",
+        }}
+      >
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          onClick={selectAll}
+        >
+          Select all
+        </button>
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          onClick={clearAll}
+        >
+          Clear all
+        </button>
+        <span className="subtle" style={{ fontSize: 12 }}>
+          Mark everything free, then paint when you're busy.
+        </span>
+        <span className="sr-only" role="status" aria-live="polite">
+          {bulkNote}
         </span>
       </div>
 

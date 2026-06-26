@@ -150,6 +150,27 @@ describe("RespondPanel", () => {
     ).toBeNull();
   });
 
+  it("marks every slot available with Select all, and wipes with Clear all", async () => {
+    const user = userEvent.setup();
+    render(<RespondPanel poll={poll} viewerTz={tz} />);
+
+    // poll is 09:00–10:00, 30-min slots, one day → two paintable cells
+    expect(
+      screen.queryAllByRole("button", { name: /available$/i }).length,
+    ).toBe(0);
+    await user.click(screen.getByRole("button", { name: /select all/i }));
+    expect(
+      screen.getAllByRole("button", { name: /09:00.*available/i }).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(/all slots marked available/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /clear all/i }));
+    expect(
+      screen.getByRole("button", { name: /09:00.*busy/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/all slots cleared/i)).toBeInTheDocument();
+  });
+
   it("keeps the calendar-overlay file input keyboard-reachable", () => {
     const { container } = render(<RespondPanel poll={poll} viewerTz={tz} />);
     const input = container.querySelector(
