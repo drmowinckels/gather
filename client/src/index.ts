@@ -39,6 +39,8 @@ export interface PollResponse {
   tz: string;
   slots: string[];
   maybe: string[];
+  /** Optional self-assigned group/team label. */
+  group?: string;
   updatedAt: string;
   /**
    * A one-time secret returned only on the first, unprotected write of a name:
@@ -84,6 +86,7 @@ export interface SlotsInput {
   tz: string;
   slots: string[];
   maybe?: string[]; // "might be available" slots (optional)
+  group?: string; // optional self-assigned group/team label
   /**
    * The secret that owns this name — a previously-issued {@link
    * PollResponse.responseToken} or the respondent's chosen password. Omit on a

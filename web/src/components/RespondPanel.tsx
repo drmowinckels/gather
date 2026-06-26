@@ -49,6 +49,18 @@ export function RespondPanel({
 
   const initialName = useMemo(() => getName(), []);
 
+  // Distinct groups already used on this poll, for the input's autocomplete.
+  const knownGroups = useMemo(
+    () => [
+      ...new Set(
+        poll.responses
+          .map((r) => r.group)
+          .filter((g): g is string => Boolean(g)),
+      ),
+    ],
+    [poll.responses],
+  );
+
   // Every paintable slot key — backs "select all" / "clear all".
   const allKeys = useMemo(() => {
     const keys: string[] = [];
@@ -64,6 +76,7 @@ export function RespondPanel({
   const [marks, setMarks] = useState<Marks>(new Map());
   const [save, setSave] = useState<SaveState>({ kind: "idle" });
   const [password, setPassword] = useState("");
+  const [group, setGroup] = useState("");
   const [busyKeys, setBusyKeys] = useState<Set<string>>(new Set());
   const [overlayNote, setOverlayNote] = useState<string | null>(null);
   const [bulkNote, setBulkNote] = useState("");
@@ -83,6 +96,7 @@ export function RespondPanel({
       ? { slots: mine.slots, maybe: mine.maybe }
       : getOwnMarks(poll.id);
     if (restored) setMarks(marksFrom(restored.slots, restored.maybe));
+    if (mine?.group) setGroup(mine.group);
   }, [initialName, poll.id, poll.responses]);
 
   const nameRef = useRef(name);
@@ -91,6 +105,8 @@ export function RespondPanel({
   marksRef.current = marks;
   const passwordRef = useRef(password);
   passwordRef.current = password;
+  const groupRef = useRef(group);
+  groupRef.current = group;
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   // Serialise saves so a slow first write (which mints the ownership token)
   // finishes before the next autosave runs — otherwise the follow-up would race
@@ -116,6 +132,7 @@ export function RespondPanel({
         tz: viewerTz,
         slots: painted.slots,
         maybe: painted.maybe,
+        group: groupRef.current.trim() || undefined,
         secret,
       });
       // Persist whatever lets this browser keep editing: the freshly minted
@@ -253,6 +270,34 @@ export function RespondPanel({
           onChange={(e) => onName(e.target.value)}
           maxLength={80}
         />
+      </div>
+
+      <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
+        <label className="fieldlbl" htmlFor="resp-group">
+          Group <span className="subtle">(optional)</span>
+        </label>
+        <input
+          id="resp-group"
+          className="input"
+          list="resp-group-options"
+          placeholder="e.g. Design team"
+          value={group}
+          onChange={(e) => {
+            setGroup(e.target.value);
+            scheduleSave();
+          }}
+          maxLength={60}
+        />
+        {knownGroups.length > 0 && (
+          <datalist id="resp-group-options">
+            {knownGroups.map((g) => (
+              <option key={g} value={g} />
+            ))}
+          </datalist>
+        )}
+        <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
+          Tag yourself to a team to see per-group tallies in the results.
+        </p>
       </div>
 
       <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>

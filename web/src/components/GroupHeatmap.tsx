@@ -69,6 +69,17 @@ export function GroupHeatmap({
     [poll.responses, excluded],
   );
   const agg = useMemo(() => aggregate(filtered), [filtered]);
+  // Respondent count per self-assigned group, over the slots currently counted.
+  const groupCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of filtered) {
+      const g = r.group?.trim();
+      if (g) m.set(g, (m.get(g) ?? 0) + 1);
+    }
+    return [...m.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0]),
+    );
+  }, [filtered]);
   const filtering = excluded.size > 0;
   const label = (key: string) =>
     formatSlotLabelInTz(key, poll.kind, poll.tz, viewerTz);
@@ -183,6 +194,26 @@ export function GroupHeatmap({
     <div className="card" style={{ padding: 24, margin: "26px 0" }}>
       {header}
       {filterBar}
+
+      {groupCounts.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "4px 14px",
+            margin: "0 0 14px",
+            fontSize: 13,
+            color: "var(--fg-muted)",
+          }}
+        >
+          <span className="subtle">By group:</span>
+          {groupCounts.map(([g, n]) => (
+            <span key={g}>
+              {g} <strong style={{ color: "var(--fg)" }}>{n}</strong>
+            </span>
+          ))}
+        </div>
+      )}
 
       <table className="sr-only">
         <caption>

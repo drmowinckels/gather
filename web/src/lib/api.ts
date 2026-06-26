@@ -42,6 +42,8 @@ export interface PollResponse {
   tz: string;
   slots: string[];
   maybe: string[];
+  // Optional self-assigned group/team label, for per-group tallies.
+  group?: string;
   updatedAt: string;
   // One-time secret returned only on the first, unprotected write of a name.
   responseToken?: string;
@@ -125,6 +127,8 @@ export interface SlotsInput {
   tz: string;
   slots: string[];
   maybe: string[];
+  // Optional self-assigned group/team label.
+  group?: string;
   // The secret that owns this name (stored token or chosen password); omitted on
   // a first write.
   secret?: string;

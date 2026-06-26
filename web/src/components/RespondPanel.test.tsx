@@ -171,6 +171,21 @@ describe("RespondPanel", () => {
     expect(screen.getByText(/all slots cleared/i)).toBeInTheDocument();
   });
 
+  it("sends an optional group label with the response", async () => {
+    const user = userEvent.setup();
+    submitMock.mockResolvedValueOnce(response({ responseToken: "t" }));
+    render(<RespondPanel poll={poll} viewerTz={tz} />);
+
+    await user.type(screen.getByLabelText(/your name/i), "Ada");
+    await user.type(screen.getByLabelText(/^group/i), "Design team");
+    await user.click(
+      screen.getByRole("button", { name: /save availability/i }),
+    );
+
+    await waitFor(() => expect(submitMock).toHaveBeenCalledTimes(1));
+    expect(submitMock.mock.calls[0][1].group).toBe("Design team");
+  });
+
   it("keeps the calendar-overlay file input keyboard-reachable", () => {
     const { container } = render(<RespondPanel poll={poll} viewerTz={tz} />);
     const input = container.querySelector(

@@ -212,10 +212,10 @@ describe("GET /v1/polls/:id/csv", () => {
     );
     const body = await res.text();
     expect(body).toBe(
-      "name,slot,status\r\n" +
-        "Ada,2099-07-15T09:00,available\r\n" +
-        "Kari,2099-07-15T09:00,available\r\n" +
-        "Ada,2099-07-15T09:30,maybe\r\n",
+      "name,slot,status,group\r\n" +
+        "Ada,2099-07-15T09:00,available,\r\n" +
+        "Kari,2099-07-15T09:00,available,\r\n" +
+        "Ada,2099-07-15T09:30,maybe,\r\n",
     );
   });
 
@@ -794,6 +794,39 @@ describe("POST /v1/polls/:id/slots", () => {
     ).json()) as { responses: Array<{ name: string; slots: string[] }> };
     expect(poll.responses).toHaveLength(1);
     expect(poll.responses[0]).toMatchObject({ name: "Ada", slots });
+  });
+
+  it("round-trips an optional group label", async () => {
+    const { id } = await newPoll();
+    const res = await submit(id, {
+      name: "Ada",
+      tz: "Europe/Oslo",
+      slots: ["2099-07-15T09:00"],
+      group: "  Design team  ",
+    });
+    expect(res.status).toBe(200);
+    expect((await res.json()) as { group?: string }).toMatchObject({
+      group: "Design team", // trimmed
+    });
+
+    const poll = (await (
+      await SELF.fetch(`https://api.test/v1/polls/${id}`, {
+        headers: { Origin: ORIGIN },
+      })
+    ).json()) as { responses: Array<{ name: string; group?: string }> };
+    expect(poll.responses[0].group).toBe("Design team");
+  });
+
+  it("omits group when not provided", async () => {
+    const { id } = await newPoll();
+    const res = await submit(id, {
+      name: "Bea",
+      tz: "Europe/Oslo",
+      slots: ["2099-07-15T09:00"],
+    });
+    expect((await res.json()) as Record<string, unknown>).not.toHaveProperty(
+      "group",
+    );
   });
 
   it("upserts the same name (with its token) instead of duplicating", async () => {

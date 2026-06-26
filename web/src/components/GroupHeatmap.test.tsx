@@ -162,6 +162,55 @@ describe("GroupHeatmap — accessibility", () => {
   });
 });
 
+describe("GroupHeatmap — groups", () => {
+  it("shows per-group respondent tallies when responses are tagged", () => {
+    const responses: PollResponse[] = [
+      {
+        name: "Ada",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Eng",
+        updatedAt: "",
+      },
+      {
+        name: "Kari",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Eng",
+        updatedAt: "",
+      },
+      {
+        name: "Cy",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        group: "Design",
+        updatedAt: "",
+      },
+    ];
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    const byGroup = screen.getByText(/by group/i).closest("div")!;
+    expect(byGroup).toHaveTextContent(/Eng\s*2/);
+    expect(byGroup).toHaveTextContent(/Design\s*1/);
+  });
+
+  it("shows no group line when nobody is tagged", () => {
+    const responses: PollResponse[] = [
+      {
+        name: "Ada",
+        tz: "UTC",
+        slots: ["2026-07-15T09:00"],
+        maybe: [],
+        updatedAt: "",
+      },
+    ];
+    render(<GroupHeatmap poll={makePoll(responses)} viewerTz="UTC" />);
+    expect(screen.queryByText(/by group/i)).not.toBeInTheDocument();
+  });
+});
+
 describe("GroupHeatmap — CSV export", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

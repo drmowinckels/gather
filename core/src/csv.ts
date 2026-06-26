@@ -2,6 +2,7 @@ export interface CsvResponse {
   name: string;
   slots: string[];
   maybe?: string[];
+  group?: string;
 }
 
 // RFC 4180: a field is quoted (and embedded quotes doubled) when it contains a
@@ -20,13 +21,19 @@ function csvRow(fields: string[]): string {
 // available before maybe, then name, so the file is stable and diff-friendly.
 // CRLF line endings per RFC 4180.
 export function responsesToCsv(responses: CsvResponse[]): string {
-  const rows: { name: string; slot: string; status: string; rank: number }[] =
-    [];
+  const rows: {
+    name: string;
+    slot: string;
+    status: string;
+    group: string;
+    rank: number;
+  }[] = [];
   for (const r of responses) {
+    const group = r.group ?? "";
     for (const slot of r.slots)
-      rows.push({ name: r.name, slot, status: "available", rank: 0 });
+      rows.push({ name: r.name, slot, status: "available", group, rank: 0 });
     for (const slot of r.maybe ?? [])
-      rows.push({ name: r.name, slot, status: "maybe", rank: 1 });
+      rows.push({ name: r.name, slot, status: "maybe", group, rank: 1 });
   }
   rows.sort(
     (a, b) =>
@@ -34,8 +41,9 @@ export function responsesToCsv(responses: CsvResponse[]): string {
       a.rank - b.rank ||
       a.name.localeCompare(b.name),
   );
-  const lines = [csvRow(["name", "slot", "status"])];
-  for (const row of rows) lines.push(csvRow([row.name, row.slot, row.status]));
+  const lines = [csvRow(["name", "slot", "status", "group"])];
+  for (const row of rows)
+    lines.push(csvRow([row.name, row.slot, row.status, row.group]));
   return lines.join("\r\n") + "\r\n";
 }
 
