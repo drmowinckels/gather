@@ -284,124 +284,135 @@ export function GroupHeatmap({
 
       <div className="results-grid">
         <div onMouseLeave={() => setHovered(null)} aria-hidden={!isHost}>
-          <div style={{ display: "flex", gap: 5, marginBottom: 5 }}>
-            <div style={{ width: 46, flex: "none" }} />
-            {view.days.map((d, i) => (
-              <div
-                key={d}
-                style={{
-                  flex: 1,
-                  minWidth: 40,
-                  textAlign: "center",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  color: "var(--fg-muted)",
-                }}
-              >
-                {view.dayLabels[i]}
-              </div>
-            ))}
-          </div>
-
-          {view.times.map((t) => (
-            <div
-              key={t}
-              style={{
-                display: "flex",
-                gap: 5,
-                marginBottom: 5,
-                alignItems: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 46,
-                  flex: "none",
-                  textAlign: "right",
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 11,
-                  color: "var(--fg-subtle)",
-                }}
-              >
-                {hourLabel(t)}
-              </div>
-              {view.days.map((d) => {
-                const key = view.keyAt(d, t);
-                if (key === null) {
-                  return (
-                    <div
-                      key={d}
-                      className="heatcell"
-                      style={{ visibility: "hidden" }}
-                    />
-                  );
-                }
-                const cell = agg.cells.get(key);
-                const count = cell?.count ?? 0;
-                const maybeN = cell?.maybe ?? 0;
-                const pct = Math.round((count / agg.total) * 100);
-                const isBest = key === agg.bestKey;
-                const isLocked = key === poll.lockedSlot;
-                const isSelected = isHost && key === (selected ?? agg.bestKey);
-                const empty = count === 0 && maybeN === 0;
-                const isFull = poll.capacity != null && count >= poll.capacity;
-                const base =
-                  count > 0
-                    ? `color-mix(in oklab, var(--brand) min(${pct}%, var(--heat-cap)), var(--heat-base))`
-                    : "transparent";
-                const desc =
-                  (empty
-                    ? `${label(key)} — nobody yet`
-                    : `${label(key)} — ${count} of ${agg.total} available${maybeN ? `, ${maybeN} maybe` : ""}`) +
-                  (isFull ? " — full" : "");
-                const baseShadow = isLocked
-                  ? LOCK_SHADOW
-                  : isSelected
-                    ? SELECT_SHADOW
-                    : empty
-                      ? "inset 0 0 0 1px var(--border-subtle)"
-                      : isBest
-                        ? BEST_SHADOW
-                        : "none";
-                const cellStyle = {
-                  cursor: isHost ? "pointer" : "default",
-                  background: maybeN > 0 ? `${HATCH}, ${base}` : base,
-                  boxShadow: isFull
-                    ? baseShadow === "none"
-                      ? FULL_RING
-                      : `${baseShadow}, ${FULL_RING}`
-                    : baseShadow,
-                  color: "var(--fg)",
-                } as const;
-                const content = count > 0 ? count : maybeN > 0 ? maybeN : "";
-                return isHost ? (
-                  <button
-                    key={d}
-                    type="button"
-                    className="heatcell"
-                    aria-pressed={isSelected}
-                    aria-label={`${desc}. Select to lock in.`}
-                    onMouseEnter={() => setHovered(key)}
-                    onClick={() => setSelected(key)}
-                    title={desc}
-                    style={cellStyle}
-                  >
-                    {content}
-                  </button>
-                ) : (
+          <div className="grid-scroll">
+            <div className="grid-rows">
+              <div style={{ display: "flex", gap: 5, marginBottom: 5 }}>
+                <div
+                  className="grid-gutter"
+                  style={{ width: 46, flex: "none" }}
+                />
+                {view.days.map((d, i) => (
                   <div
                     key={d}
-                    className="heatcell"
-                    onMouseEnter={() => setHovered(key)}
-                    title={desc}
-                    style={cellStyle}
+                    style={{
+                      flex: 1,
+                      minWidth: 40,
+                      textAlign: "center",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      color: "var(--fg-muted)",
+                    }}
                   >
-                    {content}
+                    {view.dayLabels[i]}
                   </div>
-                );
-              })}
+                ))}
+              </div>
+
+              {view.times.map((t) => (
+                <div
+                  key={t}
+                  style={{
+                    display: "flex",
+                    gap: 5,
+                    marginBottom: 5,
+                    alignItems: "center",
+                  }}
+                >
+                  <div
+                    className="grid-gutter"
+                    style={{
+                      width: 46,
+                      flex: "none",
+                      textAlign: "right",
+                      fontFamily: "var(--font-mono)",
+                      fontSize: 11,
+                      color: "var(--fg-subtle)",
+                    }}
+                  >
+                    {hourLabel(t)}
+                  </div>
+                  {view.days.map((d) => {
+                    const key = view.keyAt(d, t);
+                    if (key === null) {
+                      return (
+                        <div
+                          key={d}
+                          className="heatcell"
+                          style={{ visibility: "hidden" }}
+                        />
+                      );
+                    }
+                    const cell = agg.cells.get(key);
+                    const count = cell?.count ?? 0;
+                    const maybeN = cell?.maybe ?? 0;
+                    const pct = Math.round((count / agg.total) * 100);
+                    const isBest = key === agg.bestKey;
+                    const isLocked = key === poll.lockedSlot;
+                    const isSelected =
+                      isHost && key === (selected ?? agg.bestKey);
+                    const empty = count === 0 && maybeN === 0;
+                    const isFull =
+                      poll.capacity != null && count >= poll.capacity;
+                    const base =
+                      count > 0
+                        ? `color-mix(in oklab, var(--brand) min(${pct}%, var(--heat-cap)), var(--heat-base))`
+                        : "transparent";
+                    const desc =
+                      (empty
+                        ? `${label(key)} — nobody yet`
+                        : `${label(key)} — ${count} of ${agg.total} available${maybeN ? `, ${maybeN} maybe` : ""}`) +
+                      (isFull ? " — full" : "");
+                    const baseShadow = isLocked
+                      ? LOCK_SHADOW
+                      : isSelected
+                        ? SELECT_SHADOW
+                        : empty
+                          ? "inset 0 0 0 1px var(--border-subtle)"
+                          : isBest
+                            ? BEST_SHADOW
+                            : "none";
+                    const cellStyle = {
+                      cursor: isHost ? "pointer" : "default",
+                      background: maybeN > 0 ? `${HATCH}, ${base}` : base,
+                      boxShadow: isFull
+                        ? baseShadow === "none"
+                          ? FULL_RING
+                          : `${baseShadow}, ${FULL_RING}`
+                        : baseShadow,
+                      color: "var(--fg)",
+                    } as const;
+                    const content =
+                      count > 0 ? count : maybeN > 0 ? maybeN : "";
+                    return isHost ? (
+                      <button
+                        key={d}
+                        type="button"
+                        className="heatcell"
+                        aria-pressed={isSelected}
+                        aria-label={`${desc}. Select to lock in.`}
+                        onMouseEnter={() => setHovered(key)}
+                        onClick={() => setSelected(key)}
+                        title={desc}
+                        style={cellStyle}
+                      >
+                        {content}
+                      </button>
+                    ) : (
+                      <div
+                        key={d}
+                        className="heatcell"
+                        onMouseEnter={() => setHovered(key)}
+                        title={desc}
+                        style={cellStyle}
+                      >
+                        {content}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
 
           <div
             style={{

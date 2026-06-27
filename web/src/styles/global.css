@@ -496,6 +496,74 @@ button.heatcell {
   }
 }
 
+/* ---------- scrollable day grids ---------- */
+/* A poll spanning many days makes the day columns wider than the card. Scroll
+   them inside the card instead of letting the grid spill past its border. */
+.grid-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  padding: 4px 0 6px;
+}
+.grid-rows {
+  min-width: min-content;
+}
+/* Pin the time-of-day labels so they stay readable while the days scroll. */
+.grid-gutter {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  align-self: stretch;
+  background: var(--bg-elev-1);
+}
+
+/* ---------- poll page: availability leads, share links to the side ---------- */
+.poll-page {
+  max-width: 1040px;
+}
+/* Mobile-first: a single column. Availability comes first, results next, and the
+   share/host links wrap to the very bottom (out of the way of the main task). */
+.poll-body {
+  display: flex;
+  flex-direction: column;
+}
+.poll-body > .poll-main {
+  order: 1;
+  min-width: 0;
+}
+.poll-body > .poll-results {
+  order: 2;
+  min-width: 0;
+}
+.poll-body > .poll-aside {
+  order: 3;
+}
+@media (min-width: 880px) {
+  .poll-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 304px;
+    grid-template-areas:
+      "main aside"
+      "results results";
+    column-gap: 32px;
+  }
+  .poll-body > .poll-main {
+    grid-area: main;
+  }
+  .poll-body > .poll-aside {
+    grid-area: aside;
+    align-self: start;
+    position: sticky;
+    top: 24px;
+  }
+  .poll-body > .poll-results {
+    grid-area: results;
+  }
+}
+
 .copy-row {
   display: flex;
   gap: 8px;

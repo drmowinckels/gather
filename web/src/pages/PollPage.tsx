@@ -213,337 +213,364 @@ export function PollPage() {
 
   return (
     <Shell>
-      <div style={{ padding: "40px 0", maxWidth: 720 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            marginBottom: 6,
-          }}
-        >
-          <h1 className="h2">{poll.title}</h1>
-          {isHost && <span className="tag">You host this</span>}
-          <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
-            {isHost && !editing && (
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => setEditing(true)}
-              >
-                Edit poll
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() =>
-                navigate("/new", { state: { template: pollToTemplate(poll) } })
-              }
-            >
-              Duplicate
-            </button>
-          </div>
-        </div>
-        <p className="helper">
-          {formatDayRange(poll.days)} · {poll.from}–{poll.to} · {poll.slot}-min
-          slots · home tz {poll.tz}
-          {offset ? ` (${offset})` : ""}
-        </p>
-
-        {isHost && editing && hostToken && (
-          <EditPollPanel
-            poll={poll}
-            editToken={hostToken}
-            onSaved={(updated) => setState({ kind: "ready", poll: updated })}
-            onClose={() => setEditing(false)}
-          />
-        )}
-
-        {poll.kind === "dates" ? (
-          <label
-            className="tz-control"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              marginTop: 16,
-              fontSize: 13,
-              color: "var(--fg-muted)",
-              flexWrap: "wrap",
-            }}
-          >
-            <span>Showing times in</span>
-            <select
-              className="input"
-              style={{ width: "auto", maxWidth: "100%" }}
-              value={viewerTz}
-              onChange={(e) => setViewerTz(e.target.value)}
-              aria-label="Show times in timezone"
-            >
-              {tzOptions.map((z) => (
-                <option key={z.value} value={z.value}>
-                  {z.label}
-                </option>
-              ))}
-            </select>
-            {viewerTz !== poll.tz && (
-              <span className="subtle" style={{ fontSize: 12 }}>
-                converted from {poll.tz}
-              </span>
-            )}
-          </label>
-        ) : (
-          <p
-            className="helper"
-            style={{ marginTop: 16, fontSize: 13 }}
-            aria-label="timezone note"
-          >
-            Weekday times are shown in the poll's home timezone, {poll.tz}.
-          </p>
-        )}
-
-        {(poll.closed || poll.deadline || isHost) && (
-          <div
-            className="helper"
-            style={{
-              marginTop: 12,
-              fontSize: 13,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <span>
-              {poll.closed
-                ? "🔒 Responding is closed"
-                : poll.deadline
-                  ? `Responding closes ${new Intl.DateTimeFormat(undefined, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                    }).format(new Date(poll.deadline))}`
-                  : "Responding is open"}
-            </span>
-            {isHost && hostToken && (
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={() => setClosed(hostToken, !poll.closed)}
-              >
-                {poll.closed ? "Reopen" : "Close now"}
-              </button>
-            )}
-            {closeError && (
-              <span role="alert" style={{ color: "var(--danger)" }}>
-                Couldn't update — retry.
-              </span>
-            )}
-          </div>
-        )}
-
-        {poll.lockedSlot && (
-          <div
-            className="card"
-            style={{
-              padding: "16px 20px",
-              marginTop: 18,
-              background: "var(--bg-tinted)",
-              fontSize: 15,
-            }}
-          >
+      <div className="poll-page" style={{ padding: "40px 0" }}>
+        <div className="poll-body">
+          <div className="poll-main">
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
                 gap: 12,
-                flexWrap: "wrap",
+                marginBottom: 6,
               }}
             >
-              <span>
-                📌 Locked in:{" "}
-                <strong>
-                  {formatSlotLabelInTz(
-                    poll.lockedSlot,
-                    poll.kind,
-                    poll.tz,
-                    viewerTz,
-                  )}
-                </strong>
-              </span>
-              <a
-                className="btn btn-outline btn-sm"
-                style={{ marginLeft: "auto" }}
-                href={icsUrl(poll.id)}
-                download
-              >
-                Add to calendar
-              </a>
-            </div>
-          </div>
-        )}
-
-        <div className="card" style={{ padding: 22, margin: "26px 0" }}>
-          <span className="fieldlbl">Share this link</span>
-          <div className="copy-row">
-            <input
-              className="input"
-              readOnly
-              value={window.location.href}
-              aria-label="Shareable poll link"
-              onFocus={(e) => e.currentTarget.select()}
-            />
-            <button
-              type="button"
-              className="btn btn-primary btn-sm"
-              onClick={copyLink}
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              aria-expanded={showQr}
-              onClick={() => setShowQr((v) => !v)}
-            >
-              {showQr ? "Hide QR" : "QR"}
-            </button>
-          </div>
-          <span className="sr-only" role="status" aria-live="polite">
-            {copied ? "Link copied to clipboard" : ""}
-          </span>
-          {showQr && (
-            <QrCode
-              value={window.location.href}
-              label="QR code linking to this poll"
-            />
-          )}
-          <p className="subtle" style={{ fontSize: 13, margin: "12px 0 0" }}>
-            Anyone with this link can add their availability — no account
-            needed.
-            {poll.expiresAt && (
-              <>
-                {" "}
-                Link active until{" "}
-                {new Intl.DateTimeFormat(undefined, {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                }).format(new Date(`${poll.expiresAt}T00:00:00`))}
-                .
-              </>
-            )}
-          </p>
-        </div>
-
-        {isHost &&
-          (() => {
-            const token = getEditToken(poll.id);
-            if (!token) return null;
-            const hostLink = buildHostLink(window.location.href, token);
-            return (
-              <div
-                className="card"
-                style={{
-                  padding: 22,
-                  margin: "26px 0",
-                  background: "var(--bg-tinted)",
-                }}
-              >
-                <span className="fieldlbl">🔑 Your host link</span>
-                <div className="copy-row">
-                  <input
-                    className="input"
-                    readOnly
-                    value={hostLink}
-                    aria-label="Private host link"
-                    onFocus={(e) => e.currentTarget.select()}
-                  />
+              <h1 className="h2">{poll.title}</h1>
+              {isHost && <span className="tag">You host this</span>}
+              <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
+                {isHost && !editing && (
                   <button
                     type="button"
-                    className="btn btn-primary btn-sm"
-                    onClick={() => copyHostLink(hostLink)}
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setEditing(true)}
                   >
-                    {hostCopied ? "Copied" : "Copy"}
+                    Edit poll
                   </button>
-                </div>
-                <p
-                  className="subtle"
-                  style={{ fontSize: 13, margin: "12px 0 0" }}
+                )}
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() =>
+                    navigate("/new", {
+                      state: { template: pollToTemplate(poll) },
+                    })
+                  }
                 >
-                  Keep this private — anyone with it can lock the poll and see
-                  private results. Open it on another device to manage from
-                  there.
-                </p>
+                  Duplicate
+                </button>
               </div>
-            );
-          })()}
+            </div>
+            <p className="helper">
+              {formatDayRange(poll.days)} · {poll.from}–{poll.to} · {poll.slot}
+              -min slots · home tz {poll.tz}
+              {offset ? ` (${offset})` : ""}
+            </p>
 
-        <RespondPanel poll={poll} viewerTz={viewerTz} onSaved={mergeResponse} />
+            {isHost && editing && hostToken && (
+              <EditPollPanel
+                poll={poll}
+                editToken={hostToken}
+                onSaved={(updated) =>
+                  setState({ kind: "ready", poll: updated })
+                }
+                onClose={() => setEditing(false)}
+              />
+            )}
 
-        {isHost || (poll.public && !poll.resultsHidden) ? (
-          <>
-            {hostToken && curtained && (
+            {poll.kind === "dates" ? (
+              <label
+                className="tz-control"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginTop: 16,
+                  fontSize: 13,
+                  color: "var(--fg-muted)",
+                  flexWrap: "wrap",
+                }}
+              >
+                <span>Showing times in</span>
+                <select
+                  className="input"
+                  style={{ width: "auto", maxWidth: "100%" }}
+                  value={viewerTz}
+                  onChange={(e) => setViewerTz(e.target.value)}
+                  aria-label="Show times in timezone"
+                >
+                  {tzOptions.map((z) => (
+                    <option key={z.value} value={z.value}>
+                      {z.label}
+                    </option>
+                  ))}
+                </select>
+                {viewerTz !== poll.tz && (
+                  <span className="subtle" style={{ fontSize: 12 }}>
+                    converted from {poll.tz}
+                  </span>
+                )}
+              </label>
+            ) : (
+              <p
+                className="helper"
+                style={{ marginTop: 16, fontSize: 13 }}
+                aria-label="timezone note"
+              >
+                Weekday times are shown in the poll's home timezone, {poll.tz}.
+              </p>
+            )}
+
+            {(poll.closed || poll.deadline || isHost) && (
+              <div
+                className="helper"
+                style={{
+                  marginTop: 12,
+                  fontSize: 13,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <span>
+                  {poll.closed
+                    ? "🔒 Responding is closed"
+                    : poll.deadline
+                      ? `Responding closes ${new Intl.DateTimeFormat(
+                          undefined,
+                          {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                          },
+                        ).format(new Date(poll.deadline))}`
+                      : "Responding is open"}
+                </span>
+                {isHost && hostToken && (
+                  <button
+                    type="button"
+                    className="btn btn-outline btn-sm"
+                    onClick={() => setClosed(hostToken, !poll.closed)}
+                  >
+                    {poll.closed ? "Reopen" : "Close now"}
+                  </button>
+                )}
+                {closeError && (
+                  <span role="alert" style={{ color: "var(--danger)" }}>
+                    Couldn't update — retry.
+                  </span>
+                )}
+              </div>
+            )}
+
+            {poll.lockedSlot && (
               <div
                 className="card"
                 style={{
                   padding: "16px 20px",
-                  margin: "26px 0 0",
+                  marginTop: 18,
                   background: "var(--bg-tinted)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  flexWrap: "wrap",
-                  fontSize: 14,
+                  fontSize: 15,
                 }}
               >
-                <span>
-                  🙈 Results are hidden from respondents until you reveal them.
-                  {revealError && (
-                    <span role="alert" style={{ color: "var(--danger)" }}>
-                      {" "}
-                      Couldn't reveal — try again.
-                    </span>
-                  )}
-                </span>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span>
+                    📌 Locked in:{" "}
+                    <strong>
+                      {formatSlotLabelInTz(
+                        poll.lockedSlot,
+                        poll.kind,
+                        poll.tz,
+                        viewerTz,
+                      )}
+                    </strong>
+                  </span>
+                  <a
+                    className="btn btn-outline btn-sm"
+                    style={{ marginLeft: "auto" }}
+                    href={icsUrl(poll.id)}
+                    download
+                  >
+                    Add to calendar
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <RespondPanel
+              poll={poll}
+              viewerTz={viewerTz}
+              onSaved={mergeResponse}
+            />
+          </div>
+
+          <aside className="poll-aside">
+            <div className="card" style={{ padding: 22, margin: "26px 0" }}>
+              <span className="fieldlbl">Share this link</span>
+              <div className="copy-row">
+                <input
+                  className="input"
+                  readOnly
+                  value={window.location.href}
+                  aria-label="Shareable poll link"
+                  onFocus={(e) => e.currentTarget.select()}
+                />
                 <button
                   type="button"
                   className="btn btn-primary btn-sm"
-                  style={{ marginLeft: "auto" }}
-                  onClick={() => revealResults(hostToken)}
+                  onClick={copyLink}
                 >
-                  Reveal results
+                  {copied ? "Copied" : "Copy"}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  aria-expanded={showQr}
+                  onClick={() => setShowQr((v) => !v)}
+                >
+                  {showQr ? "Hide QR" : "QR"}
                 </button>
               </div>
+              <span className="sr-only" role="status" aria-live="polite">
+                {copied ? "Link copied to clipboard" : ""}
+              </span>
+              {showQr && (
+                <QrCode
+                  value={window.location.href}
+                  label="QR code linking to this poll"
+                />
+              )}
+              <p
+                className="subtle"
+                style={{ fontSize: 13, margin: "12px 0 0" }}
+              >
+                Anyone with this link can add their availability — no account
+                needed.
+                {poll.expiresAt && (
+                  <>
+                    {" "}
+                    Link active until{" "}
+                    {new Intl.DateTimeFormat(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }).format(new Date(`${poll.expiresAt}T00:00:00`))}
+                    .
+                  </>
+                )}
+              </p>
+            </div>
+
+            {isHost &&
+              (() => {
+                const token = getEditToken(poll.id);
+                if (!token) return null;
+                const hostLink = buildHostLink(window.location.href, token);
+                return (
+                  <div
+                    className="card"
+                    style={{
+                      padding: 22,
+                      margin: "26px 0",
+                      background: "var(--bg-tinted)",
+                    }}
+                  >
+                    <span className="fieldlbl">🔑 Your host link</span>
+                    <div className="copy-row">
+                      <input
+                        className="input"
+                        readOnly
+                        value={hostLink}
+                        aria-label="Private host link"
+                        onFocus={(e) => e.currentTarget.select()}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-sm"
+                        onClick={() => copyHostLink(hostLink)}
+                      >
+                        {hostCopied ? "Copied" : "Copy"}
+                      </button>
+                    </div>
+                    <p
+                      className="subtle"
+                      style={{ fontSize: 13, margin: "12px 0 0" }}
+                    >
+                      Keep this private — anyone with it can lock the poll and
+                      see private results. Open it on another device to manage
+                      from there.
+                    </p>
+                  </div>
+                );
+              })()}
+          </aside>
+
+          <div className="poll-results">
+            {isHost || (poll.public && !poll.resultsHidden) ? (
+              <>
+                {hostToken && curtained && (
+                  <div
+                    className="card"
+                    style={{
+                      padding: "16px 20px",
+                      margin: "26px 0 0",
+                      background: "var(--bg-tinted)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      fontSize: 14,
+                    }}
+                  >
+                    <span>
+                      🙈 Results are hidden from respondents until you reveal
+                      them.
+                      {revealError && (
+                        <span role="alert" style={{ color: "var(--danger)" }}>
+                          {" "}
+                          Couldn't reveal — try again.
+                        </span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{ marginLeft: "auto" }}
+                      onClick={() => revealResults(hostToken)}
+                    >
+                      Reveal results
+                    </button>
+                  </div>
+                )}
+                <GroupHeatmap
+                  poll={poll}
+                  viewerTz={viewerTz}
+                  isHost={isHost}
+                  editToken={getEditToken(poll.id)}
+                  onLockChange={(updated) =>
+                    setState({ kind: "ready", poll: updated })
+                  }
+                />
+              </>
+            ) : (
+              <div
+                className="card"
+                style={{
+                  padding: "28px",
+                  textAlign: "center",
+                  margin: "26px 0",
+                }}
+              >
+                <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
+                  {curtained ? "Results hidden for now" : "Results are private"}
+                </p>
+                <p
+                  className="helper"
+                  style={{ margin: "8px auto 0", maxWidth: 360 }}
+                >
+                  {curtained
+                    ? "The host is keeping the group results hidden until they reveal them. Your availability is saved."
+                    : "The host kept the group results private. Your availability is saved."}
+                </p>
+              </div>
             )}
-            <GroupHeatmap
-              poll={poll}
-              viewerTz={viewerTz}
-              isHost={isHost}
-              editToken={getEditToken(poll.id)}
-              onLockChange={(updated) =>
-                setState({ kind: "ready", poll: updated })
-              }
-            />
-          </>
-        ) : (
-          <div
-            className="card"
-            style={{ padding: "28px", textAlign: "center", margin: "26px 0" }}
-          >
-            <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
-              {curtained ? "Results hidden for now" : "Results are private"}
-            </p>
-            <p
-              className="helper"
-              style={{ margin: "8px auto 0", maxWidth: 360 }}
-            >
-              {curtained
-                ? "The host is keeping the group results hidden until they reveal them. Your availability is saved."
-                : "The host kept the group results private. Your availability is saved."}
-            </p>
           </div>
-        )}
+        </div>
       </div>
     </Shell>
   );

@@ -102,113 +102,121 @@ export function AvailabilityGrid({
       <div className="sr-only" role="status" aria-live="polite">
         {announce}
       </div>
-      <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
-        <div style={{ width: GUTTER, flex: "none" }} />
-        {view.days.map((d, i) => (
-          <div
-            key={d}
-            style={{
-              flex: 1,
-              minWidth: 44,
-              textAlign: "center",
-              fontSize: 12,
-              fontWeight: 700,
-              color: "var(--fg-muted)",
-            }}
-          >
-            {view.dayLabels[i]}
-          </div>
-        ))}
-      </div>
-
-      {view.times.map((t) => (
-        <div
-          key={t}
-          style={{
-            display: "flex",
-            gap: 6,
-            marginBottom: 6,
-            alignItems: "center",
-          }}
-        >
-          <div
-            style={{
-              width: GUTTER,
-              flex: "none",
-              textAlign: "right",
-              fontFamily: "var(--font-mono)",
-              fontSize: 11,
-              color: "var(--fg-subtle)",
-            }}
-          >
-            {hourLabel(t)}
-          </div>
-          {view.days.map((d, di) => {
-            const key = view.keyAt(d, t);
-            if (key === null) {
-              return (
-                <div
-                  key={d}
-                  className="gridcell"
-                  style={{ visibility: "hidden" }}
-                />
-              );
-            }
-            const status = value.get(key);
-            const calBusy = busyKeys?.has(key) ?? false;
-            const word =
-              status === "yes"
-                ? "available"
-                : status === "maybe"
-                  ? "maybe"
-                  : "busy";
-            return (
-              <button
+      <div className="grid-scroll">
+        <div className="grid-rows">
+          <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
+            <div
+              className="grid-gutter"
+              style={{ width: GUTTER, flex: "none" }}
+            />
+            {view.days.map((d, i) => (
+              <div
                 key={d}
-                type="button"
-                className="gridcell"
-                data-key={key}
-                aria-label={`${view.dayLabels[di]}, ${t} — ${word}${
-                  calBusy ? " — calendar conflict" : ""
-                }`}
-                disabled={disabled}
-                onPointerDown={(e) => start(key, e)}
-                onKeyDown={(e) => {
-                  if (e.key === " " || e.key === "Enter") {
-                    e.preventDefault();
-                    toggleKey(key, `${view.dayLabels[di]}, ${t}`);
-                  }
-                }}
                 style={{
-                  position: "relative",
-                  background: bgFor(status),
-                  touchAction: "none",
-                  boxShadow:
-                    status === undefined
-                      ? "inset 0 0 0 1px var(--border-subtle)"
-                      : "none",
+                  flex: 1,
+                  minWidth: 44,
+                  textAlign: "center",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--fg-muted)",
                 }}
               >
-                {calBusy && (
-                  <span
-                    aria-hidden="true"
-                    title="Busy in your calendar"
-                    style={{
-                      position: "absolute",
-                      top: 2,
-                      right: 2,
-                      width: 6,
-                      height: 6,
-                      borderRadius: 3,
-                      background: "var(--danger)",
+                {view.dayLabels[i]}
+              </div>
+            ))}
+          </div>
+
+          {view.times.map((t) => (
+            <div
+              key={t}
+              style={{
+                display: "flex",
+                gap: 6,
+                marginBottom: 6,
+                alignItems: "center",
+              }}
+            >
+              <div
+                className="grid-gutter"
+                style={{
+                  width: GUTTER,
+                  flex: "none",
+                  textAlign: "right",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11,
+                  color: "var(--fg-subtle)",
+                }}
+              >
+                {hourLabel(t)}
+              </div>
+              {view.days.map((d, di) => {
+                const key = view.keyAt(d, t);
+                if (key === null) {
+                  return (
+                    <div
+                      key={d}
+                      className="gridcell"
+                      style={{ visibility: "hidden" }}
+                    />
+                  );
+                }
+                const status = value.get(key);
+                const calBusy = busyKeys?.has(key) ?? false;
+                const word =
+                  status === "yes"
+                    ? "available"
+                    : status === "maybe"
+                      ? "maybe"
+                      : "busy";
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    className="gridcell"
+                    data-key={key}
+                    aria-label={`${view.dayLabels[di]}, ${t} — ${word}${
+                      calBusy ? " — calendar conflict" : ""
+                    }`}
+                    disabled={disabled}
+                    onPointerDown={(e) => start(key, e)}
+                    onKeyDown={(e) => {
+                      if (e.key === " " || e.key === "Enter") {
+                        e.preventDefault();
+                        toggleKey(key, `${view.dayLabels[di]}, ${t}`);
+                      }
                     }}
-                  />
-                )}
-              </button>
-            );
-          })}
+                    style={{
+                      position: "relative",
+                      background: bgFor(status),
+                      touchAction: "none",
+                      boxShadow:
+                        status === undefined
+                          ? "inset 0 0 0 1px var(--border-subtle)"
+                          : "none",
+                    }}
+                  >
+                    {calBusy && (
+                      <span
+                        aria-hidden="true"
+                        title="Busy in your calendar"
+                        style={{
+                          position: "absolute",
+                          top: 2,
+                          right: 2,
+                          width: 6,
+                          height: 6,
+                          borderRadius: 3,
+                          background: "var(--danger)",
+                        }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
 
       <div
         style={{
