@@ -251,6 +251,17 @@ describe("RespondPanel", () => {
     );
   });
 
+  it("renders the timezone control slot passed by the page", () => {
+    render(
+      <RespondPanel
+        poll={poll}
+        viewerTz={tz}
+        tzControl={<span>tz-slot-here</span>}
+      />,
+    );
+    expect(screen.getByText("tz-slot-here")).toBeInTheDocument();
+  });
+
   it("sends a typed password as the secret and keeps using it", async () => {
     const user = userEvent.setup();
     submitMock.mockResolvedValue(response()); // password path → no token returned

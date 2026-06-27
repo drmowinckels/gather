@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { AvailabilityGrid } from "./AvailabilityGrid";
 import {
   submitSlots,
@@ -28,10 +28,12 @@ export function RespondPanel({
   poll,
   viewerTz,
   onSaved,
+  tzControl,
 }: {
   poll: Poll;
   viewerTz: string;
   onSaved?: (response: PollResponse) => void;
+  tzControl?: ReactNode;
 }) {
   const view = useMemo(
     () =>
@@ -257,6 +259,7 @@ export function RespondPanel({
         className="card respond-controls"
         style={{ padding: 22, margin: "26px 0" }}
       >
+        {tzControl}
         <h2 style={{ fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
           Your details
         </h2>

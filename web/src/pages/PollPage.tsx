@@ -211,6 +211,52 @@ export function PollPage() {
   const curtained = poll.public && poll.resultsHidden;
   const offset = tzOffsetLabel(poll.tz);
 
+  // The viewer's display-timezone control lives in the sidebar's details card
+  // (passed into RespondPanel); for weekday polls it's just an info note.
+  const tzControl =
+    poll.kind === "dates" ? (
+      <label
+        className="tz-control"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          margin: "0 0 16px",
+          fontSize: 13,
+          color: "var(--fg-muted)",
+          flexWrap: "wrap",
+        }}
+      >
+        <span>Showing times in</span>
+        <select
+          className="input"
+          style={{ width: "auto", maxWidth: "100%" }}
+          value={viewerTz}
+          onChange={(e) => setViewerTz(e.target.value)}
+          aria-label="Show times in timezone"
+        >
+          {tzOptions.map((z) => (
+            <option key={z.value} value={z.value}>
+              {z.label}
+            </option>
+          ))}
+        </select>
+        {viewerTz !== poll.tz && (
+          <span className="subtle" style={{ fontSize: 12 }}>
+            converted from {poll.tz}
+          </span>
+        )}
+      </label>
+    ) : (
+      <p
+        className="helper"
+        style={{ margin: "0 0 16px", fontSize: 13 }}
+        aria-label="timezone note"
+      >
+        Weekday times are shown in the poll's home timezone, {poll.tz}.
+      </p>
+    );
+
   return (
     <Shell>
       <div className="poll-page" style={{ padding: "40px 0" }}>
@@ -264,49 +310,6 @@ export function PollPage() {
                 }
                 onClose={() => setEditing(false)}
               />
-            )}
-
-            {poll.kind === "dates" ? (
-              <label
-                className="tz-control"
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  marginTop: 16,
-                  fontSize: 13,
-                  color: "var(--fg-muted)",
-                  flexWrap: "wrap",
-                }}
-              >
-                <span>Showing times in</span>
-                <select
-                  className="input"
-                  style={{ width: "auto", maxWidth: "100%" }}
-                  value={viewerTz}
-                  onChange={(e) => setViewerTz(e.target.value)}
-                  aria-label="Show times in timezone"
-                >
-                  {tzOptions.map((z) => (
-                    <option key={z.value} value={z.value}>
-                      {z.label}
-                    </option>
-                  ))}
-                </select>
-                {viewerTz !== poll.tz && (
-                  <span className="subtle" style={{ fontSize: 12 }}>
-                    converted from {poll.tz}
-                  </span>
-                )}
-              </label>
-            ) : (
-              <p
-                className="helper"
-                style={{ marginTop: 16, fontSize: 13 }}
-                aria-label="timezone note"
-              >
-                Weekday times are shown in the poll's home timezone, {poll.tz}.
-              </p>
             )}
 
             {(poll.closed || poll.deadline || isHost) && (
@@ -397,6 +400,7 @@ export function PollPage() {
             poll={poll}
             viewerTz={viewerTz}
             onSaved={mergeResponse}
+            tzControl={tzControl}
           />
 
           <div className="poll-results">
@@ -471,7 +475,7 @@ export function PollPage() {
           </div>
 
           <aside className="poll-aside">
-            <div className="card" style={{ padding: 22, margin: "26px 0" }}>
+            <div className="card" style={{ padding: 22 }}>
               <span className="fieldlbl">Share this link</span>
               <div className="copy-row">
                 <input
@@ -537,7 +541,6 @@ export function PollPage() {
                     className="card"
                     style={{
                       padding: 22,
-                      margin: "26px 0",
                       background: "var(--bg-tinted)",
                     }}
                   >

@@ -559,9 +559,16 @@ button.heatcell {
 .poll-body > .poll-results {
   min-width: 0;
 }
-/* Desktop: the grid takes the main column while the respondent's controls and
-   the share/host links stack in a sidebar; the poll header spans the top and
-   results span the full width below. */
+/* Share/host links sit in their own full-width band below results — two columns
+   side by side on a wide screen, stacked when narrow. */
+.poll-aside {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  align-items: start;
+}
+/* Desktop: the grid takes the main column with the respondent's controls in a
+   sidebar beside it; the header, results and links each span the full width. */
 @media (min-width: 880px) {
   .poll-body {
     display: grid;
@@ -569,8 +576,8 @@ button.heatcell {
     grid-template-areas:
       "header   header"
       "main     controls"
-      "main     aside"
-      "results  results";
+      "results  results"
+      "aside    aside";
     column-gap: 32px;
     align-items: start;
   }
