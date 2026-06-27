@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { GridScroll } from "./GridScroll";
 import { hourLabel } from "../lib/datetime";
 import { cycleNext, applyMark, type Status, type Marks } from "../lib/paint";
 import type { GridView } from "../lib/tz";
@@ -102,7 +103,7 @@ export function AvailabilityGrid({
       <div className="sr-only" role="status" aria-live="polite">
         {announce}
       </div>
-      <div className="grid-scroll">
+      <GridScroll>
         <div className="grid-rows">
           <div style={{ display: "flex", gap: 6, marginBottom: 6 }}>
             <div
@@ -216,7 +217,7 @@ export function AvailabilityGrid({
             </div>
           ))}
         </div>
-      </div>
+      </GridScroll>
 
       <div
         style={{

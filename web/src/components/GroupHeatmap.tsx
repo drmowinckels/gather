@@ -5,6 +5,7 @@ import { aggregate } from "../lib/heatmap";
 import { hourLabel } from "../lib/datetime";
 import { downloadText } from "../lib/download";
 import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
+import { GridScroll } from "./GridScroll";
 import { PeopleFilter } from "./PeopleFilter";
 
 const BEST_SHADOW =
@@ -284,7 +285,7 @@ export function GroupHeatmap({
 
       <div className="results-grid">
         <div onMouseLeave={() => setHovered(null)} aria-hidden={!isHost}>
-          <div className="grid-scroll">
+          <GridScroll>
             <div className="grid-rows">
               <div style={{ display: "flex", gap: 5, marginBottom: 5 }}>
                 <div
@@ -412,7 +413,7 @@ export function GroupHeatmap({
                 </div>
               ))}
             </div>
-          </div>
+          </GridScroll>
 
           <div
             style={{

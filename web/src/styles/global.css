@@ -497,6 +497,28 @@ button.heatcell {
 }
 
 /* ---------- scrollable day grids ---------- */
+.grid-scroll-wrap {
+  position: relative;
+}
+/* Fade the trailing edge while more day columns sit off-screen to the right —
+   overlay scrollbars are hidden until you scroll, so a wide grid would
+   otherwise look complete. The fade clears once you reach the end. */
+.grid-scroll-wrap::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 44px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(to left, var(--bg-elev-1), transparent);
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-out);
+}
+.grid-scroll-wrap[data-more]::after {
+  opacity: 1;
+}
 /* A poll spanning many days makes the day columns wider than the card. Scroll
    them inside the card instead of letting the grid spill past its border. */
 .grid-scroll {
