@@ -238,7 +238,7 @@ export function RespondPanel({
   if (poll.closed) {
     return (
       <div
-        className="card"
+        className="card respond-main"
         style={{ padding: 24, margin: "26px 0", textAlign: "center" }}
       >
         <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
@@ -252,201 +252,215 @@ export function RespondPanel({
   }
 
   return (
-    <div className="card" style={{ padding: 24, margin: "26px 0" }}>
-      <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
-        Your availability
-      </h2>
-      <p className="helper" style={{ margin: "6px 0 18px", fontSize: 14 }}>
-        {poll.defaultAvailable
-          ? "You start marked free everywhere — paint the times you're busy. Each tap cycles a slot: available → maybe → clear."
-          : "Click or drag to mark when you're free. Each tap cycles a slot: available → maybe → clear."}
-      </p>
-
-      <div className="field" style={{ maxWidth: 320 }}>
-        <label className="fieldlbl" htmlFor="resp-name">
-          Your name
-        </label>
-        <input
-          id="resp-name"
-          className="input"
-          placeholder="e.g. Ada"
-          value={name}
-          onChange={(e) => onName(e.target.value)}
-          maxLength={80}
-        />
-      </div>
-
-      <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
-        <label className="fieldlbl" htmlFor="resp-group">
-          Group <span className="subtle">(optional)</span>
-        </label>
-        <input
-          id="resp-group"
-          className="input"
-          list="resp-group-options"
-          placeholder="e.g. Design team"
-          value={group}
-          onChange={(e) => {
-            setGroup(e.target.value);
-            scheduleSave();
-          }}
-          maxLength={60}
-        />
-        {knownGroups.length > 0 && (
-          <datalist id="resp-group-options">
-            {knownGroups.map((g) => (
-              <option key={g} value={g} />
-            ))}
-          </datalist>
-        )}
-        <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
-          Tag yourself to a team to see per-group tallies in the results.
-        </p>
-      </div>
-
-      <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
-        <label className="fieldlbl" htmlFor="resp-pw">
-          Edit password <span className="subtle">(optional)</span>
-        </label>
-        <input
-          id="resp-pw"
-          className="input"
-          type="password"
-          placeholder="to edit from another device"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          maxLength={200}
-          autoComplete="off"
-        />
-        <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
-          Leave blank to keep this response to this browser. Set one to claim
-          your name and edit it elsewhere.
-        </p>
-      </div>
-
+    <>
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          margin: "4px 0 14px",
-          flexWrap: "wrap",
-        }}
+        className="card respond-controls"
+        style={{ padding: 22, margin: "26px 0" }}
       >
-        <label
-          className="btn btn-outline btn-sm file-label"
-          style={{ cursor: "pointer" }}
-        >
-          Overlay my calendar (.ics)
+        <h2 style={{ fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
+          Your details
+        </h2>
+
+        <div className="field" style={{ maxWidth: 320 }}>
+          <label className="fieldlbl" htmlFor="resp-name">
+            Your name
+          </label>
           <input
-            type="file"
-            accept=".ics,text/calendar"
-            className="sr-only"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) loadCalendar(f);
-              e.target.value = "";
-            }}
+            id="resp-name"
+            className="input"
+            placeholder="e.g. Ada"
+            value={name}
+            onChange={(e) => onName(e.target.value)}
+            maxLength={80}
           />
-        </label>
-        {busyKeys.size > 0 && (
+        </div>
+
+        <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
+          <label className="fieldlbl" htmlFor="resp-group">
+            Group <span className="subtle">(optional)</span>
+          </label>
+          <input
+            id="resp-group"
+            className="input"
+            list="resp-group-options"
+            placeholder="e.g. Design team"
+            value={group}
+            onChange={(e) => {
+              setGroup(e.target.value);
+              scheduleSave();
+            }}
+            maxLength={60}
+          />
+          {knownGroups.length > 0 && (
+            <datalist id="resp-group-options">
+              {knownGroups.map((g) => (
+                <option key={g} value={g} />
+              ))}
+            </datalist>
+          )}
+          <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
+            Tag yourself to a team to see per-group tallies in the results.
+          </p>
+        </div>
+
+        <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
+          <label className="fieldlbl" htmlFor="resp-pw">
+            Edit password <span className="subtle">(optional)</span>
+          </label>
+          <input
+            id="resp-pw"
+            className="input"
+            type="password"
+            placeholder="to edit from another device"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            maxLength={200}
+            autoComplete="off"
+          />
+          <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
+            Leave blank to keep this response to this browser. Set one to claim
+            your name and edit it elsewhere.
+          </p>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            margin: "4px 0 14px",
+            flexWrap: "wrap",
+          }}
+        >
+          <label
+            className="btn btn-outline btn-sm file-label"
+            style={{ cursor: "pointer" }}
+          >
+            Overlay my calendar (.ics)
+            <input
+              type="file"
+              accept=".ics,text/calendar"
+              className="sr-only"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) loadCalendar(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {busyKeys.size > 0 && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={blockOutBusy}
+            >
+              Block out busy times
+            </button>
+          )}
+          <span
+            className="subtle"
+            role="status"
+            aria-live="polite"
+            style={{ fontSize: 12 }}
+          >
+            {overlayNote}
+          </span>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 10,
+            flexWrap: "wrap",
+          }}
+        >
           <button
             type="button"
             className="btn btn-outline btn-sm"
-            onClick={blockOutBusy}
+            onClick={selectAll}
           >
-            Block out busy times
+            Select all
           </button>
-        )}
-        <span
-          className="subtle"
-          role="status"
-          aria-live="polite"
-          style={{ fontSize: 12 }}
-        >
-          {overlayNote}
-        </span>
+          <button
+            type="button"
+            className="btn btn-outline btn-sm"
+            onClick={clearAll}
+          >
+            Clear all
+          </button>
+          <span className="subtle" style={{ fontSize: 12 }}>
+            Mark everything free, then paint when you're busy.
+          </span>
+          <span className="sr-only" role="status" aria-live="polite">
+            {bulkNote}
+          </span>
+        </div>
       </div>
 
       <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 10,
-          flexWrap: "wrap",
-        }}
+        className="card respond-main"
+        style={{ padding: 24, margin: "26px 0" }}
       >
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={selectAll}
-        >
-          Select all
-        </button>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={clearAll}
-        >
-          Clear all
-        </button>
-        <span className="subtle" style={{ fontSize: 12 }}>
-          Mark everything free, then paint when you're busy.
-        </span>
-        <span className="sr-only" role="status" aria-live="polite">
-          {bulkNote}
-        </span>
-      </div>
+        <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
+          Your availability
+        </h2>
+        <p className="helper" style={{ margin: "6px 0 18px", fontSize: 14 }}>
+          {poll.defaultAvailable
+            ? "You start marked free everywhere — paint the times you're busy. Each tap cycles a slot: available → maybe → clear."
+            : "Click or drag to mark when you're free. Each tap cycles a slot: available → maybe → clear."}
+        </p>
 
-      <AvailabilityGrid
-        view={view}
-        value={marks}
-        onChange={setMarks}
-        onCommit={scheduleSave}
-        busyKeys={busyKeys}
-      />
+        <AvailabilityGrid
+          view={view}
+          value={marks}
+          onChange={setMarks}
+          onCommit={scheduleSave}
+          busyKeys={busyKeys}
+        />
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 14,
-          marginTop: 18,
-          flexWrap: "wrap",
-        }}
-      >
-        <button
-          type="button"
-          className="btn btn-primary"
-          onClick={doSave}
-          disabled={!hasName || save.kind === "saving"}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            marginTop: 18,
+            flexWrap: "wrap",
+          }}
         >
-          {save.kind === "saving" ? "Saving…" : "Save availability"}
-        </button>
-        {!hasName && (
-          <span className="subtle" style={{ fontSize: 13 }}>
-            Add your name to save.
+          <button
+            type="button"
+            className="btn btn-primary"
+            onClick={doSave}
+            disabled={!hasName || save.kind === "saving"}
+          >
+            {save.kind === "saving" ? "Saving…" : "Save availability"}
+          </button>
+          {!hasName && (
+            <span className="subtle" style={{ fontSize: 13 }}>
+              Add your name to save.
+            </span>
+          )}
+          {hasName && save.kind === "saved" && (
+            <span style={{ fontSize: 13, color: "var(--botanical)" }}>
+              Saved ✓
+            </span>
+          )}
+          {save.kind === "error" && (
+            <span role="alert" style={{ fontSize: 13, color: "var(--danger)" }}>
+              {save.message}
+            </span>
+          )}
+          <span className="sr-only" role="status" aria-live="polite">
+            {save.kind === "saving"
+              ? "Saving your availability"
+              : save.kind === "saved"
+                ? "Availability saved"
+                : ""}
           </span>
-        )}
-        {hasName && save.kind === "saved" && (
-          <span style={{ fontSize: 13, color: "var(--botanical)" }}>
-            Saved ✓
-          </span>
-        )}
-        {save.kind === "error" && (
-          <span role="alert" style={{ fontSize: 13, color: "var(--danger)" }}>
-            {save.message}
-          </span>
-        )}
-        <span className="sr-only" role="status" aria-live="polite">
-          {save.kind === "saving"
-            ? "Saving your availability"
-            : save.kind === "saved"
-              ? "Availability saved"
-              : ""}
-        </span>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

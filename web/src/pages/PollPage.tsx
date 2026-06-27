@@ -215,7 +215,7 @@ export function PollPage() {
     <Shell>
       <div className="poll-page" style={{ padding: "40px 0" }}>
         <div className="poll-body">
-          <div className="poll-main">
+          <div className="poll-header">
             <div
               style={{
                 display: "flex",
@@ -391,12 +391,83 @@ export function PollPage() {
                 </div>
               </div>
             )}
+          </div>
 
-            <RespondPanel
-              poll={poll}
-              viewerTz={viewerTz}
-              onSaved={mergeResponse}
-            />
+          <RespondPanel
+            poll={poll}
+            viewerTz={viewerTz}
+            onSaved={mergeResponse}
+          />
+
+          <div className="poll-results">
+            {isHost || (poll.public && !poll.resultsHidden) ? (
+              <>
+                {hostToken && curtained && (
+                  <div
+                    className="card"
+                    style={{
+                      padding: "16px 20px",
+                      margin: "26px 0 0",
+                      background: "var(--bg-tinted)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      flexWrap: "wrap",
+                      fontSize: 14,
+                    }}
+                  >
+                    <span>
+                      🙈 Results are hidden from respondents until you reveal
+                      them.
+                      {revealError && (
+                        <span role="alert" style={{ color: "var(--danger)" }}>
+                          {" "}
+                          Couldn't reveal — try again.
+                        </span>
+                      )}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-sm"
+                      style={{ marginLeft: "auto" }}
+                      onClick={() => revealResults(hostToken)}
+                    >
+                      Reveal results
+                    </button>
+                  </div>
+                )}
+                <GroupHeatmap
+                  poll={poll}
+                  viewerTz={viewerTz}
+                  isHost={isHost}
+                  editToken={getEditToken(poll.id)}
+                  onLockChange={(updated) =>
+                    setState({ kind: "ready", poll: updated })
+                  }
+                />
+              </>
+            ) : (
+              <div
+                className="card"
+                style={{
+                  padding: "28px",
+                  textAlign: "center",
+                  margin: "26px 0",
+                }}
+              >
+                <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
+                  {curtained ? "Results hidden for now" : "Results are private"}
+                </p>
+                <p
+                  className="helper"
+                  style={{ margin: "8px auto 0", maxWidth: 360 }}
+                >
+                  {curtained
+                    ? "The host is keeping the group results hidden until they reveal them. Your availability is saved."
+                    : "The host kept the group results private. Your availability is saved."}
+                </p>
+              </div>
+            )}
           </div>
 
           <aside className="poll-aside">
@@ -499,77 +570,6 @@ export function PollPage() {
                 );
               })()}
           </aside>
-
-          <div className="poll-results">
-            {isHost || (poll.public && !poll.resultsHidden) ? (
-              <>
-                {hostToken && curtained && (
-                  <div
-                    className="card"
-                    style={{
-                      padding: "16px 20px",
-                      margin: "26px 0 0",
-                      background: "var(--bg-tinted)",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      flexWrap: "wrap",
-                      fontSize: 14,
-                    }}
-                  >
-                    <span>
-                      🙈 Results are hidden from respondents until you reveal
-                      them.
-                      {revealError && (
-                        <span role="alert" style={{ color: "var(--danger)" }}>
-                          {" "}
-                          Couldn't reveal — try again.
-                        </span>
-                      )}
-                    </span>
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-sm"
-                      style={{ marginLeft: "auto" }}
-                      onClick={() => revealResults(hostToken)}
-                    >
-                      Reveal results
-                    </button>
-                  </div>
-                )}
-                <GroupHeatmap
-                  poll={poll}
-                  viewerTz={viewerTz}
-                  isHost={isHost}
-                  editToken={getEditToken(poll.id)}
-                  onLockChange={(updated) =>
-                    setState({ kind: "ready", poll: updated })
-                  }
-                />
-              </>
-            ) : (
-              <div
-                className="card"
-                style={{
-                  padding: "28px",
-                  textAlign: "center",
-                  margin: "26px 0",
-                }}
-              >
-                <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
-                  {curtained ? "Results hidden for now" : "Results are private"}
-                </p>
-                <p
-                  className="helper"
-                  style={{ margin: "8px auto 0", maxWidth: 360 }}
-                >
-                  {curtained
-                    ? "The host is keeping the group results hidden until they reveal them. Your availability is saved."
-                    : "The host kept the group results private. Your availability is saved."}
-                </p>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </Shell>
