@@ -542,44 +542,49 @@ button.heatcell {
   background: var(--bg-elev-1);
 }
 
-/* ---------- poll page: availability leads, share links to the side ---------- */
+/* ---------- poll page: availability leads, controls & links to the side ---------- */
 .poll-page {
   max-width: 1040px;
 }
-/* Mobile-first: a single column. Availability comes first, results next, and the
-   share/host links wrap to the very bottom (out of the way of the main task). */
+/* Mobile-first single column: poll header, then the respondent's details and
+   controls, then the availability grid, then results, and finally the share/host
+   links — primary task up top, links fall to the very bottom. The source order
+   already matches this, so no reordering tricks are needed. */
 .poll-body {
   display: flex;
   flex-direction: column;
 }
-.poll-body > .poll-main {
-  order: 1;
-  min-width: 0;
-}
+.poll-body > .poll-header,
+.poll-body > .respond-main,
 .poll-body > .poll-results {
-  order: 2;
   min-width: 0;
 }
-.poll-body > .poll-aside {
-  order: 3;
-}
+/* Desktop: the grid takes the main column while the respondent's controls and
+   the share/host links stack in a sidebar; the poll header spans the top and
+   results span the full width below. */
 @media (min-width: 880px) {
   .poll-body {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 304px;
     grid-template-areas:
-      "main aside"
-      "results results";
+      "header   header"
+      "main     controls"
+      "main     aside"
+      "results  results";
     column-gap: 32px;
+    align-items: start;
   }
-  .poll-body > .poll-main {
+  .poll-body > .poll-header {
+    grid-area: header;
+  }
+  .poll-body > .respond-main {
     grid-area: main;
+  }
+  .poll-body > .respond-controls {
+    grid-area: controls;
   }
   .poll-body > .poll-aside {
     grid-area: aside;
-    align-self: start;
-    position: sticky;
-    top: 24px;
   }
   .poll-body > .poll-results {
     grid-area: results;
