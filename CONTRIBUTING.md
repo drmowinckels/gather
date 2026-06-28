@@ -34,8 +34,8 @@ tests for any new behaviour.
 ## Translations
 
 The web app is fully translatable. Translations live in **one file per
-language**, so adding a language means writing a single file and registering it
-— you don't touch any component.
+language**, which the registry auto-discovers — so adding a language means
+writing a single file, with nothing to register and no component to touch.
 
 Everything lives in [`web/src/i18n/`](web/src/i18n):
 
