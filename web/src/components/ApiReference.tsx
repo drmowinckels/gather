@@ -2,6 +2,8 @@
 // deliberately small: our spec has no $refs (schemas are inlined) and shallow
 // request bodies, so a recursive renderer would be over-engineering.
 
+import { useT } from "../i18n";
+
 export interface JsonSchema {
   type?: string | string[];
   format?: string;
@@ -89,6 +91,7 @@ function statusKind(code: string): string {
 }
 
 function PropertyList({ schema }: { schema: JsonSchema }) {
+  const t = useT();
   const props = schema.properties ?? {};
   const required = new Set(schema.required ?? []);
   const names = Object.keys(props);
@@ -103,7 +106,7 @@ function PropertyList({ schema }: { schema: JsonSchema }) {
               <code>{name}</code>
               <span className="prop-type">{typeLabel(p)}</span>
               {!required.has(name) && (
-                <span className="prop-opt">optional</span>
+                <span className="prop-opt">{t("apiRef.optional")}</span>
               )}
             </dt>
             <dd>
@@ -111,7 +114,8 @@ function PropertyList({ schema }: { schema: JsonSchema }) {
               {p.default !== undefined && (
                 <span className="prop-default">
                   {" "}
-                  defaults to <code>{JSON.stringify(p.default)}</code>
+                  {t("apiRef.defaultsTo")}{" "}
+                  <code>{JSON.stringify(p.default)}</code>
                 </span>
               )}
             </dd>
@@ -123,6 +127,7 @@ function PropertyList({ schema }: { schema: JsonSchema }) {
 }
 
 function OperationItem({ method, path, op }: Row) {
+  const t = useT();
   const body = op.requestBody?.content?.["application/json"]?.schema;
   const params = op.parameters ?? [];
   const responses = Object.entries(op.responses ?? {});
@@ -139,15 +144,19 @@ function OperationItem({ method, path, op }: Row) {
 
         {params.length > 0 && (
           <div className="detail-block">
-            <p className="detail-label">Parameters</p>
+            <p className="detail-label">{t("apiRef.parameters")}</p>
             <dl className="props">
               {params.map((p) => (
                 <div className="prop" key={`${p.in}:${p.name}`}>
                   <dt>
                     <code>{p.name}</code>
                     <span className="prop-type">{typeLabel(p.schema)}</span>
-                    <span className="prop-in">in {p.in}</span>
-                    {!p.required && <span className="prop-opt">optional</span>}
+                    <span className="prop-in">
+                      {t("apiRef.in", { location: p.in })}
+                    </span>
+                    {!p.required && (
+                      <span className="prop-opt">{t("apiRef.optional")}</span>
+                    )}
                   </dt>
                   <dd>{p.description}</dd>
                 </div>
@@ -158,14 +167,14 @@ function OperationItem({ method, path, op }: Row) {
 
         {body && (
           <div className="detail-block">
-            <p className="detail-label">Request body</p>
+            <p className="detail-label">{t("apiRef.requestBody")}</p>
             <PropertyList schema={body} />
           </div>
         )}
 
         {responses.length > 0 && (
           <div className="detail-block">
-            <p className="detail-label">Responses</p>
+            <p className="detail-label">{t("apiRef.responses")}</p>
             <ul className="resp">
               {responses.map(([code, r]) => (
                 <li key={code}>

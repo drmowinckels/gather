@@ -1,23 +1,22 @@
 import { useMemo, useRef, useState } from "react";
-import { DISPLAY_LOCALE } from "../lib/datetime";
+import { localizedDateFormat, getDisplayLocale } from "../lib/datetime";
+import { useT, useLocale } from "../i18n";
 
 // A localized calendar-month date picker with drag-to-paint selection. Replaces
 // the native <input type="date"> (whose format we can't control) and a flat day
 // list. Selection is a Set of canonical ISO dates ("YYYY-MM-DD").
 
-const MONTH_TITLE_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+const MONTH_TITLE_OPTS: Intl.DateTimeFormatOptions = {
   month: "long",
   year: "numeric",
-});
-const WEEKDAY_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-  weekday: "short",
-});
-const FULL_DATE_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
+};
+const WEEKDAY_OPTS: Intl.DateTimeFormatOptions = { weekday: "short" };
+const FULL_DATE_OPTS: Intl.DateTimeFormatOptions = {
   weekday: "long",
   year: "numeric",
   month: "long",
   day: "numeric",
-});
+};
 
 function isoOf(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
@@ -42,14 +41,6 @@ export function localeFirstDay(locale: string): number {
   return 1; // Monday
 }
 
-const FIRST_DAY = localeFirstDay(DISPLAY_LOCALE);
-
-// Weekday headers starting on the locale's first day. 2024-01-07 was a Sunday
-// (getDay() === 0), so +dayIndex lands on each weekday name.
-const WEEKDAY_HEADERS = Array.from({ length: 7 }, (_, i) =>
-  WEEKDAY_FMT.format(new Date(2024, 0, 7 + ((FIRST_DAY + i) % 7))),
-);
-
 interface MonthCalendarProps {
   value: Set<string>;
   onChange: (updater: (prev: Set<string>) => Set<string>) => void;
@@ -68,8 +59,25 @@ export function MonthCalendar({
   lockedDays,
   today: nowProp,
 }: MonthCalendarProps) {
+  const t = useT();
+  const [locale] = useLocale();
   const today = useMemo(() => isoOf(nowProp ?? new Date()), [nowProp]);
   const floor = minDate ?? today;
+
+  // First day of week and the weekday headers follow the chosen language
+  // (Monday-first "man." in Norwegian, Sunday-first "Sun" in English). Recompute
+  // when the locale changes; the formatter cache keys on the locale too.
+  const firstDay = useMemo(() => localeFirstDay(getDisplayLocale()), [locale]);
+  // 2024-01-07 was a Sunday (getDay() === 0), so +dayIndex lands on each weekday.
+  const weekdayHeaders = useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) =>
+        localizedDateFormat(WEEKDAY_OPTS).format(
+          new Date(2024, 0, 7 + ((firstDay + i) % 7)),
+        ),
+      ),
+    [locale, firstDay],
+  );
   const currentMonth = useMemo(() => {
     const d = nowProp ?? new Date();
     return { year: d.getFullYear(), month: d.getMonth() };
@@ -82,7 +90,7 @@ export function MonthCalendar({
 
   const weeks = useMemo(() => {
     const first = new Date(view.year, view.month, 1);
-    const lead = (first.getDay() - FIRST_DAY + 7) % 7; // offset to locale's first weekday
+    const lead = (first.getDay() - firstDay + 7) % 7; // offset to locale's first weekday
     const start = new Date(view.year, view.month, 1 - lead);
     return Array.from({ length: 6 }, (_, w) =>
       Array.from({ length: 7 }, (_, d) => {
@@ -94,7 +102,7 @@ export function MonthCalendar({
         return { iso: isoOf(date), date };
       }),
     );
-  }, [view]);
+  }, [view, firstDay]);
 
   const atFloor = isoOf(new Date(currentMonth.year, currentMonth.month, 1));
   const viewFirst = isoOf(new Date(view.year, view.month, 1));
@@ -188,18 +196,20 @@ export function MonthCalendar({
           className="btn btn-outline btn-sm"
           onClick={() => shiftMonth(-1)}
           disabled={!canGoPrev}
-          aria-label="Previous month"
+          aria-label={t("calendar.prevMonth")}
         >
           ‹
         </button>
         <strong style={{ fontSize: 14 }} aria-live="polite">
-          {MONTH_TITLE_FMT.format(new Date(view.year, view.month, 1))}
+          {localizedDateFormat(MONTH_TITLE_OPTS).format(
+            new Date(view.year, view.month, 1),
+          )}
         </strong>
         <button
           type="button"
           className="btn btn-outline btn-sm"
           onClick={() => shiftMonth(1)}
-          aria-label="Next month"
+          aria-label={t("calendar.nextMonth")}
         >
           ›
         </button>
@@ -216,7 +226,7 @@ export function MonthCalendar({
           marginBottom: 4,
         }}
       >
-        {WEEKDAY_HEADERS.map((w, i) => (
+        {weekdayHeaders.map((w, i) => (
           <div key={i} style={{ textAlign: "center" }}>
             {w}
           </div>
@@ -225,9 +235,11 @@ export function MonthCalendar({
 
       <div
         role="group"
-        aria-label={`Choose dates in ${MONTH_TITLE_FMT.format(
-          new Date(view.year, view.month, 1),
-        )}`}
+        aria-label={t("calendar.chooseDatesIn", {
+          month: localizedDateFormat(MONTH_TITLE_OPTS).format(
+            new Date(view.year, view.month, 1),
+          ),
+        })}
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
@@ -247,11 +259,9 @@ export function MonthCalendar({
               data-iso={iso}
               aria-pressed={isSelected}
               aria-hidden={!inMonth}
-              aria-label={FULL_DATE_FMT.format(date)}
+              aria-label={localizedDateFormat(FULL_DATE_OPTS).format(date)}
               disabled={isDisabled && !isLocked}
-              title={
-                isLocked ? "Already in the poll — can't be removed" : undefined
-              }
+              title={isLocked ? t("calendar.lockedDay") : undefined}
               onPointerDown={(e) => start(iso, e)}
               onKeyDown={(e) => {
                 if (e.key === " " || e.key === "Enter") {

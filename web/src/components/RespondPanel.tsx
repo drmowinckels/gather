@@ -9,6 +9,7 @@ import {
 import { buildGridView } from "../lib/tz";
 import { marksFrom, splitMarks, fillAll, type Marks } from "../lib/paint";
 import { parseIcsBusy, busySlotKeys, overlayWindow } from "../lib/icsImport";
+import { useT } from "../i18n";
 import {
   getName,
   saveName,
@@ -35,6 +36,7 @@ export function RespondPanel({
   onSaved?: (response: PollResponse) => void;
   tzControl?: ReactNode;
 }) {
+  const t = useT();
   const view = useMemo(
     () =>
       buildGridView(
@@ -155,10 +157,10 @@ export function RespondPanel({
         kind: "error",
         message:
           err instanceof ApiError && err.code === "name_protected"
-            ? "That name is protected. Enter its password to edit, or pick another name."
+            ? t("respond.error.nameProtected")
             : err instanceof ApiError
-              ? "Couldn't save — please try again."
-              : "Can't reach samkoma. Check your connection.",
+              ? t("respond.error.saveFailed")
+              : t("respond.error.network"),
       });
     } finally {
       saving.current = false;
@@ -186,7 +188,7 @@ export function RespondPanel({
   // and overlay the busy slots so the viewer paints around their commitments.
   async function loadCalendar(file: File) {
     if (file.size > 5_000_000) {
-      setOverlayNote("That calendar file is too large (over 5 MB).");
+      setOverlayNote(t("respond.overlay.tooLarge"));
       return;
     }
     try {
@@ -200,14 +202,14 @@ export function RespondPanel({
       setBusyKeys(keys);
       setOverlayNote(
         busy.length === 0
-          ? "No events found in this poll's range."
-          : `Marked ${keys.size} busy slot(s) from your calendar — nothing was uploaded.` +
+          ? t("respond.overlay.noEvents")
+          : t("respond.overlay.marked", { count: keys.size }) +
               (skipped
-                ? ` (${skipped} recurring event${skipped > 1 ? "s" : ""} couldn't be expanded.)`
+                ? t("respond.overlay.recurring", { count: skipped })
                 : ""),
       );
     } catch {
-      setOverlayNote("Couldn't read that file — is it a .ics calendar?");
+      setOverlayNote(t("respond.overlay.readFailed"));
     }
   }
 
@@ -225,13 +227,13 @@ export function RespondPanel({
   // "tell me when you're *not* free" style polls.
   function selectAll() {
     setMarks(fillAll(allKeys, "yes"));
-    setBulkNote("All slots marked available.");
+    setBulkNote(t("respond.bulk.allAvailable"));
     scheduleSave();
   }
 
   function clearAll() {
     setMarks(new Map());
-    setBulkNote("All slots cleared.");
+    setBulkNote(t("respond.bulk.allCleared"));
     scheduleSave();
   }
 
@@ -244,10 +246,10 @@ export function RespondPanel({
         style={{ padding: 24, margin: "26px 0", textAlign: "center" }}
       >
         <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
-          Responding is closed
+          {t("respond.closed.title")}
         </p>
         <p className="helper" style={{ margin: "8px auto 0", maxWidth: 380 }}>
-          This poll is no longer accepting availability.
+          {t("respond.closed.body")}
         </p>
       </div>
     );
@@ -261,17 +263,17 @@ export function RespondPanel({
       >
         {tzControl}
         <h2 style={{ fontWeight: 700, fontSize: 18, margin: "0 0 16px" }}>
-          Your details
+          {t("respond.details.heading")}
         </h2>
 
         <div className="field" style={{ maxWidth: 320 }}>
           <label className="fieldlbl" htmlFor="resp-name">
-            Your name
+            {t("respond.name.label")}
           </label>
           <input
             id="resp-name"
             className="input"
-            placeholder="e.g. Ada"
+            placeholder={t("respond.name.placeholder")}
             value={name}
             onChange={(e) => onName(e.target.value)}
             maxLength={80}
@@ -280,13 +282,14 @@ export function RespondPanel({
 
         <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
           <label className="fieldlbl" htmlFor="resp-group">
-            Group <span className="subtle">(optional)</span>
+            {t("respond.group.label")}{" "}
+            <span className="subtle">{t("respond.optional")}</span>
           </label>
           <input
             id="resp-group"
             className="input"
             list="resp-group-options"
-            placeholder="e.g. Design team"
+            placeholder={t("respond.group.placeholder")}
             value={group}
             onChange={(e) => {
               setGroup(e.target.value);
@@ -302,27 +305,27 @@ export function RespondPanel({
             </datalist>
           )}
           <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
-            Tag yourself to a team to see per-group tallies in the results.
+            {t("respond.group.helper")}
           </p>
         </div>
 
         <div className="field" style={{ maxWidth: 320, marginTop: 12 }}>
           <label className="fieldlbl" htmlFor="resp-pw">
-            Edit password <span className="subtle">(optional)</span>
+            {t("respond.password.label")}{" "}
+            <span className="subtle">{t("respond.optional")}</span>
           </label>
           <input
             id="resp-pw"
             className="input"
             type="password"
-            placeholder="to edit from another device"
+            placeholder={t("respond.password.placeholder")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             maxLength={200}
             autoComplete="off"
           />
           <p className="subtle" style={{ fontSize: 12, margin: "6px 0 0" }}>
-            Leave blank to keep this response to this browser. Set one to claim
-            your name and edit it elsewhere.
+            {t("respond.password.helper")}
           </p>
         </div>
 
@@ -339,7 +342,7 @@ export function RespondPanel({
             className="btn btn-outline btn-sm file-label"
             style={{ cursor: "pointer" }}
           >
-            Overlay my calendar (.ics)
+            {t("respond.calendar.overlay")}
             <input
               type="file"
               accept=".ics,text/calendar"
@@ -357,7 +360,7 @@ export function RespondPanel({
               className="btn btn-outline btn-sm"
               onClick={blockOutBusy}
             >
-              Block out busy times
+              {t("respond.calendar.blockOut")}
             </button>
           )}
           <span
@@ -384,17 +387,17 @@ export function RespondPanel({
             className="btn btn-outline btn-sm"
             onClick={selectAll}
           >
-            Select all
+            {t("respond.bulk.selectAll")}
           </button>
           <button
             type="button"
             className="btn btn-outline btn-sm"
             onClick={clearAll}
           >
-            Clear all
+            {t("respond.bulk.clearAll")}
           </button>
           <span className="subtle" style={{ fontSize: 12 }}>
-            Mark everything free, then paint when you're busy.
+            {t("respond.bulk.helper")}
           </span>
           <span className="sr-only" role="status" aria-live="polite">
             {bulkNote}
@@ -407,12 +410,12 @@ export function RespondPanel({
         style={{ padding: 24, margin: "26px 0" }}
       >
         <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
-          Your availability
+          {t("respond.availability.heading")}
         </h2>
         <p className="helper" style={{ margin: "6px 0 18px", fontSize: 14 }}>
           {poll.defaultAvailable
-            ? "You start marked free everywhere — paint the times you're busy. Each tap cycles a slot: available → maybe → clear."
-            : "Click or drag to mark when you're free. Each tap cycles a slot: available → maybe → clear."}
+            ? t("respond.availability.helperDefaultAvailable")
+            : t("respond.availability.helper")}
         </p>
 
         <AvailabilityGrid
@@ -438,16 +441,18 @@ export function RespondPanel({
             onClick={doSave}
             disabled={!hasName || save.kind === "saving"}
           >
-            {save.kind === "saving" ? "Saving…" : "Save availability"}
+            {save.kind === "saving"
+              ? t("respond.save.saving")
+              : t("respond.save.button")}
           </button>
           {!hasName && (
             <span className="subtle" style={{ fontSize: 13 }}>
-              Add your name to save.
+              {t("respond.save.addName")}
             </span>
           )}
           {hasName && save.kind === "saved" && (
             <span style={{ fontSize: 13, color: "var(--botanical)" }}>
-              Saved ✓
+              {t("respond.save.saved")} ✓
             </span>
           )}
           {save.kind === "error" && (
@@ -457,9 +462,9 @@ export function RespondPanel({
           )}
           <span className="sr-only" role="status" aria-live="polite">
             {save.kind === "saving"
-              ? "Saving your availability"
+              ? t("respond.save.liveSaving")
               : save.kind === "saved"
-                ? "Availability saved"
+                ? t("respond.save.liveSaved")
                 : ""}
           </span>
         </div>

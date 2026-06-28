@@ -2,258 +2,118 @@
 
 Find a time, together.
 
-**samkoma** is an API-first group-availability scheduler —
-a modern [when2meet](https://www.when2meet.com) alternative. A host creates a
-poll for some days and times, shares one link, respondents paint when they're
-free, and a live heatmap surfaces the slot that works for the most people.
+**samkoma** is an API-first group-availability scheduler — a modern
+[when2meet](https://www.when2meet.com) alternative. A host creates a poll,
+shares one link, respondents paint when they're free, and a live heatmap
+surfaces the slot that works for the most people. Everything the web UI does is
+a thin client over a REST API, so a CLI or a bot can drive it too.
 
-Everything the web UI does is a thin client over a REST API, so a CLI or a bot
-can create polls and read results programmatically too.
+- **App:** https://samkoma.org
+- **API:** https://api.samkoma.org
 
-## How it runs (static frontend, persistent links)
+## Architecture
 
-GitHub Pages only serves static files, but a scheduling tool needs shared,
-persistent state. So samkoma is split in two:
+GitHub Pages serves only static files, so samkoma is split in two:
 
 | Part       | Lives on                | What it is                             |
 | ---------- | ----------------------- | -------------------------------------- |
 | **`web/`** | GitHub Pages            | React + TypeScript + Vite SPA (static) |
 | **`api/`** | Cloudflare Workers + D1 | REST API + SQLite database             |
 
-The browser calls the Worker cross-origin (CORS). Poll links persist
-indefinitely because the data lives in D1, not in the page. Both tiers are free
-at this scale.
-
 ```
-browser ──fetch──▶  samkoma-api.<sub>.workers.dev  ──▶  D1 (SQLite)
-(Pages SPA)                 (Worker, REST)
+browser ──fetch──▶  api.samkoma.org  ──▶  D1 (SQLite)
+(Pages SPA)           (Worker, REST)
 ```
 
-## Live
+The browser calls the Worker cross-origin. Poll links persist because state
+lives in D1, not the page — and both tiers are free at this scale. Shared domain
+logic (day resolution, the slot grid, ranking) lives in [`core/`](core) and is
+bundled into each app.
 
-- **App:** https://samkoma.org
-- **API:** https://api.samkoma.org
+## Features
 
-## Status
-
-**Slice 1 (done):** create a poll → it persists in D1 → the link reopens it in
-any browser. Landing, create-poll form (with live CLI-equivalent), and a poll
-page with a shareable link.
-
-**Slice 2 (done):** drag-to-paint availability grid (direction B — soft
-columns) on the poll page, saved via `POST /v1/polls/:id/slots` (upsert by name,
-autosave on drag-end, keyboard toggle for a11y).
-
-**Slice 3 (done):** group heatmap on the poll page + `GET /v1/polls/:id/best`.
-Cells coloured by how many respondents are free, best slot ringed, best-slot +
-runner-ups panel. Results respect the privacy flag (public, or host with the
-edit token).
-
-**Slice 4 (done):** per-viewer timezone. Each visitor sees and paints the grid
-(and the heatmap) in their own zone via a timezone selector; slot keys stay
-canonical (in the poll's home tz), so two people in different zones who pick the
-same absolute time land on the same slot. So "14:00 Oslo" is "08:00 New York"
-automatically.
-
-**Slice 5 (done):** the host can "lock in" a slot
-(`POST /v1/polls/:id/lock`, edit-token gated) — tap any heatmap cell to pick it
-(defaults to the best), then lock. Everyone sees a "Locked in" banner and the
-locked cell is ringed; the host can unlock.
-
-**Slice 6 (done):** polls auto-expire **14 days after their last day**. The
-expiry is stored at creation; expired polls return `410` and a daily Cloudflare
-Cron Trigger deletes them (and their responses), so stale polls don't pile up.
-The poll page shows "Link active until <date>".
-
-**Slice 7 (done):** a `samkoma` CLI (`cli/`) — a thin client over the API:
-`samkoma new`, `samkoma best`, `samkoma lock`/`unlock`, with edit tokens stored in
-`~/.samkoma`. See [CLI](#cli).
-
-**Slice 8 (done):** abuse hardening — per-IP poll-creation rate limit and a
-per-poll respondent cap (both `429`). See [Notes](#notes).
-
-**Slice 9 (done):** `samkoma-client` ([`client/`](client)) — a dependency-free
-API client + command helpers — and a [Jinx integration guide](docs/jinx-integration.md)
-for bots. The bot itself lives in its own repo as a consumer of the API.
-
-**Slice 10 (done):** tri-state availability. Each cell cycles **available →
-maybe → busy** (tap or drag); "maybe" ("might be able to make it") is stored
-separately and shown in the heatmap as a diagonal hatch, with its own counts and
-names. Best-slot ranks by available first, then available-or-maybe.
-
-**Next:** Jinx wiring happens in the bot's own repo against this client.
+- **Paint availability** — drag across a grid; tri-state **available → maybe →
+  busy**, keyboard-accessible.
+- **Live heatmap** — the best slot is ringed and runner-ups listed; **filter
+  people** to recompute over a subset.
+- **Per-viewer timezone** — everyone paints in their own zone, but slot keys
+  stay canonical, so the same absolute time lands on the same slot.
+- **Two poll kinds** — specific **dates** or recurring **weekdays**.
+- **Lock a slot** — the host locks the winner; anyone can then **add it to their
+  calendar** (`.ics`).
+- **No accounts** — an edit token (stored client-side) gates host actions, and
+  responses are claimed with an auto-minted secret or an optional password.
+- **More** — private polls & hidden results, QR share, CSV export, duplicate a
+  poll, deadline & early close, and an `.ics` overlay to block out busy times.
+- **Multilingual** — the UI is fully translatable; see
+  [CONTRIBUTING](CONTRIBUTING.md#translations).
+- Polls **auto-expire** (14 days after the last day for `dates`, 60 days after
+  creation for `weekdays`) and a daily cron purges them. Per-IP rate limits and
+  a per-poll respondent cap keep abuse down.
 
 ## API
 
 Base: the deployed Worker URL. Interactive docs live at **`/docs`** and the
-machine-readable spec at **`/openapi.json`** (request bodies are generated from
-the same zod validators the routes use, so they can't drift). See
-[`design/HANDOFF.md`](design/HANDOFF.md) for the visual spec.
+machine-readable spec at **`/openapi.json`** (generated from the same zod
+validators the routes use, so they can't drift).
 
-| Method | Endpoint              | Body                                          | Returns                                |
-| ------ | --------------------- | --------------------------------------------- | -------------------------------------- |
-| `POST` | `/v1/polls`           | `{title, kind?, days[], from, to, slot, tz, public}` | `{id, url, editToken}`          |
-| `GET`  | `/v1/polls/:id`       | —                                             | poll + aggregated responses            |
-| `POST` | `/v1/polls/:id/slots` | `{name, tz, slots[], maybe[]}`                | saved `{name, tz, slots, maybe, …}`    |
-| `GET`  | `/v1/polls/:id/best`  | `?limit=` (optional)                          | `{total, results[{slot,count,names}]}` |
-| `GET`  | `/v1/polls/:id/csv`   | —                                             | `text/csv` of every response (gated like `best`) |
-| `POST` | `/v1/polls/:id/lock`  | `{slot}` (or `{slot:null}`), host token       | updated poll                           |
-| `GET`  | `/v1/polls/:id/ics`   | —                                             | `text/calendar` for the locked slot (`409` if none) |
+| Method | Endpoint              | Returns                                |
+| ------ | --------------------- | -------------------------------------- |
+| `POST` | `/v1/polls`           | `{id, url, editToken}`                 |
+| `GET`  | `/v1/polls/:id`       | poll + aggregated responses            |
+| `POST` | `/v1/polls/:id/slots` | the saved response                     |
+| `GET`  | `/v1/polls/:id/best`  | `{total, results[{slot,count,names}]}` |
+| `GET`  | `/v1/polls/:id/csv`   | `text/csv` of every response           |
+| `POST` | `/v1/polls/:id/lock`  | the updated poll                       |
+| `GET`  | `/v1/polls/:id/ics`   | `text/calendar` for the locked slot    |
 
-A poll is one of two `kind`s (default `dates`):
+A **`dates`** poll uses ISO dates (`YYYY-MM-DD`) with per-viewer timezones; a
+**`weekdays`** poll uses weekday tokens (`mon`…`sun`) in the poll's home
+timezone. Non-public polls hide responses unless the request sends the edit
+token as `Authorization: Bearer <token>`.
 
-- **`dates`** — specific calendar dates; `days` are ISO dates (`YYYY-MM-DD`),
-  slot keys are `YYYY-MM-DDThh:mm`, and each viewer can see/paint in their own
-  timezone. Polls expire 14 days after their last day.
-- **`weekdays`** — recurring days of the week; `days` are weekday tokens
-  (`mon`…`sun`), slot keys are `monThh:mm`, and everyone uses the poll's home
-  timezone (no per-viewer conversion). Polls expire 60 days after creation.
+## CLI & client
 
-Once a slot is locked, `GET /v1/polls/:id/ics` returns a calendar anyone can add
-to their own calendar app — a single absolute-time event for a `dates` poll, or a
-weekly-recurring event (`RRULE`) for a `weekdays` poll. The poll page shows an
-"Add to calendar" button on the locked banner.
-
-For a non-public poll, `GET /v1/polls/:id` returns an empty `responses` list and
-`GET /v1/polls/:id/best` returns `403` unless the request sends the edit token
-as `Authorization: Bearer <token>`.
-
-## CLI
-
-`cli/` is a thin client over the same API. It stores edit tokens in `~/.samkoma`
-so the host can lock from the terminal.
+[`cli/`](cli) is a thin client over the same API, storing edit tokens in
+`~/.samkoma`:
 
 ```bash
-npm install                  # once, at the repo root (workspaces)
 npm run build -w samkoma-cli
 node cli/dist/index.js new "Team offsite" --days mon-fri --from 09:00 --to 17:00 --tz Europe/Oslo --public
-node cli/dist/index.js new --like <id> --days 2026-09-01,2026-09-02   # duplicate an existing poll
 node cli/dist/index.js best <id>
 node cli/dist/index.js lock <id> 2026-07-15T09:00
-node cli/dist/index.js ics <id> --out offsite.ics   # export the locked slot
-node cli/dist/index.js csv <id> --out responses.csv # export every response as CSV
 ```
 
-`--days` accepts ISO dates (`2026-07-15,2026-07-16`) or weekdays/ranges
-(`mon-fri`, `tue,wed,thu`); weekdays resolve to their next upcoming occurrence.
-The API base defaults to production; override with `--api` or `$SAMKOMA_API`.
-
-## Client library & bots
-
-[`client/`](client) is a tiny, dependency-free `samkoma-client` (a `SamkomaClient`
-class plus `resolveDays` / `parseSamkomaCommand` helpers) for any consumer of the
-API — Node, browser, or a Worker. See
-[**docs/jinx-integration.md**](docs/jinx-integration.md) for a full bot flow
-(parse an issue command → create a poll → post the link → lock the winner).
+[`client/`](client) is a dependency-free `samkoma-client` for any consumer
+(Node, browser, or a Worker); see
+[docs/jinx-integration.md](docs/jinx-integration.md) for a full bot flow.
 
 ## Develop
 
-Requires Node 20+. This is an npm-workspaces monorepo (`core`, `api`, `web`,
-`cli`, `client`) — install once at the root, then target a package with `-w`.
-Shared domain logic (day resolution, the slot grid, ranking) lives in
-[`core/`](core) (`@samkoma/core`) and is bundled into each app at build time.
+npm-workspaces monorepo (`core`, `api`, `web`, `cli`, `client`), Node 20+. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for the full guide (and how to add a
+language).
 
 ```bash
 npm install                  # once, at the repo root — links @samkoma/core
-
-# API (terminal 1)
-cp api/.dev.vars.example api/.dev.vars
-npm run migrate:local -w samkoma-api   # apply migrations to the local D1
-npm run dev -w samkoma-api             # wrangler dev on http://localhost:8787
-
-# Web (terminal 2)
-cp web/.env.example web/.env           # VITE_API_BASE=http://localhost:8787
-npm run dev -w samkoma-web             # vite on http://localhost:5173/
-```
-
-### Test
-
-```bash
+npm run dev -w samkoma-api   # API on :8787 (cp api/.dev.vars.example api/.dev.vars)
+npm run dev -w samkoma-web   # web on :5173 (cp web/.env.example web/.env)
 npm test                     # every workspace
-npm test -w samkoma-api      # just the Worker + D1 integration suite
-npm run typecheck            # tsc --noEmit across all packages
-npm run format:check         # prettier
 ```
 
-## Deploy (one-time setup)
+## Deploy
 
-> **Already configured for this repo.** The D1 database, the GitHub Actions
-> secrets/variables, and Pages (custom domain `samkoma.org`) are all set up;
-> pushing to `main` deploys both tiers. The steps below document how, for
-> reference or a fresh fork.
+Pushing to `main` deploys both tiers via
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — **already
+configured for this repo** (the D1 database, the Actions secrets, and Pages with
+the `samkoma.org` custom domain). For a fresh fork:
 
-The repo deploys on push to `main` via [`.github/workflows/deploy.yml`].
+1. Create the D1 database and paste its id into `api/wrangler.toml`:
+   `cd api && npx wrangler d1 create samkoma`.
+2. Add Actions secrets `CLOUDFLARE_API_TOKEN` (Workers + D1 edit) and
+   `CLOUDFLARE_ACCOUNT_ID`.
+3. Set Pages source to **GitHub Actions**, then add an Actions variable
+   `VITE_API_BASE` = the deployed Worker URL and re-run the workflow.
 
-1. **Create the D1 database** and paste its id into `api/wrangler.toml`
-   (replacing `REPLACE_WITH_D1_ID`):
-   ```bash
-   cd api && npx wrangler d1 create samkoma
-   ```
-2. **Add GitHub Actions secrets** (repo → Settings → Secrets → Actions):
-   - `CLOUDFLARE_API_TOKEN` — token with Workers + D1 edit permissions
-   - `CLOUDFLARE_ACCOUNT_ID`
-3. **Enable Pages**: repo → Settings → Pages → Source = **GitHub Actions**.
-4. **First run** deploys the Worker. Note its `*.workers.dev` URL, then add a
-   GitHub Actions **variable** `VITE_API_BASE` = that URL and re-run the workflow
-   so the web build points at the live API.
-
-> The frontend is served at the root of the apex custom domain `samkoma.org`
-> (Vite `base` is `/`; `web/public/CNAME` carries the domain into the Pages
-> build). The API has a Cloudflare Worker custom domain `api.samkoma.org`.
-> `ALLOWED_ORIGINS` / `WEB_BASE_URL` in `api/wrangler.toml` and the
-> `VITE_API_BASE` repo variable all point at these.
->
-> DNS lives in a Cloudflare zone for `samkoma.org`: the apex is a DNS-only
-> CNAME to `drmowinckels.github.io` (flattened to GitHub Pages' IPs), and
-> `api.samkoma.org` is a Worker custom domain. Both the custom domain and the
-> apex record are managed **out-of-band** (Cloudflare dashboard/API), because
-> the CI deploy token only has Workers + D1 permissions — `wrangler deploy`
-> just ships the script, vars and migrations.
-
-## Notes
-
-- No accounts. Creating a poll returns an **edit token** stored client-side;
-  anyone with the link can respond.
-- **Hidden results.** A host can hide the aggregate from respondents until they
-  reveal it (`resultsHidden`, the `--hide-results` flag, or the create toggle) —
-  this curtain applies even to a public poll. The host always sees results and
-  can reveal them at any time; respondents see only their own availability.
-- **QR share.** The poll page can show a QR code for the share link (downloadable
-  as SVG/PNG), generated in the browser — the URL is never sent to a QR service.
-- **Compare subsets.** On the results, a "Filter people" control toggles
-  respondents in or out of the tally, so the heatmap and best slot recompute over
-  just the people you pick — "what works if we drop Alice and Bob?". Anyone who
-  responds later is counted by default; it's a client-side view, no API change.
-- **CSV export.** "Download CSV" on the results gives a tidy file
-  (`name,slot,status`, status `available`/`maybe`) for any external analysis. The
-  web builds it in the browser from data already loaded (so it works for a host on
-  a private poll too); `GET /v1/polls/:id/csv` and `samkoma csv <id>` expose the
-  same export programmatically, gated like the aggregate.
-- **Duplicate a poll.** "Duplicate" prefills the create form from an existing
-  poll's settings (times, timezone, slot size, visibility). Recurring weekday
-  tokens carry over; specific calendar dates are cleared so you pick fresh ones
-  (reusing past dates would create an already-expired poll). The CLI mirrors it
-  with `samkoma new --like <id>`.
-- **Calendar overlay (no accounts).** A respondent can upload their own `.ics`
-  to overlay busy times on the grid (conflict dots) and one-click "block out" the
-  clashing slots. Parsed **entirely in the browser** — nothing is uploaded.
-  Supports UTC/zoned/floating/all-day events and simple weekly/daily recurrence.
-- **Deadline & close.** A poll can carry an optional `deadline`, and the host can
-  **close** it early (`samkoma close <id>`, `--reopen` to undo). Once closed,
-  response writes return `409` but the poll stays readable (it's not deleted —
-  that's the separate 14/60-day expiry). The host can still lock a slot.
-- **Response ownership.** The first time a name is saved, the server returns a
-  one-time secret (auto-minted token, kept in the browser) that claims it — so
-  nobody can overwrite your row by typing your name. To edit from another device,
-  set an optional **password** when you respond. Secrets are stored only as a
-  PBKDF2 hash and verified in constant time; a re-write without the secret is
-  `403`.
-- **Abuse limits:** poll creation and slot submission are both rate-limited per
-  IP (`CREATE_LIMIT`/min default 30, `SUBMIT_LIMIT`/min default 120), and each
-  poll caps distinct respondents (`MAX_RESPONSES`, default 1000) — all `429`.
-  Counters live in a tiny D1 table the daily cron purges.
-- `npm audit` advisories in both packages are confined to the dev toolchain
-  (vite / vitest / wrangler / miniflare). Production dependencies — the Worker
-  (Hono, zod) and the SPA (React) — report **0 vulnerabilities**.
-- `design/` holds the original design handoff and the HTML visual spec. It is a
-  reference, not shipped code.
+DNS (the apex → GitHub Pages, `api.` → a Worker custom domain) is managed
+out-of-band in Cloudflare, since the CI token only has Workers + D1 permissions.

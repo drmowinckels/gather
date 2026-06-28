@@ -1,11 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import { GridScroll } from "./GridScroll";
-import { hourLabel } from "../lib/datetime";
+import { formatHour } from "../lib/datetime";
 import { cycleNext, applyMark, type Status, type Marks } from "../lib/paint";
 import type { GridView } from "../lib/tz";
+import { useT } from "../i18n";
+import type { TKey } from "../i18n";
 
-function statusWord(status: Status | undefined): string {
-  return status === "yes" ? "available" : status === "maybe" ? "maybe" : "busy";
+function statusKey(status: Status | undefined): TKey {
+  return status === "yes"
+    ? "grid.state.available"
+    : status === "maybe"
+      ? "grid.state.maybe"
+      : "grid.state.busy";
 }
 
 interface GridProps {
@@ -39,6 +45,7 @@ export function AvailabilityGrid({
   disabled = false,
   busyKeys,
 }: GridProps) {
+  const t = useT();
   const dragging = useRef(false);
   const target = useRef<Status | undefined>(undefined);
   const lastPainted = useRef<string | null>(null);
@@ -94,7 +101,7 @@ export function AvailabilityGrid({
     if (disabled) return;
     const next = cycleNext(value.get(key));
     onChange((prev) => applyMark(prev, key, next));
-    setAnnounce(`${human} — ${statusWord(next)}`);
+    setAnnounce(t("grid.announce", { slot: human, state: t(statusKey(next)) }));
     commitRef.current?.();
   }
 
@@ -127,9 +134,9 @@ export function AvailabilityGrid({
             ))}
           </div>
 
-          {view.times.map((t) => (
+          {view.times.map((time) => (
             <div
-              key={t}
+              key={time}
               style={{
                 display: "flex",
                 gap: 6,
@@ -148,10 +155,10 @@ export function AvailabilityGrid({
                   color: "var(--fg-subtle)",
                 }}
               >
-                {hourLabel(t)}
+                {formatHour(time)}
               </div>
               {view.days.map((d, di) => {
-                const key = view.keyAt(d, t);
+                const key = view.keyAt(d, time);
                 if (key === null) {
                   return (
                     <div
@@ -163,27 +170,36 @@ export function AvailabilityGrid({
                 }
                 const status = value.get(key);
                 const calBusy = busyKeys?.has(key) ?? false;
-                const word =
-                  status === "yes"
-                    ? "available"
-                    : status === "maybe"
-                      ? "maybe"
-                      : "busy";
+                const state = t(statusKey(status));
+                const slot = t("grid.slot", {
+                  day: view.dayLabels[di],
+                  time,
+                });
                 return (
                   <button
                     key={d}
                     type="button"
                     className="gridcell"
                     data-key={key}
-                    aria-label={`${view.dayLabels[di]}, ${t} — ${word}${
-                      calBusy ? " — calendar conflict" : ""
-                    }`}
+                    aria-label={
+                      calBusy
+                        ? t("grid.cellLabelConflict", {
+                            day: view.dayLabels[di],
+                            time,
+                            state,
+                          })
+                        : t("grid.cellLabel", {
+                            day: view.dayLabels[di],
+                            time,
+                            state,
+                          })
+                    }
                     disabled={disabled}
                     onPointerDown={(e) => start(key, e)}
                     onKeyDown={(e) => {
                       if (e.key === " " || e.key === "Enter") {
                         e.preventDefault();
-                        toggleKey(key, `${view.dayLabels[di]}, ${t}`);
+                        toggleKey(key, slot);
                       }
                     }}
                     style={{
@@ -199,7 +215,7 @@ export function AvailabilityGrid({
                     {calBusy && (
                       <span
                         aria-hidden="true"
-                        title="Busy in your calendar"
+                        title={t("grid.conflictDot")}
                         style={{
                           position: "absolute",
                           top: 2,
@@ -238,7 +254,7 @@ export function AvailabilityGrid({
               background: YES_BG,
             }}
           />
-          available
+          {t("grid.state.available")}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
@@ -249,7 +265,7 @@ export function AvailabilityGrid({
               background: MAYBE_BG,
             }}
           />
-          maybe
+          {t("grid.state.maybe")}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
           <span
@@ -261,7 +277,7 @@ export function AvailabilityGrid({
               boxShadow: "inset 0 0 0 1px var(--border-subtle)",
             }}
           />
-          busy
+          {t("grid.state.busy")}
         </span>
       </div>
     </div>

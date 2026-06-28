@@ -2,16 +2,16 @@ import { useMemo, useState } from "react";
 import { editPoll, ApiError, type Poll, type EditPollInput } from "../lib/api";
 import { MonthCalendar } from "./MonthCalendar";
 import { weekdayLabel } from "../lib/tz";
+import { useT } from "../i18n";
+import type { TKey } from "../i18n";
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 
-const ERROR_TEXT: Record<string, string> = {
-  not_additive:
-    "Editing is additive — you can add days or widen the window, but not drop a day or time people may already have answered for.",
-  from_after_to: "The end time needs to be after the start time.",
-  slot_change_unsupported:
-    "The slot size can't be changed after a poll is created.",
-  invalid_body: "Check the fields and try again.",
+const ERROR_TEXT: Record<string, TKey> = {
+  not_additive: "edit.error.notAdditive",
+  from_after_to: "edit.error.fromAfterTo",
+  slot_change_unsupported: "edit.error.slotChangeUnsupported",
+  invalid_body: "edit.error.invalidBody",
 };
 
 export function EditPollPanel({
@@ -25,6 +25,7 @@ export function EditPollPanel({
   onSaved: (poll: Poll) => void;
   onClose: () => void;
 }) {
+  const t = useT();
   const [title, setTitle] = useState(poll.title);
   const [added, setAdded] = useState<string[]>([]);
   const [from, setFrom] = useState(poll.from);
@@ -77,8 +78,8 @@ export function EditPollPanel({
     } catch (err) {
       setError(
         err instanceof ApiError
-          ? (ERROR_TEXT[err.code] ?? "We couldn't save those changes.")
-          : "Can't reach the samkoma service. Check your connection and try again.",
+          ? t(ERROR_TEXT[err.code] ?? "edit.error.generic")
+          : t("edit.error.network"),
       );
       setSaving(false);
     }
@@ -101,13 +102,13 @@ export function EditPollPanel({
           gap: 12,
         }}
       >
-        <span className="fieldlbl">✏️ Edit poll</span>
+        <span className="fieldlbl">✏️ {t("edit.heading")}</span>
         <button
           type="button"
           className="btn btn-outline btn-sm"
           onClick={onClose}
         >
-          Close
+          {t("edit.close")}
         </button>
       </div>
 
@@ -119,7 +120,7 @@ export function EditPollPanel({
 
       <div className="field" style={{ marginTop: 14 }}>
         <label className="fieldlbl" htmlFor="edit-title">
-          Event name
+          {t("edit.eventName")}
         </label>
         <input
           id="edit-title"
@@ -131,7 +132,7 @@ export function EditPollPanel({
       </div>
 
       <div className="field">
-        <span className="fieldlbl">Days</span>
+        <span className="fieldlbl">{t("edit.days")}</span>
         {poll.kind === "weekdays" ? (
           <div className="chips">
             {WEEKDAYS.map((wd) => {
@@ -144,9 +145,7 @@ export function EditPollPanel({
                   className={`chip${selected ? " on" : ""}`}
                   aria-pressed={selected}
                   disabled={isLocked}
-                  title={
-                    isLocked ? "Existing day — can't be removed" : undefined
-                  }
+                  title={isLocked ? t("edit.existingDay") : undefined}
                   onClick={() =>
                     onCalendarChange((prev) => {
                       const next = new Set(prev);
@@ -169,15 +168,14 @@ export function EditPollPanel({
           />
         )}
         <p className="subtle" style={{ margin: "10px 0 0", fontSize: 12 }}>
-          You can add days, but existing ones (ringed, fixed) stay — people may
-          have answered for them.
+          {t("edit.daysHelp")}
         </p>
       </div>
 
       <div className="field-row field">
         <div>
           <label className="fieldlbl" htmlFor="edit-from">
-            No earlier than
+            {t("edit.noEarlierThan")}
           </label>
           <input
             id="edit-from"
@@ -190,7 +188,7 @@ export function EditPollPanel({
         </div>
         <div>
           <label className="fieldlbl" htmlFor="edit-to">
-            No later than
+            {t("edit.noLaterThan")}
           </label>
           <input
             id="edit-to"
@@ -202,7 +200,7 @@ export function EditPollPanel({
           />
         </div>
         <div>
-          <span className="fieldlbl">Slot size</span>
+          <span className="fieldlbl">{t("edit.slotSize")}</span>
           <p
             className="input"
             style={{
@@ -211,13 +209,12 @@ export function EditPollPanel({
               color: "var(--fg-muted)",
             }}
           >
-            {poll.slot} min
+            {t("edit.slotMinutes", { slot: poll.slot })}
           </p>
         </div>
       </div>
       <p className="subtle" style={{ margin: "-8px 0 16px", fontSize: 12 }}>
-        You can only widen the window (earlier start, later end), and the slot
-        size is fixed.
+        {t("edit.windowHelp")}
       </p>
 
       <div
@@ -244,7 +241,7 @@ export function EditPollPanel({
             <span className="switch-track">
               <span className="switch-knob" />
             </span>
-            Make results public
+            {t("edit.makePublic")}
           </label>
           <label className="switch">
             <input
@@ -255,7 +252,7 @@ export function EditPollPanel({
             <span className="switch-track">
               <span className="switch-knob" />
             </span>
-            Hide results until I reveal them
+            {t("edit.hideResults")}
           </label>
         </div>
         <button
@@ -263,15 +260,14 @@ export function EditPollPanel({
           className="btn btn-primary"
           disabled={!dirty || saving || (goingPublic && !confirmPublic)}
         >
-          {saving ? "Saving…" : "Save changes"}
+          {saving ? t("edit.saving") : t("edit.save")}
         </button>
       </div>
 
       {goingPublic && (
         <div className="error-banner" role="alert" style={{ marginTop: 16 }}>
-          <strong>Heads up:</strong> making results public reveals the names and
-          painted availability of everyone who already answered while this poll
-          was private. This can't be undone for answers they've already given.
+          <strong>{t("edit.public.warningLead")}</strong>{" "}
+          {t("edit.public.warningBody")}
           <label
             className="switch"
             style={{ marginTop: 12, fontSize: 13, fontWeight: 600 }}
@@ -284,7 +280,7 @@ export function EditPollPanel({
             <span className="switch-track">
               <span className="switch-knob" />
             </span>
-            I understand — make past responses public
+            {t("edit.public.confirm")}
           </label>
         </div>
       )}

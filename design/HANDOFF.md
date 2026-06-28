@@ -4,10 +4,10 @@
 **samkoma** is a group-availability scheduling tool: a host creates a poll for a set of
 days/times in a timezone, shares one link, respondents paint when they're free, and a live
 heatmap surfaces the slot that works for the most people. It is **API-first** — everything the
-web UI does is a thin client over a REST API — so a bot (e.g. **Jinx**, the R-Ladies+ GitHub
+web UI does is a thin client over a REST API — so a bot (e.g. **Jinx**, the RLadies+ GitHub
 bot) or a CLI can create polls and read results programmatically.
 
-The product is intentionally **independent** (not branded to R-Ladies or Dr. Mowinckel's). Jinx
+The product is intentionally **independent** (not branded to RLadies+ or Dr. Mowinckel's). Jinx
 is treated as *one consumer* of the public API, not the owner of the product.
 
 ## About the design files

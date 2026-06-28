@@ -1,4 +1,9 @@
-import { timeSlots, dayHeader, DISPLAY_LOCALE } from "./datetime";
+import {
+  timeSlots,
+  localizedDateFormat,
+  formatDayLabel,
+  formatTime,
+} from "./datetime";
 import { zonedTimeToUtc, partsInTz, existsInTz } from "@samkoma/core";
 
 // DST-aware tz conversion is shared domain logic; it lives in @samkoma/core
@@ -9,19 +14,18 @@ export { zonedTimeToUtc, partsInTz, existsInTz };
 export type PollKind = "dates" | "weekdays";
 
 const WEEKDAY_ORDER = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
-const WEEKDAY_LABEL_FMT = new Intl.DateTimeFormat(DISPLAY_LOCALE, {
-  weekday: "short",
-});
+const WEEKDAY_SHORT: Intl.DateTimeFormatOptions = { weekday: "short" };
 
 // "mon" -> "Mon" / "man." in the viewer's locale. 2024-01-01 was a Monday.
 export function weekdayLabel(token: string): string {
   const i = WEEKDAY_ORDER.indexOf(token);
-  return i < 0 ? token : WEEKDAY_LABEL_FMT.format(new Date(2024, 0, 1 + i));
+  return i < 0
+    ? token
+    : localizedDateFormat(WEEKDAY_SHORT).format(new Date(2024, 0, 1 + i));
 }
 
 function dateLabel(iso: string): string {
-  const h = dayHeader(iso);
-  return `${h.weekday} ${h.day}`;
+  return formatDayLabel(iso);
 }
 
 export interface GridView {
@@ -102,13 +106,11 @@ export function formatSlotLabelInTz(
 ): string {
   const [day, time] = canonicalKey.split("T");
   if (kind === "weekdays") {
-    return `${weekdayLabel(day)} ${time}`;
+    return `${weekdayLabel(day)} ${formatTime(time)}`;
   }
   if (pollTz === viewerTz) {
-    const h = dayHeader(day);
-    return `${h.weekday} ${h.day}, ${time}`;
+    return `${formatDayLabel(day)}, ${formatTime(time)}`;
   }
   const local = partsInTz(zonedTimeToUtc(day, time, pollTz), viewerTz);
-  const h = dayHeader(local.date);
-  return `${h.weekday} ${h.day}, ${local.time}`;
+  return `${formatDayLabel(local.date)}, ${formatTime(local.time)}`;
 }

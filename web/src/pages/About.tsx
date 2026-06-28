@@ -1,41 +1,28 @@
 import { Link } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { Mark } from "../components/Logo";
+import { useT } from "../i18n";
+import type { TKey } from "../i18n";
 import { GITHUB_URL, SUPPORT_URL } from "../lib/links";
 
-const PRINCIPLES = [
-  {
-    title: "No accounts, ever",
-    body: "You shouldn't have to sign up to answer “when are you free?” Nobody makes a profile, nobody gets added to a list. Polls expire on their own and quietly disappear.",
-  },
-  {
-    title: "One link does it",
-    body: "Share a single link. People paint when they're free — on a phone, in their own timezone — and leave. No app to install, no invite to accept.",
-  },
-  {
-    title: "Your data isn't the product",
-    body: "There's nothing to monetise here. A poll holds only what it needs to do its job, and it's deleted once it's done.",
-  },
-  {
-    title: "API-first, not API-eventually",
-    body: "Everything the website does is a public REST call, so a script or a bot can run the very same flow. The web app is just one polite client.",
-  },
+const PRINCIPLES: { title: TKey; body: TKey }[] = [
+  { title: "about.principle1.title", body: "about.principle1.body" },
+  { title: "about.principle2.title", body: "about.principle2.body" },
+  { title: "about.principle3.title", body: "about.principle3.body" },
+  { title: "about.principle4.title", body: "about.principle4.body" },
 ];
 
 export function About() {
+  const t = useT();
+
   return (
     <Shell>
       <div className="content">
         <section className="page-hero">
           <div>
-            <p className="eyebrow">About</p>
-            <h1 className="h1">We made the boring part painless.</h1>
-            <p className="lede">
-              samkoma is a small, independent tool for the universally annoying
-              job of finding a time that works for a group. One link, no
-              accounts, and a live heatmap that lights up the slot the most
-              people can make. That's the whole thing.
-            </p>
+            <p className="eyebrow">{t("about.eyebrow")}</p>
+            <h1 className="h1">{t("about.heroTitle")}</h1>
+            <p className="lede">{t("about.heroLede")}</p>
           </div>
           <div className="hero-emblem" aria-hidden="true">
             <Mark size={148} />
@@ -43,36 +30,29 @@ export function About() {
         </section>
 
         <section className="section">
-          <h2 className="h2">Why it works this way</h2>
-          <p className="section-lead">
-            A few deliberate choices, each one in service of getting out of your
-            way.
-          </p>
+          <h2 className="h2">{t("about.whyTitle")}</h2>
+          <p className="section-lead">{t("about.whyLead")}</p>
           <div className="principles">
             {PRINCIPLES.map((p) => (
               <div className="principle" key={p.title}>
-                <h3>{p.title}</h3>
-                <p>{p.body}</p>
+                <h3>{t(p.title)}</h3>
+                <p>{t(p.body)}</p>
               </div>
             ))}
           </div>
         </section>
 
         <section className="section">
-          <h2 className="h2">Where it comes from</h2>
+          <h2 className="h2">{t("about.originTitle")}</h2>
           <div className="prose" style={{ marginTop: 14 }}>
             <p>
-              samkoma began as the scheduling brain behind <strong>Jinx</strong>
-              , the R-Ladies+ community bot — but it's built to stand on its
-              own. Jinx is simply one consumer of the public API; anyone can be
-              another. The product is deliberately <strong>independent</strong>:
-              not tied to any single community or company, and not anyone's
-              growth funnel.
+              {t("about.originPara1a")} <strong>Jinx</strong>
+              {t("about.originPara1b")}{" "}
+              <strong>{t("about.independent")}</strong>
+              {t("about.originPara1c")}
             </p>
             <p>
-              It's open source and maintained by Dr. Athanasia Mowinckel. If
-              you'd like to see how it's built, file an issue, or send a patch,
-              it all lives on{" "}
+              {t("about.originPara2")}{" "}
               <a href={GITHUB_URL} target="_blank" rel="noreferrer">
                 GitHub
               </a>
@@ -82,18 +62,13 @@ export function About() {
         </section>
 
         <section className="section">
-          <h2 className="h2">Keeping it free</h2>
+          <h2 className="h2">{t("about.freeTitle")}</h2>
           <div className="support-card">
             <span className="support-mark">
               <Mark size={44} />
             </span>
             <div className="support-copy">
-              <p>
-                samkoma runs on free tiers and stays free to use — no paywalls,
-                no “pro” plan. If it saved you an email thread or two and you'd
-                like to chip in toward the upkeep, you can buy me a coffee.
-                Entirely optional, genuinely appreciated.
-              </p>
+              <p>{t("about.freeBody")}</p>
             </div>
             <a
               className="btn btn-primary"
@@ -101,19 +76,19 @@ export function About() {
               target="_blank"
               rel="noreferrer"
             >
-              Buy me a coffee ☕
+              {t("about.supportCta")} ☕
             </a>
           </div>
         </section>
 
         <section className="section">
-          <h2 className="h2">Ready to find a time?</h2>
+          <h2 className="h2">{t("about.ctaTitle")}</h2>
           <div className="cta-row">
             <Link to="/new" className="btn btn-primary">
-              Create a poll →
+              {t("about.ctaCreate")} →
             </Link>
             <Link to="/api" className="btn btn-outline">
-              Explore the API
+              {t("about.ctaApi")}
             </Link>
           </div>
         </section>

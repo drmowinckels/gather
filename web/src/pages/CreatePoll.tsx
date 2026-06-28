@@ -7,6 +7,7 @@ import { createPoll, ApiError, type PollKind } from "../lib/api";
 import { saveEditToken } from "../lib/storage";
 import { browserTimezone, listTimezones, tzOffsetLabel } from "../lib/datetime";
 import { weekdayLabel } from "../lib/tz";
+import { useT } from "../i18n";
 import type { PollTemplate } from "../lib/duplicate";
 
 const SLOT_SIZES = [15, 30, 60];
@@ -15,6 +16,7 @@ const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
 export function CreatePoll() {
   const navigate = useNavigate();
   const location = useLocation();
+  const t = useT();
   // A "Duplicate" navigation carries a template to prefill the form from.
   const template = (location.state as { template?: PollTemplate } | null)
     ?.template;
@@ -85,8 +87,8 @@ export function CreatePoll() {
     } catch (err) {
       const msg =
         err instanceof ApiError
-          ? "We couldn't create the poll. Check the fields and try again."
-          : "Can't reach the samkoma service. Check your connection and try again.";
+          ? t("create.error.api")
+          : t("create.error.network");
       setError(msg);
       setSubmitting(false);
     }
@@ -109,13 +111,15 @@ export function CreatePoll() {
           style={{ padding: "32px 36px" }}
           onSubmit={onSubmit}
         >
-          <h1 className="h2">{template ? "Duplicate poll" : "New poll"}</h1>
+          <h1 className="h2">
+            {template ? t("create.heading.duplicate") : t("create.heading.new")}
+          </h1>
           <p className="helper" style={{ margin: "6px 0 28px" }}>
             {template
               ? template.kind === "dates"
-                ? "Copied the settings from your poll — now pick the new dates."
-                : "Copied the settings from your poll — tweak anything below."
-              : "Two minutes, no account. You'll get a link to share and an edit link to keep."}
+                ? t("create.lede.duplicateDates")
+                : t("create.lede.duplicateOther")
+              : t("create.lede.new")}
           </p>
 
           {error && (
@@ -130,12 +134,12 @@ export function CreatePoll() {
 
           <div className="field">
             <label className="fieldlbl" htmlFor="title">
-              Event name
+              {t("create.title.label")}
             </label>
             <input
               id="title"
               className="input"
-              placeholder="Team offsite — September"
+              placeholder={t("create.title.placeholder")}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
@@ -143,11 +147,11 @@ export function CreatePoll() {
           </div>
 
           <div className="field">
-            <span className="fieldlbl">Which days?</span>
+            <span className="fieldlbl">{t("create.days.label")}</span>
             <div
               className="chips"
               role="radiogroup"
-              aria-label="Poll type"
+              aria-label={t("create.kind.ariaLabel")}
               style={{ margin: "0 0 14px" }}
             >
               <button
@@ -157,7 +161,7 @@ export function CreatePoll() {
                 aria-checked={kind === "dates"}
                 onClick={() => switchKind("dates")}
               >
-                Specific dates
+                {t("create.kind.dates")}
               </button>
               <button
                 type="button"
@@ -166,7 +170,7 @@ export function CreatePoll() {
                 aria-checked={kind === "weekdays"}
                 onClick={() => switchKind("weekdays")}
               >
-                Days of the week
+                {t("create.kind.weekdays")}
               </button>
             </div>
 
@@ -176,8 +180,7 @@ export function CreatePoll() {
                   className="subtle"
                   style={{ margin: "0 0 12px", fontSize: 12 }}
                 >
-                  Tap a day, or drag across several. Use ‹ › to reach another
-                  month.
+                  {t("create.days.datesHint")}
                 </p>
                 <MonthCalendar value={selected} onChange={setSelected} />
               </>
@@ -187,8 +190,7 @@ export function CreatePoll() {
                   className="subtle"
                   style={{ margin: "0 0 12px", fontSize: 12 }}
                 >
-                  Pick the weekdays that recur — times stay in the poll's home
-                  timezone.
+                  {t("create.days.weekdaysHint")}
                 </p>
                 <div className="chips">
                   {WEEKDAYS.map((wd) => (
@@ -214,15 +216,17 @@ export function CreatePoll() {
             )}
             <p className="subtle" style={{ margin: "10px 0 0", fontSize: 12 }}>
               {selectedDays.length === 0
-                ? "No days selected yet."
-                : `${selectedDays.length} day${selectedDays.length === 1 ? "" : "s"} selected.`}
+                ? t("create.days.noneSelected")
+                : t("create.days.countSelected", {
+                    count: selectedDays.length,
+                  })}
             </p>
           </div>
 
           <div className="field-row field">
             <div>
               <label className="fieldlbl" htmlFor="from">
-                No earlier than
+                {t("create.from.label")}
               </label>
               <input
                 id="from"
@@ -234,7 +238,7 @@ export function CreatePoll() {
             </div>
             <div>
               <label className="fieldlbl" htmlFor="to">
-                No later than
+                {t("create.to.label")}
               </label>
               <input
                 id="to"
@@ -246,7 +250,7 @@ export function CreatePoll() {
             </div>
             <div>
               <label className="fieldlbl" htmlFor="slot">
-                Slot size
+                {t("create.slot.label")}
               </label>
               <select
                 id="slot"
@@ -256,7 +260,7 @@ export function CreatePoll() {
               >
                 {SLOT_SIZES.map((s) => (
                   <option key={s} value={s}>
-                    {s} min
+                    {t("create.slot.minutes", { count: s })}
                   </option>
                 ))}
               </select>
@@ -267,13 +271,13 @@ export function CreatePoll() {
               className="subtle"
               style={{ margin: "-12px 0 22px", fontSize: 13 }}
             >
-              The end time needs to be after the start time.
+              {t("create.time.invalid")}
             </p>
           )}
 
           <div className="field">
             <label className="fieldlbl" htmlFor="tz">
-              Timezone
+              {t("create.tz.label")}
             </label>
             <select
               id="tz"
@@ -288,13 +292,14 @@ export function CreatePoll() {
               ))}
             </select>
             <p className="subtle" style={{ margin: "7px 0 0", fontSize: 12 }}>
-              This is the poll's home timezone. Respondents paint in their own.
+              {t("create.tz.hint")}
             </p>
           </div>
 
           <div className="field">
             <label className="fieldlbl" htmlFor="deadline">
-              Respond-by deadline <span className="subtle">(optional)</span>
+              {t("create.deadline.label")}{" "}
+              <span className="subtle">{t("create.optional")}</span>
             </label>
             <input
               id="deadline"
@@ -304,27 +309,26 @@ export function CreatePoll() {
               onChange={(e) => setDeadline(e.target.value)}
             />
             <p className="subtle" style={{ margin: "6px 0 0", fontSize: 12 }}>
-              After this, the poll stops accepting availability. You can also
-              close it by hand any time.
+              {t("create.deadline.hint")}
             </p>
           </div>
 
           <div className="field">
             <label className="fieldlbl" htmlFor="capacity">
-              Per-slot capacity <span className="subtle">(optional)</span>
+              {t("create.capacity.label")}{" "}
+              <span className="subtle">{t("create.optional")}</span>
             </label>
             <input
               id="capacity"
               type="number"
               min={1}
               className="input"
-              placeholder="e.g. 8"
+              placeholder={t("create.capacity.placeholder")}
               value={capacity}
               onChange={(e) => setCapacity(e.target.value)}
             />
             <p className="subtle" style={{ margin: "6px 0 0", fontSize: 12 }}>
-              A slot is shown as "full" once this many people are free in it.
-              Leave blank for no limit.
+              {t("create.capacity.hint")}
             </p>
           </div>
 
@@ -349,7 +353,7 @@ export function CreatePoll() {
                 <span className="switch-track">
                   <span className="switch-knob" />
                 </span>
-                Make results public
+                {t("create.toggle.public")}
               </label>
               <label className="switch">
                 <input
@@ -360,7 +364,7 @@ export function CreatePoll() {
                 <span className="switch-track">
                   <span className="switch-knob" />
                 </span>
-                Hide results until I reveal them
+                {t("create.toggle.hideResults")}
               </label>
               <label className="switch">
                 <input
@@ -371,7 +375,7 @@ export function CreatePoll() {
                 <span className="switch-track">
                   <span className="switch-knob" />
                 </span>
-                Start everyone available (they mark busy)
+                {t("create.toggle.defaultAvailable")}
               </label>
             </div>
             <button
@@ -379,14 +383,14 @@ export function CreatePoll() {
               className="btn btn-primary"
               disabled={!canSubmit || submitting}
             >
-              {submitting ? "Creating…" : "Create poll"}
+              {submitting ? t("create.submit.busy") : t("create.submit.idle")}
             </button>
           </div>
         </form>
 
         <div>
           <p className="fieldlbl" style={{ marginBottom: 12 }}>
-            CLI equivalent
+            {t("create.cli.label")}
           </p>
           <CliEquivalent
             title={title.trim()}
@@ -400,8 +404,7 @@ export function CreatePoll() {
             resultsHidden={resultsHidden}
           />
           <p className="subtle" style={{ fontSize: 13, margin: "14px 2px 0" }}>
-            The form and the CLI hit the same endpoint. Anything you can click,
-            a script can do.
+            {t("create.cli.hint")}
           </p>
         </div>
       </div>

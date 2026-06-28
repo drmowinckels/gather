@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { responsesToCsv, csvFilename } from "@samkoma/core";
 import { lockSlot, type Poll } from "../lib/api";
 import { aggregate } from "../lib/heatmap";
-import { hourLabel } from "../lib/datetime";
+import { formatHour } from "../lib/datetime";
 import { downloadText } from "../lib/download";
 import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
 import { GridScroll } from "./GridScroll";
 import { PeopleFilter } from "./PeopleFilter";
+import { useT } from "../i18n";
 
 const BEST_SHADOW =
   "0 0 0 2px var(--brand), 0 0 14px color-mix(in oklab, var(--brand) 60%, transparent)";
@@ -30,6 +31,7 @@ export function GroupHeatmap({
   editToken?: string | null;
   onLockChange?: (poll: Poll) => void;
 }) {
+  const t = useT();
   const [locking, setLocking] = useState(false);
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -154,7 +156,7 @@ export function GroupHeatmap({
       }}
     >
       <h2 style={{ fontWeight: 700, fontSize: 18, margin: 0 }}>
-        Group availability
+        {t("heatmap.title")}
       </h2>
       <span
         style={{ display: "flex", alignItems: "center", gap: 12 }}
@@ -162,8 +164,11 @@ export function GroupHeatmap({
       >
         <span style={{ fontSize: 12 }}>
           {filtering
-            ? `${agg.total} of ${names.length} responses`
-            : `${agg.total} ${agg.total === 1 ? "response" : "responses"}`}
+            ? t("heatmap.responsesOf", {
+                total: agg.total,
+                names: names.length,
+              })
+            : t("heatmap.responses", { count: agg.total })}
         </span>
         {poll.responses.length > 0 && (
           <button
@@ -171,7 +176,7 @@ export function GroupHeatmap({
             className="btn btn-outline btn-sm"
             onClick={exportCsv}
           >
-            Download CSV
+            {t("heatmap.downloadCsv")}
           </button>
         )}
       </span>
@@ -200,12 +205,14 @@ export function GroupHeatmap({
         {filterBar}
         <div style={{ textAlign: "center", padding: "24px 4px" }}>
           <p style={{ fontWeight: 700, fontSize: 16, margin: 0 }}>
-            {filtering ? "No one in this selection" : "No availability yet"}
+            {filtering
+              ? t("heatmap.emptyFilteredTitle")
+              : t("heatmap.emptyTitle")}
           </p>
           <p className="helper" style={{ margin: "8px auto 0", maxWidth: 360 }}>
             {filtering
-              ? "Add someone back in to see where they overlap."
-              : "Once people paint their free times, the group's best slot lights up here."}
+              ? t("heatmap.emptyFilteredBody")
+              : t("heatmap.emptyBody")}
           </p>
         </div>
       </div>
@@ -218,9 +225,9 @@ export function GroupHeatmap({
   // Screen-reader equivalent of the colour grid: every slot with any
   // availability, as plain text. The visual grid is aria-hidden for non-hosts,
   // so this table is their canonical source of the per-slot tally.
-  const srRows = view.times.flatMap((t) =>
+  const srRows = view.times.flatMap((time) =>
     view.days.flatMap((d) => {
-      const key = view.keyAt(d, t);
+      const key = view.keyAt(d, time);
       if (key === null) return [];
       const cell = agg.cells.get(key);
       const count = cell?.count ?? 0;
@@ -246,7 +253,7 @@ export function GroupHeatmap({
             color: "var(--fg-muted)",
           }}
         >
-          <span className="subtle">By group:</span>
+          <span className="subtle">{t("heatmap.byGroup")}</span>
           {groupCounts.map(([g, n]) => (
             <span key={g}>
               {g} <strong style={{ color: "var(--fg)" }}>{n}</strong>
@@ -257,14 +264,18 @@ export function GroupHeatmap({
 
       <table className="sr-only">
         <caption>
-          Group availability by slot, {agg.total} of {names.length} responses
-          counted. Best slot {label(best.slot)} with {best.count} available.
+          {t("heatmap.srCaption", {
+            total: agg.total,
+            names: names.length,
+            time: label(best.slot),
+            count: best.count,
+          })}
         </caption>
         <thead>
           <tr>
-            <th scope="col">Time slot</th>
-            <th scope="col">Available</th>
-            <th scope="col">Maybe</th>
+            <th scope="col">{t("heatmap.colTimeSlot")}</th>
+            <th scope="col">{t("heatmap.colAvailable")}</th>
+            <th scope="col">{t("heatmap.colMaybe")}</th>
           </tr>
         </thead>
         <tbody>
@@ -272,9 +283,9 @@ export function GroupHeatmap({
             <tr key={key}>
               <th scope="row">{label(key)}</th>
               <td>
-                {count} of {agg.total}
+                {t("heatmap.srCount", { count, total: agg.total })}
                 {poll.capacity != null && count >= poll.capacity
-                  ? " (full)"
+                  ? t("heatmap.srFull")
                   : ""}
               </td>
               <td>{maybeN}</td>
@@ -309,9 +320,9 @@ export function GroupHeatmap({
                 ))}
               </div>
 
-              {view.times.map((t) => (
+              {view.times.map((time) => (
                 <div
-                  key={t}
+                  key={time}
                   style={{
                     display: "flex",
                     gap: 5,
@@ -330,10 +341,10 @@ export function GroupHeatmap({
                       color: "var(--fg-subtle)",
                     }}
                   >
-                    {hourLabel(t)}
+                    {formatHour(time)}
                   </div>
                   {view.days.map((d) => {
-                    const key = view.keyAt(d, t);
+                    const key = view.keyAt(d, time);
                     if (key === null) {
                       return (
                         <div
@@ -360,9 +371,16 @@ export function GroupHeatmap({
                         : "transparent";
                     const desc =
                       (empty
-                        ? `${label(key)} — nobody yet`
-                        : `${label(key)} — ${count} of ${agg.total} available${maybeN ? `, ${maybeN} maybe` : ""}`) +
-                      (isFull ? " — full" : "");
+                        ? t("heatmap.cellEmpty", { time: label(key) })
+                        : t("heatmap.cellAvailable", {
+                            time: label(key),
+                            count,
+                            total: agg.total,
+                          }) +
+                          (maybeN
+                            ? t("heatmap.cellMaybeSuffix", { count: maybeN })
+                            : "")) +
+                      (isFull ? t("heatmap.cellFullSuffix") : "");
                     const baseShadow = isLocked
                       ? LOCK_SHADOW
                       : isSelected
@@ -390,7 +408,7 @@ export function GroupHeatmap({
                         type="button"
                         className="heatcell"
                         aria-pressed={isSelected}
-                        aria-label={`${desc}. Select to lock in.`}
+                        aria-label={t("heatmap.cellAriaLockable", { desc })}
                         onMouseEnter={() => setHovered(key)}
                         onClick={() => setSelected(key)}
                         title={desc}
@@ -452,7 +470,7 @@ export function GroupHeatmap({
                   background: HATCH,
                 }}
               />
-              maybe
+              {t("heatmap.legendMaybe")}
             </span>
             {poll.capacity != null && (
               <span
@@ -470,7 +488,7 @@ export function GroupHeatmap({
                     boxShadow: "inset 0 0 0 2px var(--botanical)",
                   }}
                 />
-                full
+                {t("heatmap.legendFull")}
               </span>
             )}
           </div>
@@ -494,7 +512,7 @@ export function GroupHeatmap({
                 opacity: 0.85,
               }}
             >
-              Best slot
+              {t("heatmap.bestSlot")}
             </div>
             <div
               style={{
@@ -508,9 +526,14 @@ export function GroupHeatmap({
               {label(best.slot)}
             </div>
             <div style={{ fontSize: 13, marginTop: 8, opacity: 0.9 }}>
-              {best.count} / {agg.total} available
-              {best.maybe > 0 ? ` · ${best.maybe} maybe` : ""}
-              {best.count === agg.total ? " · all in" : ""}
+              {t("heatmap.bestSlotCount", {
+                count: best.count,
+                total: agg.total,
+              })}
+              {best.maybe > 0
+                ? t("heatmap.bestSlotMaybeSuffix", { count: best.maybe })
+                : ""}
+              {best.count === agg.total ? t("heatmap.bestSlotAllIn") : ""}
             </div>
           </div>
 
@@ -526,7 +549,7 @@ export function GroupHeatmap({
                   marginBottom: 10,
                 }}
               >
-                Runner-ups
+                {t("heatmap.runnerUps")}
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {runnerUps.map((r) => (
@@ -567,7 +590,7 @@ export function GroupHeatmap({
                     marginBottom: 6,
                   }}
                 >
-                  {hovered ? "This slot" : "Best slot"}
+                  {hovered ? t("heatmap.thisSlot") : t("heatmap.bestSlot")}
                 </div>
                 <div style={{ fontWeight: 700, fontSize: 13 }}>
                   {label(key)}
@@ -581,7 +604,7 @@ export function GroupHeatmap({
                         marginTop: 4,
                       }}
                     >
-                      Available · {cell.count}
+                      {t("heatmap.detailAvailable", { count: cell.count })}
                     </div>
                     <div
                       style={{
@@ -604,7 +627,7 @@ export function GroupHeatmap({
                         marginTop: 8,
                       }}
                     >
-                      Maybe · {cell.maybe}
+                      {t("heatmap.detailMaybe", { count: cell.maybe })}
                     </div>
                     <div
                       style={{
@@ -633,7 +656,8 @@ export function GroupHeatmap({
               {poll.lockedSlot ? (
                 <>
                   <div style={{ fontSize: 13, marginBottom: 8 }}>
-                    📌 Locked: <strong>{label(poll.lockedSlot)}</strong>
+                    📌 {t("heatmap.lockedLabel")}{" "}
+                    <strong>{label(poll.lockedSlot)}</strong>
                   </div>
                   <button
                     type="button"
@@ -641,7 +665,7 @@ export function GroupHeatmap({
                     onClick={() => setLock(null)}
                     disabled={locking}
                   >
-                    {locking ? "…" : "Unlock"}
+                    {locking ? "…" : t("heatmap.unlock")}
                   </button>
                 </>
               ) : (
@@ -656,15 +680,17 @@ export function GroupHeatmap({
                         onClick={() => setLock(target)}
                         disabled={locking}
                       >
-                        {locking ? "Locking…" : `Lock in ${label(target)}`}
+                        {locking
+                          ? t("heatmap.locking")
+                          : t("heatmap.lockIn", { time: label(target) })}
                       </button>
                       <p
                         className="subtle"
                         style={{ fontSize: 12, margin: "8px 0 0" }}
                       >
                         {selected
-                          ? "Tap another slot to change your pick."
-                          : "Best slot picked — tap any slot to choose a different one."}
+                          ? t("heatmap.pickHintSelected")
+                          : t("heatmap.pickHintDefault")}
                       </p>
                     </>
                   );

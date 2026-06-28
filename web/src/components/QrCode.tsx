@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import qrcode from "qrcode-generator";
+import { useT } from "../i18n";
 
 const QUIET = 4; // modules of light margin so scanners lock on
 
@@ -36,6 +37,7 @@ function downloadBlob(blob: Blob, name: string): void {
 }
 
 export function QrCode({ value, label }: { value: string; label: string }) {
+  const t = useT();
   // Auto-sizing throws if the value exceeds even a type-40 QR; degrade instead
   // of crashing the page (unreachable for poll links, but defensive).
   const built = useMemo(() => {
@@ -49,7 +51,7 @@ export function QrCode({ value, label }: { value: string; label: string }) {
   if (!built) {
     return (
       <p className="subtle" style={{ fontSize: 13, marginTop: 12 }}>
-        That link is too long to fit in a QR code.
+        {t("qr.tooLong")}
       </p>
     );
   }
@@ -106,14 +108,14 @@ export function QrCode({ value, label }: { value: string; label: string }) {
           className="btn btn-outline btn-sm"
           onClick={downloadSvg}
         >
-          Download SVG
+          {t("qr.downloadSvg")}
         </button>
         <button
           type="button"
           className="btn btn-outline btn-sm"
           onClick={downloadPng}
         >
-          Download PNG
+          {t("qr.downloadPng")}
         </button>
       </div>
     </div>

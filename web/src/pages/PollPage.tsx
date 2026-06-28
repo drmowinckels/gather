@@ -16,14 +16,17 @@ import {
 import { getEditToken, saveEditToken } from "../lib/storage";
 import {
   formatDayRange,
+  formatTime,
   tzOffsetLabel,
   browserTimezone,
   listTimezones,
+  localizedDateFormat,
 } from "../lib/datetime";
 import { formatSlotLabelInTz } from "../lib/tz";
 import { parseHostToken, buildHostLink } from "../lib/hostlink";
 import { pollToTemplate } from "../lib/duplicate";
 import { QrCode } from "../components/QrCode";
+import { useT } from "../i18n";
 
 type State =
   | { kind: "loading" }
@@ -33,6 +36,7 @@ type State =
   | { kind: "ready"; poll: Poll };
 
 export function PollPage() {
+  const t = useT();
   const { id = "" } = useParams();
   const navigate = useNavigate();
   const [state, setState] = useState<State>({ kind: "loading" });
@@ -143,7 +147,7 @@ export function PollPage() {
     return (
       <Shell>
         <p className="helper" style={{ padding: "64px 0" }}>
-          Loading poll…
+          {t("poll.loading")}
         </p>
       </Shell>
     );
@@ -153,13 +157,12 @@ export function PollPage() {
     return (
       <Shell>
         <div style={{ padding: "64px 0", maxWidth: 460 }}>
-          <h1 className="h2">That poll isn't here</h1>
+          <h1 className="h2">{t("poll.notFound.title")}</h1>
           <p className="helper" style={{ margin: "10px 0 20px" }}>
-            The link may be mistyped, or the poll was never created. Start a
-            fresh one and share the new link.
+            {t("poll.notFound.body")}
           </p>
           <Link to="/new" className="btn btn-primary">
-            Create a poll →
+            {t("poll.notFound.cta")} →
           </Link>
         </div>
       </Shell>
@@ -170,13 +173,12 @@ export function PollPage() {
     return (
       <Shell>
         <div style={{ padding: "64px 0", maxWidth: 460 }}>
-          <h1 className="h2">This poll has expired</h1>
+          <h1 className="h2">{t("poll.expired.title")}</h1>
           <p className="helper" style={{ margin: "10px 0 20px" }}>
-            Polls stay live for 14 days after their last day, then they're
-            cleared. Start a fresh one for your next get-together.
+            {t("poll.expired.body")}
           </p>
           <Link to="/new" className="btn btn-primary">
-            Create a poll →
+            {t("poll.expired.cta")} →
           </Link>
         </div>
       </Shell>
@@ -187,16 +189,16 @@ export function PollPage() {
     return (
       <Shell>
         <div style={{ padding: "64px 0", maxWidth: 460 }}>
-          <h1 className="h2">Can't load this poll right now</h1>
+          <h1 className="h2">{t("poll.error.title")}</h1>
           <p className="helper" style={{ margin: "10px 0 20px" }}>
-            The samkoma service didn't respond. Refresh to try again.
+            {t("poll.error.body")}
           </p>
           <button
             type="button"
             className="btn btn-outline"
             onClick={() => window.location.reload()}
           >
-            Refresh
+            {t("poll.error.refresh")}
           </button>
         </div>
       </Shell>
@@ -227,13 +229,13 @@ export function PollPage() {
           flexWrap: "wrap",
         }}
       >
-        <span>Showing times in</span>
+        <span>{t("poll.tz.showingIn")}</span>
         <select
           className="input"
           style={{ width: "auto", maxWidth: "100%" }}
           value={viewerTz}
           onChange={(e) => setViewerTz(e.target.value)}
-          aria-label="Show times in timezone"
+          aria-label={t("poll.tz.selectLabel")}
         >
           {tzOptions.map((z) => (
             <option key={z.value} value={z.value}>
@@ -243,7 +245,7 @@ export function PollPage() {
         </select>
         {viewerTz !== poll.tz && (
           <span className="subtle" style={{ fontSize: 12 }}>
-            converted from {poll.tz}
+            {t("poll.tz.convertedFrom", { tz: poll.tz })}
           </span>
         )}
       </label>
@@ -251,9 +253,9 @@ export function PollPage() {
       <p
         className="helper"
         style={{ margin: "0 0 16px", fontSize: 13 }}
-        aria-label="timezone note"
+        aria-label={t("poll.tz.noteLabel")}
       >
-        Weekday times are shown in the poll's home timezone, {poll.tz}.
+        {t("poll.tz.weekdayNote", { tz: poll.tz })}
       </p>
     );
 
@@ -271,7 +273,7 @@ export function PollPage() {
               }}
             >
               <h1 className="h2">{poll.title}</h1>
-              {isHost && <span className="tag">You host this</span>}
+              {isHost && <span className="tag">{t("poll.youHost")}</span>}
               <div style={{ marginLeft: "auto", display: "flex", gap: 8 }}>
                 {isHost && !editing && (
                   <button
@@ -279,7 +281,7 @@ export function PollPage() {
                     className="btn btn-outline btn-sm"
                     onClick={() => setEditing(true)}
                   >
-                    Edit poll
+                    {t("poll.editPoll")}
                   </button>
                 )}
                 <button
@@ -291,13 +293,17 @@ export function PollPage() {
                     })
                   }
                 >
-                  Duplicate
+                  {t("poll.duplicate")}
                 </button>
               </div>
             </div>
             <p className="helper">
-              {formatDayRange(poll.days)} · {poll.from}–{poll.to} · {poll.slot}
-              -min slots · home tz {poll.tz}
+              {formatDayRange(poll.days, {
+                empty: t("poll.noDays"),
+                days: (count) => t("poll.dayCount", { count }),
+              })}{" "}
+              · {formatTime(poll.from)}–{formatTime(poll.to)} ·{" "}
+              {t("poll.meta", { slot: poll.slot, tz: poll.tz })}
               {offset ? ` (${offset})` : ""}
             </p>
 
@@ -326,16 +332,15 @@ export function PollPage() {
               >
                 <span>
                   {poll.closed
-                    ? "🔒 Responding is closed"
+                    ? t("poll.responding.closed")
                     : poll.deadline
-                      ? `Responding closes ${new Intl.DateTimeFormat(
-                          undefined,
-                          {
+                      ? t("poll.responding.closesAt", {
+                          date: localizedDateFormat({
                             dateStyle: "medium",
                             timeStyle: "short",
-                          },
-                        ).format(new Date(poll.deadline))}`
-                      : "Responding is open"}
+                          }).format(new Date(poll.deadline)),
+                        })
+                      : t("poll.responding.open")}
                 </span>
                 {isHost && hostToken && (
                   <button
@@ -343,12 +348,12 @@ export function PollPage() {
                     className="btn btn-outline btn-sm"
                     onClick={() => setClosed(hostToken, !poll.closed)}
                   >
-                    {poll.closed ? "Reopen" : "Close now"}
+                    {poll.closed ? t("poll.reopen") : t("poll.closeNow")}
                   </button>
                 )}
                 {closeError && (
                   <span role="alert" style={{ color: "var(--danger)" }}>
-                    Couldn't update — retry.
+                    {t("poll.closeError")}
                   </span>
                 )}
               </div>
@@ -373,7 +378,7 @@ export function PollPage() {
                   }}
                 >
                   <span>
-                    📌 Locked in:{" "}
+                    {t("poll.lockedIn")}{" "}
                     <strong>
                       {formatSlotLabelInTz(
                         poll.lockedSlot,
@@ -389,7 +394,7 @@ export function PollPage() {
                     href={icsUrl(poll.id)}
                     download
                   >
-                    Add to calendar
+                    {t("poll.addToCalendar")}
                   </a>
                 </div>
               </div>
@@ -421,12 +426,11 @@ export function PollPage() {
                     }}
                   >
                     <span>
-                      🙈 Results are hidden from respondents until you reveal
-                      them.
+                      {t("poll.curtain.hostHidden")}
                       {revealError && (
                         <span role="alert" style={{ color: "var(--danger)" }}>
                           {" "}
-                          Couldn't reveal — try again.
+                          {t("poll.curtain.revealError")}
                         </span>
                       )}
                     </span>
@@ -436,7 +440,7 @@ export function PollPage() {
                       style={{ marginLeft: "auto" }}
                       onClick={() => revealResults(hostToken)}
                     >
-                      Reveal results
+                      {t("poll.curtain.reveal")}
                     </button>
                   </div>
                 )}
@@ -460,15 +464,17 @@ export function PollPage() {
                 }}
               >
                 <p style={{ fontWeight: 700, fontSize: 15, margin: 0 }}>
-                  {curtained ? "Results hidden for now" : "Results are private"}
+                  {curtained
+                    ? t("poll.private.curtainedTitle")
+                    : t("poll.private.privateTitle")}
                 </p>
                 <p
                   className="helper"
                   style={{ margin: "8px auto 0", maxWidth: 360 }}
                 >
                   {curtained
-                    ? "The host is keeping the group results hidden until they reveal them. Your availability is saved."
-                    : "The host kept the group results private. Your availability is saved."}
+                    ? t("poll.private.curtainedBody")
+                    : t("poll.private.privateBody")}
                 </p>
               </div>
             )}
@@ -476,13 +482,13 @@ export function PollPage() {
 
           <aside className="poll-aside">
             <div className="card" style={{ padding: 22 }}>
-              <span className="fieldlbl">Share this link</span>
+              <span className="fieldlbl">{t("poll.share.label")}</span>
               <div className="copy-row">
                 <input
                   className="input"
                   readOnly
                   value={window.location.href}
-                  aria-label="Shareable poll link"
+                  aria-label={t("poll.share.inputLabel")}
                   onFocus={(e) => e.currentTarget.select()}
                 />
                 <button
@@ -490,7 +496,7 @@ export function PollPage() {
                   className="btn btn-primary btn-sm"
                   onClick={copyLink}
                 >
-                  {copied ? "Copied" : "Copy"}
+                  {copied ? t("poll.copied") : t("poll.copy")}
                 </button>
                 <button
                   type="button"
@@ -498,34 +504,33 @@ export function PollPage() {
                   aria-expanded={showQr}
                   onClick={() => setShowQr((v) => !v)}
                 >
-                  {showQr ? "Hide QR" : "QR"}
+                  {showQr ? t("poll.qr.hide") : t("poll.qr.show")}
                 </button>
               </div>
               <span className="sr-only" role="status" aria-live="polite">
-                {copied ? "Link copied to clipboard" : ""}
+                {copied ? t("poll.share.copiedStatus") : ""}
               </span>
               {showQr && (
                 <QrCode
                   value={window.location.href}
-                  label="QR code linking to this poll"
+                  label={t("poll.qr.label")}
                 />
               )}
               <p
                 className="subtle"
                 style={{ fontSize: 13, margin: "12px 0 0" }}
               >
-                Anyone with this link can add their availability — no account
-                needed.
+                {t("poll.share.anyone")}
                 {poll.expiresAt && (
                   <>
                     {" "}
-                    Link active until{" "}
-                    {new Intl.DateTimeFormat(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    }).format(new Date(`${poll.expiresAt}T00:00:00`))}
-                    .
+                    {t("poll.share.activeUntil", {
+                      date: localizedDateFormat({
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      }).format(new Date(`${poll.expiresAt}T00:00:00`)),
+                    })}
                   </>
                 )}
               </p>
@@ -544,13 +549,13 @@ export function PollPage() {
                       background: "var(--bg-tinted)",
                     }}
                   >
-                    <span className="fieldlbl">🔑 Your host link</span>
+                    <span className="fieldlbl">{t("poll.host.label")}</span>
                     <div className="copy-row">
                       <input
                         className="input"
                         readOnly
                         value={hostLink}
-                        aria-label="Private host link"
+                        aria-label={t("poll.host.inputLabel")}
                         onFocus={(e) => e.currentTarget.select()}
                       />
                       <button
@@ -558,16 +563,14 @@ export function PollPage() {
                         className="btn btn-primary btn-sm"
                         onClick={() => copyHostLink(hostLink)}
                       >
-                        {hostCopied ? "Copied" : "Copy"}
+                        {hostCopied ? t("poll.copied") : t("poll.copy")}
                       </button>
                     </div>
                     <p
                       className="subtle"
                       style={{ fontSize: 13, margin: "12px 0 0" }}
                     >
-                      Keep this private — anyone with it can lock the poll and
-                      see private results. Open it on another device to manage
-                      from there.
+                      {t("poll.host.hint")}
                     </p>
                   </div>
                 );

@@ -5,6 +5,7 @@ import { Mark } from "../components/Logo";
 import { ApiReference, type OpenApiDoc } from "../components/ApiReference";
 import { apiDocsUrl } from "../lib/api";
 import { GITHUB_URL } from "../lib/links";
+import { useT } from "../i18n";
 
 // The web app serves its own copy of the spec (generated from the API at build
 // via `npm run gen:openapi`), so the reference renders on localhost and Pages
@@ -12,6 +13,7 @@ import { GITHUB_URL } from "../lib/links";
 const SPEC_URL = `${import.meta.env.BASE_URL}openapi.json`;
 
 function CreateExample() {
+  const t = useT();
   return (
     <div className="card" style={{ overflow: "hidden", padding: 0 }}>
       <div
@@ -42,7 +44,7 @@ function CreateExample() {
             marginLeft: 8,
           }}
         >
-          create a poll
+          {t("apiPage.example.windowTitle")}
         </span>
       </div>
       <pre
@@ -95,6 +97,7 @@ function CreateExample() {
 }
 
 function Reference() {
+  const t = useT();
   const [spec, setSpec] = useState<OpenApiDoc | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -115,35 +118,33 @@ function Reference() {
   if (failed) {
     return (
       <p className="section-lead">
-        The reference couldn't load.{" "}
+        {t("apiPage.reference.loadFailed")}{" "}
         <a href={apiDocsUrl()} target="_blank" rel="noreferrer">
-          Open the interactive docs ↗
+          {t("apiPage.reference.openDocs")}
         </a>{" "}
-        or{" "}
+        {t("apiPage.reference.or")}{" "}
         <a href={SPEC_URL} target="_blank" rel="noreferrer">
-          view the raw spec ↗
+          {t("apiPage.reference.viewRawSpec")}
         </a>{" "}
-        instead.
+        {t("apiPage.reference.instead")}
       </p>
     );
   }
-  if (!spec) return <p className="section-lead">Loading the reference…</p>;
+  if (!spec)
+    return <p className="section-lead">{t("apiPage.reference.loading")}</p>;
   return <ApiReference spec={spec} />;
 }
 
 export function Api() {
+  const t = useT();
   return (
     <Shell>
       <div className="content">
         <section className="page-hero">
           <div>
             <p className="eyebrow">API</p>
-            <h1 className="h1">One poll, two front doors.</h1>
-            <p className="lede">
-              Everything you can do by clicking, you can do with a request. The
-              web app, the CLI, and bots like Jinx all speak to the same public
-              REST API. No SDK to learn — it's just HTTP and JSON.
-            </p>
+            <h1 className="h1">{t("apiPage.hero.title")}</h1>
+            <p className="lede">{t("apiPage.hero.lede")}</p>
             <div className="api-actions">
               <a
                 className="btn btn-primary"
@@ -151,7 +152,7 @@ export function Api() {
                 target="_blank"
                 rel="noreferrer"
               >
-                Open interactive console ↗
+                {t("apiPage.action.openConsole")}
               </a>
               <a
                 className="btn btn-outline"
@@ -159,7 +160,7 @@ export function Api() {
                 target="_blank"
                 rel="noreferrer"
               >
-                View raw spec ↗
+                {t("apiPage.action.viewRawSpec")}
               </a>
             </div>
           </div>
@@ -167,43 +168,40 @@ export function Api() {
         </section>
 
         <section className="section">
-          <h2 className="h2">Reference</h2>
+          <h2 className="h2">{t("apiPage.reference.heading")}</h2>
           <p className="section-lead">
-            No accounts: creating a poll returns an edit token, sent as{" "}
+            {t("apiPage.reference.lead.before")}{" "}
             <code style={{ fontFamily: "var(--font-mono)", fontSize: ".9em" }}>
               Authorization: Bearer …
             </code>{" "}
-            for host-only actions. Expand any endpoint for its parameters, body,
-            and responses. The interactive console adds a “try it” runner.
+            {t("apiPage.reference.lead.after")}
           </p>
           <Reference />
         </section>
 
         <section className="section">
-          <h2 className="h2">Built for bots</h2>
-          <p className="section-lead">
-            Because the API is the product, automation isn't a bolt-on. Jinx,
-            the R-Ladies+ bot, turns a comment on a GitHub issue into a poll —
-            then edits its own reply with the winning slot once everyone's in.
-          </p>
+          <h2 className="h2">{t("apiPage.bots.heading")}</h2>
+          <p className="section-lead">{t("apiPage.bots.lead")}</p>
           <div className="bot-reply">
             <div className="bot-head">
               <span className="bot-badge">
                 <Mark size={20} />
               </span>
               samkoma-bot
-              <span className="bot-handle">replied just now</span>
+              <span className="bot-handle">
+                {t("apiPage.bots.repliedJustNow")}
+              </span>
             </div>
             <p className="bot-body">
-              📋 Poll's up! <strong>Team offsite — September</strong>
+              {t("apiPage.bots.pollsUp")}{" "}
+              <strong>Team offsite — September</strong>
               <br />
               Tue–Thu, 9–15 (Europe/Oslo) ·{" "}
               <span style={{ color: "var(--brand)" }}>
                 samkoma.org/#/e/9fK2qd
               </span>
               <br />
-              I'll edit this comment with the winning slot once everyone's
-              responded.
+              {t("apiPage.bots.editNote")}
             </p>
             <div className="bot-chips">
               <span className="bot-chip">0 responses</span>
@@ -213,7 +211,7 @@ export function Api() {
         </section>
 
         <section className="section">
-          <h2 className="h2">Start building</h2>
+          <h2 className="h2">{t("apiPage.build.heading")}</h2>
           <div className="cta-row">
             <a
               className="btn btn-primary"
@@ -221,7 +219,7 @@ export function Api() {
               target="_blank"
               rel="noreferrer"
             >
-              Open interactive console ↗
+              {t("apiPage.action.openConsole")}
             </a>
             <a
               className="btn btn-outline"
@@ -229,10 +227,10 @@ export function Api() {
               target="_blank"
               rel="noreferrer"
             >
-              Source on GitHub ↗
+              {t("apiPage.action.sourceOnGitHub")}
             </a>
             <Link to="/new" className="btn btn-outline">
-              Create a poll →
+              {t("apiPage.action.createPoll")}
             </Link>
           </div>
         </section>

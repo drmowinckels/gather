@@ -1,26 +1,20 @@
+import { Fragment } from "react";
 import { Link } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { MiniHeat } from "../components/MiniHeat";
+import { useT } from "../i18n";
+import type { TKey } from "../i18n";
 
-const STEPS = [
-  {
-    n: "01",
-    title: "Paint your hours",
-    body: "Click and drag across the grid to mark when you're free. No account, no calendar sync.",
-  },
-  {
-    n: "02",
-    title: "See it converge",
-    body: "A live heatmap surfaces the slot that works for the most people, runner-ups close behind.",
-  },
-  {
-    n: "03",
-    title: "Automate it",
-    body: "Every poll is a REST resource, so a CLI or a bot can open one and read the winning slot back.",
-  },
+const STEPS: { n: string; title: TKey; body: TKey }[] = [
+  { n: "01", title: "landing.step1.title", body: "landing.step1.body" },
+  { n: "02", title: "landing.step2.title", body: "landing.step2.body" },
+  { n: "03", title: "landing.step3.title", body: "landing.step3.body" },
 ];
 
 export function Landing() {
+  const t = useT();
+  const titleLines = t("landing.title").split("\n");
+
   return (
     <Shell showNewPoll={false}>
       <section
@@ -34,17 +28,16 @@ export function Landing() {
         className="hero"
       >
         <div>
-          <p className="eyebrow">Group scheduling, one shared link</p>
+          <p className="eyebrow">{t("landing.eyebrow")}</p>
           <h1 className="h1">
-            Find a time,
-            <br />
-            together.
+            {titleLines.map((line, i) => (
+              <Fragment key={i}>
+                {i > 0 && <br />}
+                {line}
+              </Fragment>
+            ))}
           </h1>
-          <p className="subcopy">
-            Paint when you're free, share one link, and watch the group's best
-            slot light up. No accounts required — and every poll is reachable
-            from the API.
-          </p>
+          <p className="subcopy">{t("landing.subcopy")}</p>
           <div
             style={{
               display: "flex",
@@ -54,10 +47,10 @@ export function Landing() {
             }}
           >
             <Link to="/new" className="btn btn-primary">
-              Create a poll →
+              {t("landing.ctaCreate")} →
             </Link>
             <Link to="/api" className="btn btn-outline">
-              Explore the API
+              {t("landing.ctaApi")}
             </Link>
           </div>
           <div className="term" style={{ marginTop: 26, maxWidth: 460 }}>
@@ -96,7 +89,7 @@ export function Landing() {
               {s.n}
             </div>
             <div style={{ fontWeight: 700, fontSize: 17, marginTop: 10 }}>
-              {s.title}
+              {t(s.title)}
             </div>
             <p
               style={{
@@ -106,7 +99,7 @@ export function Landing() {
                 margin: "8px 0 0",
               }}
             >
-              {s.body}
+              {t(s.body)}
             </p>
           </div>
         ))}

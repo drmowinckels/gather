@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useT } from "../i18n";
 
 // A disclosure of respondent chips: toggle people in or out of the tally so the
 // host can ask "what works if we drop Alice and Bob?". Inclusion is tracked by
@@ -21,6 +22,7 @@ export function PeopleFilter({
   onToggleGroup?: (members: string[]) => void;
   onReset: () => void;
 }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const included = names.length - excluded.size;
   const filtering = excluded.size > 0;
@@ -35,8 +37,12 @@ export function PeopleFilter({
         onClick={() => setOpen((v) => !v)}
       >
         {filtering
-          ? `Counting ${included} of ${names.length} people`
-          : "Filter people"}
+          ? t("filter.counting", {
+              count: names.length,
+              included,
+              total: names.length,
+            })
+          : t("filter.toggle")}
         <span aria-hidden="true"> {open ? "▲" : "▼"}</span>
       </button>
 
@@ -46,7 +52,7 @@ export function PeopleFilter({
             <div
               className="chips"
               role="group"
-              aria-label="Groups counted in the results"
+              aria-label={t("filter.groupsLabel")}
               style={{ marginBottom: 12 }}
             >
               {groups.map(({ label, members }) => {
@@ -69,7 +75,7 @@ export function PeopleFilter({
           <div
             className="chips"
             role="group"
-            aria-label="People counted in the results"
+            aria-label={t("filter.peopleLabel")}
           >
             {names.map((name) => {
               const on = !excluded.has(name);
@@ -103,7 +109,7 @@ export function PeopleFilter({
               }}
               onClick={onReset}
             >
-              Reset — count everyone
+              {t("filter.reset")}
             </button>
           )}
         </div>

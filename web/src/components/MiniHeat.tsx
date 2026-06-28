@@ -1,4 +1,6 @@
-const DAYS = ["MON", "TUE", "WED", "THU", "FRI"];
+import { useT } from "../i18n";
+
+const DAYS = ["mon", "tue", "wed", "thu", "fri"] as const;
 const ROWS = 9;
 const TOTAL = 9;
 
@@ -11,12 +13,13 @@ function count(d: number, t: number): number {
 }
 
 export function MiniHeat() {
+  const t = useT();
   return (
     <div
       className="card"
       style={{ padding: 24 }}
       role="img"
-      aria-label="Preview of a group availability heatmap converging on a shared time"
+      aria-label={t("miniheat.ariaLabel")}
     >
       <div
         style={{
@@ -27,10 +30,10 @@ export function MiniHeat() {
         }}
       >
         <span style={{ fontWeight: 700, fontSize: 14 }}>
-          Group availability
+          {t("miniheat.title")}
         </span>
         <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>
-          9 respondents
+          {t("miniheat.respondents", { count: TOTAL })}
         </span>
       </div>
 
@@ -48,14 +51,14 @@ export function MiniHeat() {
               color: "var(--fg-subtle)",
             }}
           >
-            {d}
+            {t(`miniheat.${d}`)}
           </div>
         ))}
       </div>
 
-      {Array.from({ length: ROWS }, (_, t) => (
+      {Array.from({ length: ROWS }, (_, r) => (
         <div
-          key={t}
+          key={r}
           style={{
             display: "flex",
             gap: 5,
@@ -72,10 +75,10 @@ export function MiniHeat() {
               textAlign: "right",
             }}
           >
-            {t % 2 === 0 ? `${9 + t}` : ""}
+            {r % 2 === 0 ? `${9 + r}` : ""}
           </div>
           {DAYS.map((_, d) => {
-            const c = count(d, t);
+            const c = count(d, r);
             const pct = Math.round((c / TOTAL) * 100);
             return (
               <div
@@ -104,7 +107,7 @@ export function MiniHeat() {
           color: "var(--fg-subtle)",
         }}
       >
-        <span>fewer</span>
+        <span>{t("miniheat.fewer")}</span>
         <div style={{ display: "flex", gap: 3 }}>
           {[12, 38, 64, 100].map((p) => (
             <div
@@ -118,7 +121,7 @@ export function MiniHeat() {
             />
           ))}
         </div>
-        <span>everyone</span>
+        <span>{t("miniheat.everyone")}</span>
       </div>
     </div>
   );

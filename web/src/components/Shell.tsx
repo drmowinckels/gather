@@ -1,7 +1,10 @@
 import { Link, NavLink } from "react-router-dom";
 import type { ReactNode } from "react";
 import { useTheme } from "../lib/useTheme";
+import { useT } from "../i18n";
 import { Logo, Mark } from "./Logo";
+import { LanguageToggle } from "./LanguageToggle";
+import { FormatMenu } from "./FormatMenu";
 import { GITHUB_URL, SUPPORT_URL } from "../lib/links";
 import { apiDocsUrl } from "../lib/api";
 
@@ -12,6 +15,7 @@ interface ShellProps {
 
 export function Shell({ children, showNewPoll = true }: ShellProps) {
   const [theme, toggle] = useTheme();
+  const t = useT();
 
   return (
     <div className="page">
@@ -25,18 +29,18 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
           main?.scrollIntoView();
         }}
       >
-        Skip to content
+        {t("nav.skipToContent")}
       </a>
       <header className="shell">
-        <nav className="nav" aria-label="Primary">
+        <nav className="nav" aria-label={t("nav.primary")}>
           <Logo />
           <div className="nav-right">
             <div className="nav-links">
               <NavLink to="/api" className="navlink">
-                API
+                {t("nav.api")}
               </NavLink>
               <NavLink to="/about" className="navlink">
-                About
+                {t("nav.about")}
               </NavLink>
               <a
                 className="navlink"
@@ -44,20 +48,24 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
                 target="_blank"
                 rel="noreferrer"
               >
-                GitHub <span aria-hidden="true">↗</span>
+                {t("nav.github")} <span aria-hidden="true">↗</span>
               </a>
             </div>
+            <LanguageToggle />
+            <FormatMenu />
             <button
               type="button"
               className="theme-toggle"
               onClick={toggle}
-              aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+              aria-label={
+                theme === "dark" ? t("theme.toLight") : t("theme.toDark")
+              }
             >
               {theme === "dark" ? "☀" : "☾"}
             </button>
             {showNewPoll && (
               <Link to="/new" className="btn btn-primary btn-sm">
-                New poll
+                {t("nav.newPoll")}
               </Link>
             )}
           </div>
@@ -80,20 +88,20 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
               <Mark size={20} />
             </span>
             <span>
-              <strong>samkoma</strong> — find a time, together.
+              <strong>samkoma</strong> — {t("footer.tagline")}
             </span>
           </div>
-          <nav className="footer-links" aria-label="Footer">
-            <Link to="/about">About</Link>
-            <Link to="/api">API</Link>
+          <nav className="footer-links" aria-label={t("footer.label")}>
+            <Link to="/about">{t("nav.about")}</Link>
+            <Link to="/api">{t("nav.api")}</Link>
             <a href={apiDocsUrl()} target="_blank" rel="noreferrer">
-              Docs ↗
+              {t("footer.docs")} ↗
             </a>
             <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-              GitHub ↗
+              {t("nav.github")} ↗
             </a>
             <a href={SUPPORT_URL} target="_blank" rel="noreferrer">
-              Buy me a coffee ↗
+              {t("footer.support")} ↗
             </a>
           </nav>
         </div>
