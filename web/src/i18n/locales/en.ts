@@ -309,6 +309,8 @@ export const en = {
     "Best slot picked — tap any slot to choose a different one.",
 
   // ── poll ──
+  "poll.noDays": "No days yet",
+  "poll.dayCount": { one: "{count} day", other: "{count} days" },
   "poll.loading": "Loading poll…",
   "poll.notFound.title": "That poll isn't here",
   "poll.notFound.body":

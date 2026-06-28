@@ -302,6 +302,8 @@ export const nb: Catalog = {
     "Beste tidspunkt valgt — trykk på et tidspunkt for å velge et annet.",
 
   // ── poll ──
+  "poll.noDays": "Ingen dager ennå",
+  "poll.dayCount": { one: "{count} dag", other: "{count} dager" },
   "poll.loading": "Laster avstemning…",
   "poll.notFound.title": "Denne avstemningen finnes ikke her",
   "poll.notFound.body":

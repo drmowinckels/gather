@@ -298,8 +298,11 @@ export function PollPage() {
               </div>
             </div>
             <p className="helper">
-              {formatDayRange(poll.days)} · {formatTime(poll.from)}–
-              {formatTime(poll.to)} ·{" "}
+              {formatDayRange(poll.days, {
+                empty: t("poll.noDays"),
+                days: (count) => t("poll.dayCount", { count }),
+              })}{" "}
+              · {formatTime(poll.from)}–{formatTime(poll.to)} ·{" "}
               {t("poll.meta", { slot: poll.slot, tz: poll.tz })}
               {offset ? ` (${offset})` : ""}
             </p>
