@@ -1,4 +1,9 @@
-import { timeSlots, dayHeader, localizedDateFormat } from "./datetime";
+import {
+  timeSlots,
+  localizedDateFormat,
+  formatDayLabel,
+  formatTime,
+} from "./datetime";
 import { zonedTimeToUtc, partsInTz, existsInTz } from "@samkoma/core";
 
 // DST-aware tz conversion is shared domain logic; it lives in @samkoma/core
@@ -20,8 +25,7 @@ export function weekdayLabel(token: string): string {
 }
 
 function dateLabel(iso: string): string {
-  const h = dayHeader(iso);
-  return `${h.weekday} ${h.day}`;
+  return formatDayLabel(iso);
 }
 
 export interface GridView {
@@ -102,13 +106,11 @@ export function formatSlotLabelInTz(
 ): string {
   const [day, time] = canonicalKey.split("T");
   if (kind === "weekdays") {
-    return `${weekdayLabel(day)} ${time}`;
+    return `${weekdayLabel(day)} ${formatTime(time)}`;
   }
   if (pollTz === viewerTz) {
-    const h = dayHeader(day);
-    return `${h.weekday} ${h.day}, ${time}`;
+    return `${formatDayLabel(day)}, ${formatTime(time)}`;
   }
   const local = partsInTz(zonedTimeToUtc(day, time, pollTz), viewerTz);
-  const h = dayHeader(local.date);
-  return `${h.weekday} ${h.day}, ${local.time}`;
+  return `${formatDayLabel(local.date)}, ${formatTime(local.time)}`;
 }

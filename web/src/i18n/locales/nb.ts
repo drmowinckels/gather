@@ -413,6 +413,15 @@ export const nb: Catalog = {
   "respond.save.saved": "Lagret",
   "respond.save.liveSaving": "Lagrer tilgjengeligheten din",
   "respond.save.liveSaved": "Tilgjengelighet lagret",
+
+  // ── format ──
+  "format.ariaTrigger": "Dato- og tidsformat",
+  "format.time": "Klokkeslett",
+  "format.date": "Dato",
+  "format.auto": "Auto",
+  "format.h12": "12t",
+  "format.h24": "24t",
+  "format.iso": "ISO",
 };
 
 export default nb;

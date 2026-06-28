@@ -15,4 +15,11 @@ export {
 export type { Locale } from "./registry";
 export { makeT, translate, interpolate } from "./translate";
 export type { TFunc, Vars } from "./translate";
-export { LangProvider, useT, useLocale, useLang } from "./LangProvider";
+export {
+  LangProvider,
+  useT,
+  useLocale,
+  useLang,
+  useTimeFormat,
+  useDateFormat,
+} from "./LangProvider";

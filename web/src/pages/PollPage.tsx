@@ -16,6 +16,7 @@ import {
 import { getEditToken, saveEditToken } from "../lib/storage";
 import {
   formatDayRange,
+  formatTime,
   tzOffsetLabel,
   browserTimezone,
   listTimezones,
@@ -297,7 +298,8 @@ export function PollPage() {
               </div>
             </div>
             <p className="helper">
-              {formatDayRange(poll.days)} · {poll.from}–{poll.to} ·{" "}
+              {formatDayRange(poll.days)} · {formatTime(poll.from)}–
+              {formatTime(poll.to)} ·{" "}
               {t("poll.meta", { slot: poll.slot, tz: poll.tz })}
               {offset ? ` (${offset})` : ""}
             </p>

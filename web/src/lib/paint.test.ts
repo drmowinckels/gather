@@ -7,7 +7,7 @@ import {
   fillAll,
   type Marks,
 } from "./paint";
-import { timeSlots, slotKey, hourLabel } from "./datetime";
+import { timeSlots, slotKey, formatHour } from "./datetime";
 
 describe("paint cycle", () => {
   it("cycles busy -> yes -> maybe -> busy", () => {
@@ -63,8 +63,9 @@ describe("slot helpers", () => {
 
   it("builds a slot key and labels only the hour", () => {
     expect(slotKey("2026-07-15", "09:30")).toBe("2026-07-15T09:30");
-    expect(hourLabel("09:00")).toBe("9am");
-    expect(hourLabel("09:30")).toBe("");
-    expect(hourLabel("12:00")).toBe("12pm");
+    // 24h is pinned in the test setup, so the gutter shows the hour only.
+    expect(formatHour("09:00")).toBe("09");
+    expect(formatHour("09:30")).toBe("");
+    expect(formatHour("12:00")).toBe("12");
   });
 });

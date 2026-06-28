@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
 import { afterEach } from "vitest";
 import { cleanup } from "@testing-library/react";
+import { setTimeFormat } from "../lib/datetime";
+
+// Pin time display to 24h so slot-time assertions ("09:00") are deterministic
+// regardless of the jsdom locale's default clock. The real app defaults to
+// "auto" (locale-driven); format-specific behaviour is covered in datetime.test.
+setTimeFormat("24h");
 
 // This jsdom build doesn't expose the Web Storage API; provide a minimal
 // in-memory implementation so storage-backed code is exercised in tests.

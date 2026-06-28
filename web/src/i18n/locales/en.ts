@@ -416,6 +416,15 @@ export const en = {
   "respond.save.saved": "Saved",
   "respond.save.liveSaving": "Saving your availability",
   "respond.save.liveSaved": "Availability saved",
+
+  // ── format ──
+  "format.ariaTrigger": "Date and time format",
+  "format.time": "Time",
+  "format.date": "Date",
+  "format.auto": "Auto",
+  "format.h12": "12h",
+  "format.h24": "24h",
+  "format.iso": "ISO",
 } satisfies CatalogPart;
 
 export default en;

@@ -4,6 +4,7 @@ import { useTheme } from "../lib/useTheme";
 import { useT } from "../i18n";
 import { Logo, Mark } from "./Logo";
 import { LanguageToggle } from "./LanguageToggle";
+import { FormatMenu } from "./FormatMenu";
 import { GITHUB_URL, SUPPORT_URL } from "../lib/links";
 import { apiDocsUrl } from "../lib/api";
 
@@ -51,6 +52,7 @@ export function Shell({ children, showNewPoll = true }: ShellProps) {
               </a>
             </div>
             <LanguageToggle />
+            <FormatMenu />
             <button
               type="button"
               className="theme-toggle"

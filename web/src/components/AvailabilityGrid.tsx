@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { GridScroll } from "./GridScroll";
-import { hourLabel } from "../lib/datetime";
+import { formatHour } from "../lib/datetime";
 import { cycleNext, applyMark, type Status, type Marks } from "../lib/paint";
 import type { GridView } from "../lib/tz";
 import { useT } from "../i18n";
@@ -155,7 +155,7 @@ export function AvailabilityGrid({
                   color: "var(--fg-subtle)",
                 }}
               >
-                {hourLabel(time)}
+                {formatHour(time)}
               </div>
               {view.days.map((d, di) => {
                 const key = view.keyAt(d, time);

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { responsesToCsv, csvFilename } from "@samkoma/core";
 import { lockSlot, type Poll } from "../lib/api";
 import { aggregate } from "../lib/heatmap";
-import { hourLabel } from "../lib/datetime";
+import { formatHour } from "../lib/datetime";
 import { downloadText } from "../lib/download";
 import { buildGridView, formatSlotLabelInTz } from "../lib/tz";
 import { GridScroll } from "./GridScroll";
@@ -341,7 +341,7 @@ export function GroupHeatmap({
                       color: "var(--fg-subtle)",
                     }}
                   >
-                    {hourLabel(time)}
+                    {formatHour(time)}
                   </div>
                   {view.days.map((d) => {
                     const key = view.keyAt(d, time);
