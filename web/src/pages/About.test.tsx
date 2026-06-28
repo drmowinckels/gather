@@ -31,7 +31,7 @@ describe("About", () => {
   it("names the maintainer and origin", () => {
     renderAbout();
     expect(screen.getByText(/dr\. athanasia mowinckel/i)).toBeInTheDocument();
-    expect(screen.getByText(/r-ladies\+ community bot/i)).toBeInTheDocument();
+    expect(screen.getByText(/rladies\+ community bot/i)).toBeInTheDocument();
   });
 
   it("offers a Buy Me a Coffee support link", () => {

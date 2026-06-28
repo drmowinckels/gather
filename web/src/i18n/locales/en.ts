@@ -78,7 +78,7 @@ export const en = {
   "about.originTitle": "Where it comes from",
   "about.originPara1a": "samkoma began as the scheduling brain behind",
   "about.originPara1b":
-    ", the R-Ladies+ community bot — but it's built to stand on its own. Jinx is simply one consumer of the public API; anyone can be another. The product is deliberately",
+    ", the RLadies+ community bot — but it's built to stand on its own. Jinx is simply one consumer of the public API; anyone can be another. The product is deliberately",
   "about.independent": "independent",
   "about.originPara1c":
     ": not tied to any single community or company, and not anyone's growth funnel.",
@@ -114,7 +114,7 @@ export const en = {
   "apiPage.reference.loading": "Loading the reference…",
   "apiPage.bots.heading": "Built for bots",
   "apiPage.bots.lead":
-    "Because the API is the product, automation isn't a bolt-on. Jinx, the R-Ladies+ bot, turns a comment on a GitHub issue into a poll — then edits its own reply with the winning slot once everyone's in.",
+    "Because the API is the product, automation isn't a bolt-on. Jinx, the RLadies+ bot, turns a comment on a GitHub issue into a poll — then edits its own reply with the winning slot once everyone's in.",
   "apiPage.bots.repliedJustNow": "replied just now",
   "apiPage.bots.pollsUp": "📋 Poll's up!",
   "apiPage.bots.editNote":

@@ -70,7 +70,7 @@ export const nb: Catalog = {
   "about.originTitle": "Hvor det kommer fra",
   "about.originPara1a": "samkoma startet som planleggingshjernen bak",
   "about.originPara1b":
-    ", R-Ladies+-fellesskapets bot — men det er bygd for å stå på egne ben. Jinx er bare én bruker av det offentlige API-et; hvem som helst kan bli en annen. Produktet er bevisst",
+    ", RLadies+-fellesskapets bot — men det er bygd for å stå på egne ben. Jinx er bare én bruker av det offentlige API-et; hvem som helst kan bli en annen. Produktet er bevisst",
   "about.independent": "uavhengig",
   "about.originPara1c":
     ": ikke bundet til noe enkelt fellesskap eller selskap, og ikke noens vekstkanal.",
@@ -106,7 +106,7 @@ export const nb: Catalog = {
   "apiPage.reference.loading": "Laster referansen…",
   "apiPage.bots.heading": "Laget for roboter",
   "apiPage.bots.lead":
-    "Fordi API-et er produktet, er automatisering ikke noe påheng. Jinx, R-Ladies+-roboten, gjør en kommentar på en GitHub-sak om til en avstemning — og redigerer så sitt eget svar med det vinnende tidspunktet når alle har svart.",
+    "Fordi API-et er produktet, er automatisering ikke noe påheng. Jinx, RLadies+-roboten, gjør en kommentar på en GitHub-sak om til en avstemning — og redigerer så sitt eget svar med det vinnende tidspunktet når alle har svart.",
   "apiPage.bots.repliedJustNow": "svarte akkurat nå",
   "apiPage.bots.pollsUp": "📋 Avstemningen er klar!",
   "apiPage.bots.editNote":
