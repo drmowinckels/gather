@@ -3,10 +3,19 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Shell } from "../components/Shell";
 import { CliEquivalent } from "../components/CliEquivalent";
 import { MonthCalendar } from "../components/MonthCalendar";
+import { OverlapBand } from "../components/OverlapBand";
 import { createPoll, ApiError, type PollKind } from "../lib/api";
 import { saveEditToken } from "../lib/storage";
-import { browserTimezone, listTimezones, tzOffsetLabel } from "../lib/datetime";
+import {
+  browserTimezone,
+  listTimezones,
+  tzOffsetLabel,
+  formatTime,
+  cityLabel,
+} from "../lib/datetime";
 import { weekdayLabel } from "../lib/tz";
+import { useMediaQuery } from "../lib/useMediaQuery";
+import { overlapWindow, type OverlapResult } from "@samkoma/core";
 import { useT } from "../i18n";
 import type { PollTemplate } from "../lib/duplicate";
 
@@ -17,6 +26,8 @@ export function CreatePoll() {
   const navigate = useNavigate();
   const location = useLocation();
   const t = useT();
+  // Two months side by side once there's room; one on narrow screens.
+  const twoMonths = useMediaQuery("(min-width: 760px)");
   // A "Duplicate" navigation carries a template to prefill the form from.
   const template = (location.state as { template?: PollTemplate } | null)
     ?.template;
@@ -37,6 +48,10 @@ export function CreatePoll() {
   const [from, setFrom] = useState(template?.from ?? "09:00");
   const [to, setTo] = useState(template?.to ?? "17:00");
   const [slot, setSlot] = useState(template?.slot ?? 30);
+  // Timezone-overlap helper: the regions to coordinate across. The poll's own
+  // from/to is read as each region's local workday; the band shows where they
+  // overlap (informational — it doesn't change the poll window).
+  const [coverZones, setCoverZones] = useState<string[]>([]);
   const [tz, setTz] = useState(template?.tz ?? browserTimezone());
   const [isPublic, setIsPublic] = useState(template?.public ?? true);
   const [resultsHidden, setResultsHidden] = useState(
@@ -59,6 +74,26 @@ export function CreatePoll() {
       ? [...selected].sort((a, b) => WEEKDAYS.indexOf(a) - WEEKDAYS.indexOf(b))
       : [...selected].sort();
   const timeValid = from < to;
+
+  // The overlap is only meaningful for dated polls (weekday polls are tz-naive),
+  // and needs at least one region, a valid window, and dates to check across.
+  // The poll's own from/to is the working window read into each region.
+  const overlap = useMemo<OverlapResult | null>(() => {
+    if (
+      kind !== "dates" ||
+      coverZones.length === 0 ||
+      selectedDays.length === 0 ||
+      !timeValid
+    ) {
+      return null;
+    }
+    // The host is a participant too: fold the home tz into the covered zones.
+    // Every throw path in overlapWindow is pre-guarded above, so no try/catch.
+    const zones = [tz, ...coverZones.filter((z) => z !== tz)];
+    return overlapWindow(zones, from, to, selectedDays, tz);
+    // selectedDays is rebuilt each render, so key the memo off its serialization.
+  }, [kind, coverZones, from, to, selectedDays.join(","), tz, timeValid]);
+
   const canSubmit =
     title.trim().length > 0 && selectedDays.length > 0 && timeValid;
 
@@ -98,13 +133,13 @@ export function CreatePoll() {
     <Shell showNewPoll={false}>
       <div
         style={{
-          display: "grid",
-          gridTemplateColumns: "minmax(0, 1.6fr) minmax(0, 1fr)",
-          gap: 32,
-          alignItems: "start",
+          maxWidth: 880,
+          margin: "0 auto",
+          display: "flex",
+          flexDirection: "column",
+          gap: 28,
           padding: "40px 0",
         }}
-        className="hero"
       >
         <form
           className="card"
@@ -182,7 +217,11 @@ export function CreatePoll() {
                 >
                   {t("create.days.datesHint")}
                 </p>
-                <MonthCalendar value={selected} onChange={setSelected} />
+                <MonthCalendar
+                  value={selected}
+                  onChange={setSelected}
+                  months={twoMonths ? 2 : 1}
+                />
               </>
             ) : (
               <>
@@ -295,6 +334,101 @@ export function CreatePoll() {
               {t("create.tz.hint")}
             </p>
           </div>
+
+          {kind === "dates" && (
+            <div className="field">
+              <span className="fieldlbl">{t("create.cover.label")}</span>
+              <p
+                className="subtle"
+                style={{ margin: "2px 0 12px", fontSize: 12 }}
+              >
+                {t("create.cover.hint")}
+              </p>
+
+              {coverZones.length > 0 && (
+                <div className="chips" style={{ marginBottom: 12 }}>
+                  {coverZones.map((z) => (
+                    <button
+                      key={z}
+                      type="button"
+                      className="chip on"
+                      aria-label={t("create.cover.removeZone", { zone: z })}
+                      onClick={() =>
+                        setCoverZones((prev) => prev.filter((x) => x !== z))
+                      }
+                    >
+                      {cityLabel(z)} ×
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <select
+                className="input"
+                aria-label={t("create.cover.zonesLabel")}
+                value=""
+                onChange={(e) => {
+                  const z = e.target.value;
+                  if (z)
+                    setCoverZones((prev) =>
+                      prev.includes(z) ? prev : [...prev, z],
+                    );
+                }}
+              >
+                <option value="">{t("create.cover.zoneAdd")}</option>
+                {tzOptions
+                  .filter((z) => !coverZones.includes(z.value))
+                  .map((z) => (
+                    <option key={z.value} value={z.value}>
+                      {z.label}
+                    </option>
+                  ))}
+              </select>
+
+              {overlap &&
+                coverZones.length > 0 &&
+                timeValid &&
+                selectedDays.length > 0 && (
+                  <OverlapBand
+                    zones={coverZones}
+                    workFrom={from}
+                    workTo={to}
+                    homeTz={tz}
+                    refDate={selectedDays[0]}
+                    overlap={overlap}
+                  />
+                )}
+
+              <div style={{ marginTop: 12 }} aria-live="polite">
+                {coverZones.length === 0 ? (
+                  <p className="subtle" style={{ fontSize: 12, margin: 0 }}>
+                    {t("create.cover.noZones")}
+                  </p>
+                ) : selectedDays.length === 0 ? (
+                  <p className="subtle" style={{ fontSize: 12, margin: 0 }}>
+                    {t("create.cover.noDates")}
+                  </p>
+                ) : !timeValid ? null : overlap?.empty ? (
+                  <p
+                    style={{ fontSize: 13, margin: 0, color: "var(--danger)" }}
+                  >
+                    {t("create.cover.empty", {
+                      from: formatTime(from),
+                      to: formatTime(to),
+                    })}
+                  </p>
+                ) : overlap && overlap.from && overlap.to ? (
+                  <p className="subtle" style={{ fontSize: 13, margin: 0 }}>
+                    {t("create.cover.result", {
+                      from: formatTime(overlap.from),
+                      to: formatTime(overlap.to),
+                      tz,
+                    })}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          )}
 
           <div className="field">
             <label className="fieldlbl" htmlFor="deadline">

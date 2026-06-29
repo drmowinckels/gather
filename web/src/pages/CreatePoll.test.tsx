@@ -164,6 +164,62 @@ describe("CreatePoll", () => {
   });
 });
 
+describe("CreatePoll — timezone overlap helper", () => {
+  function pickFirstDay(user: ReturnType<typeof userEvent.setup>) {
+    const day = [
+      ...document.querySelectorAll<HTMLButtonElement>("[data-iso]"),
+    ].find((c) => !c.disabled && c.getAttribute("aria-pressed") === "false")!;
+    return user.click(day);
+  }
+
+  it("summarises the overlap of the covered regions without changing the poll window", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await pickFirstDay(user);
+    await user.selectOptions(screen.getByLabelText("Timezone"), "Asia/Dubai");
+    // Home Dubai (+4), Bangkok (+7) and Tokyo (+9) are all DST-free, so with the
+    // default 09:00-17:00 window the overlap is date-independent at 09:00-12:00.
+    const coverSelect = screen.getByLabelText("Regions to cover");
+    await user.selectOptions(coverSelect, "Asia/Bangkok");
+    await user.selectOptions(coverSelect, "Asia/Tokyo");
+
+    const summary = screen.getByText(/everyone's workday overlaps/i);
+    expect(summary.textContent).toMatch(/09:00/);
+    expect(summary.textContent).toMatch(/12:00/);
+    // Informational only — the poll window is untouched.
+    expect(screen.getByLabelText(/no earlier than/i)).toHaveValue("09:00");
+    expect(screen.getByLabelText(/no later than/i)).toHaveValue("17:00");
+  });
+
+  it("warns when the regions never overlap", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    await pickFirstDay(user);
+    await user.selectOptions(
+      screen.getByLabelText("Timezone"),
+      "Africa/Abidjan",
+    );
+    const coverSelect = screen.getByLabelText("Regions to cover");
+    await user.selectOptions(coverSelect, "Pacific/Honolulu");
+    await user.selectOptions(coverSelect, "Asia/Dubai");
+
+    expect(screen.getByText(/no part of/i)).toBeInTheDocument();
+  });
+
+  it("is hidden for weekday polls", async () => {
+    const user = userEvent.setup();
+    renderForm();
+
+    expect(
+      screen.getByText("Coordinating across timezones?"),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole("radio", { name: /days of the week/i }));
+    expect(screen.queryByText("Coordinating across timezones?")).toBeNull();
+  });
+});
+
 describe("CreatePoll — duplicate prefill", () => {
   function renderWithTemplate(template: unknown) {
     return render(

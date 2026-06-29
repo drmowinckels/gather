@@ -1155,6 +1155,143 @@ button.heatcell {
   }
 }
 
+/* ---------- timezone overlap band ---------- */
+.tzband-wrap {
+  margin-top: 12px;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  overscroll-behavior-x: contain;
+}
+.tzband {
+  border-collapse: collapse;
+  width: max-content;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.tzband th,
+.tzband td {
+  text-align: center;
+}
+.tzband-corner,
+.tzband-zone {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--bg);
+  text-align: left;
+  white-space: nowrap;
+  padding: 5px 12px;
+  border-right: 1px solid var(--border-subtle);
+}
+.tzband-corner {
+  color: var(--fg-subtle);
+  font-weight: 600;
+}
+.tzband-hr {
+  min-width: 26px;
+  padding: 5px 0;
+  font-weight: 500;
+  color: var(--fg-subtle);
+}
+.tzband-hr.work {
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+  color: var(--fg);
+}
+.tzband-hr.overlap {
+  background: color-mix(in oklab, var(--brand) 42%, transparent);
+  color: var(--fg);
+  font-weight: 700;
+}
+.tzband-zone {
+  font-weight: 600;
+  color: var(--fg);
+}
+.tzband-zone-off {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--fg-subtle);
+}
+.tzband-cell {
+  min-width: 26px;
+  height: 28px;
+  color: var(--fg-subtle);
+  border-left: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border-subtle);
+}
+.tzband-cell.work {
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+  color: var(--fg);
+}
+.tzband-cell.overlap {
+  background: color-mix(in oklab, var(--brand) 42%, transparent);
+  color: var(--fg);
+  font-weight: 700;
+}
+.tzband-legend {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--fg-muted);
+}
+.tzband-legend .sep {
+  width: 14px;
+}
+.tzband-key {
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+.tzband-key.work {
+  background: color-mix(in oklab, var(--brand) 16%, transparent);
+}
+.tzband-key.overlap {
+  background: color-mix(in oklab, var(--brand) 42%, transparent);
+}
+
+/* ---------- calendar (one or more months side by side) ---------- */
+.calendar-cols {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.calendar-col {
+  flex: 1;
+  min-width: 0;
+  max-width: 340px;
+}
+.calendar-col-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.calendar-arrow-spacer {
+  flex: none;
+  width: 32px;
+}
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--fg-subtle);
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   * {
     transition: none !important;
