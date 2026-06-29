@@ -1,6 +1,19 @@
-export { pad, toMinutes, timeSlots, slotKey, validSlotKeys } from "./time.js";
+export {
+  pad,
+  toMinutes,
+  minutesToTime,
+  timeSlots,
+  slotKey,
+  validSlotKeys,
+} from "./time.js";
 export { resolveDays, parseWeekdays, WEEKDAY_TOKENS } from "./days.js";
-export { zonedTimeToUtc, partsInTz, existsInTz } from "./zone.js";
+export {
+  zonedTimeToUtc,
+  partsInTz,
+  existsInTz,
+  overlapWindow,
+  type OverlapResult,
+} from "./zone.js";
 export {
   buildLockedIcs,
   icsFilename,

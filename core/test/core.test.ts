@@ -3,6 +3,7 @@ import {
   resolveDays,
   parseWeekdays,
   timeSlots,
+  minutesToTime,
   validSlotKeys,
   slotKey,
   tallySlots,
@@ -61,6 +62,12 @@ describe("slot grid", () => {
       "10:00",
     ]);
     expect(timeSlots("09:00", "09:00", 30)).toEqual([]);
+  });
+
+  it("formats minutes-after-midnight as HH:MM", () => {
+    expect(minutesToTime(0)).toBe("00:00");
+    expect(minutesToTime(540)).toBe("09:00");
+    expect(minutesToTime(1439)).toBe("23:59");
   });
 
   it("builds every valid slot key across days", () => {
