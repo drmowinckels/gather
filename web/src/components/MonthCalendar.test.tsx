@@ -22,9 +22,11 @@ const NOW = new Date(2026, 6, 15); // Wed 2026-07-15
 function Harness({
   initial = new Set<string>(),
   locked,
+  months,
 }: {
   initial?: Set<string>;
   locked?: Set<string>;
+  months?: number;
 }) {
   const [value, setValue] = useState(initial);
   return (
@@ -33,6 +35,7 @@ function Harness({
       onChange={setValue}
       lockedDays={locked}
       today={NOW}
+      months={months}
     />
   );
 }
@@ -120,6 +123,27 @@ describe("MonthCalendar", () => {
       expect(localeFirstDay("en-US")).toBe(0); // Sunday
       expect(localeFirstDay("nb-NO")).toBe(1); // Monday
     }
+  });
+
+  it("shows two months side by side, each date once, with single controls", () => {
+    render(<Harness months={2} />);
+    expect(screen.getByText(/July 2026/)).toBeTruthy();
+    expect(screen.getByText(/August 2026/)).toBeTruthy();
+    // Second-month days are pickable…
+    expect(cell("2026-08-10")).not.toBeDisabled();
+    // …and seam dates render exactly once (no duplicate filler buttons).
+    expect(document.querySelectorAll('[data-iso="2026-07-31"]')).toHaveLength(
+      1,
+    );
+    expect(document.querySelectorAll('[data-iso="2026-08-01"]')).toHaveLength(
+      1,
+    );
+    expect(
+      screen.getAllByRole("button", { name: /previous month/i }),
+    ).toHaveLength(1);
+    expect(screen.getAllByRole("button", { name: /next month/i })).toHaveLength(
+      1,
+    );
   });
 
   it("navigates months and disables Previous at the reference month", async () => {

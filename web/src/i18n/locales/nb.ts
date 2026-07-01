@@ -184,6 +184,31 @@ export const nb: Catalog = {
     other: "{count} min",
   },
   "create.time.invalid": "Sluttiden må være etter starttiden.",
+  "create.cover.label": "Skal dere koordinere på tvers av tidssoner?",
+  "create.cover.hint":
+    "Legg til regionene gruppen spenner over. Start- og sluttidene over leses som hver regions lokale arbeidsdag, og båndet viser når de timene overlapper overalt.",
+  "create.cover.zonesLabel": "Regioner å dekke",
+  "create.cover.zoneAdd": "Legg til en region…",
+  "create.cover.removeZone": "Fjern {zone}",
+  "create.cover.noZones":
+    "Legg til regionene gruppen spenner over for å se hvor timene overlapper.",
+  "create.cover.noDates":
+    "Velg datoene over — overlappet sjekkes på tvers av de dagene.",
+  "create.cover.result": "Alles arbeidsdag overlapper {from}–{to} i {tz}.",
+  "create.cover.legendWork": "Arbeidstid",
+  "create.cover.legendOverlap": "Alle overlapper",
+  "create.cover.bandYou": "deg",
+  "create.cover.bandRegion":
+    "Tidssoneoverlapp time for time (rull for å se alle timene)",
+  "create.cover.bandOverlapCell": "(overlapper)",
+  "create.cover.bandCaption": {
+    one: "Timebånd: {count} time passer i alle regioner.",
+    other: "Timebånd: {count} timer passer i alle regioner.",
+  },
+  "create.cover.bandCaptionEmpty":
+    "Timebånd: ingen time passer i alle regioner.",
+  "create.cover.empty":
+    "Ingen del av {from}–{to} er arbeidstid i alle regioner. Utvid tidene over, eller fjern en region.",
   "create.tz.label": "Tidssone",
   "create.tz.hint":
     "Dette er avstemningens hjemtidssone. Deltakere maler inn i sin egen.",

@@ -192,6 +192,30 @@ export const en = {
     other: "{count} min",
   },
   "create.time.invalid": "The end time needs to be after the start time.",
+  "create.cover.label": "Coordinating across timezones?",
+  "create.cover.hint":
+    "Add the regions your group spans. The start and end times above are read as each region's local workday, and the band shows when those hours overlap everywhere.",
+  "create.cover.zonesLabel": "Regions to cover",
+  "create.cover.zoneAdd": "Add a region…",
+  "create.cover.removeZone": "Remove {zone}",
+  "create.cover.noZones":
+    "Add the regions your group spans to see where their hours overlap.",
+  "create.cover.noDates":
+    "Pick your dates above — the overlap is checked across those days.",
+  "create.cover.result": "Everyone's workday overlaps {from}–{to} in {tz}.",
+  "create.cover.legendWork": "Working hours",
+  "create.cover.legendOverlap": "Everyone overlaps",
+  "create.cover.bandYou": "you",
+  "create.cover.bandRegion":
+    "Hour-by-hour timezone overlap (scroll to see all hours)",
+  "create.cover.bandOverlapCell": "(overlaps)",
+  "create.cover.bandCaption": {
+    one: "Hour band: {count} hour works in every region.",
+    other: "Hour band: {count} hours work in every region.",
+  },
+  "create.cover.bandCaptionEmpty": "Hour band: no hour works in every region.",
+  "create.cover.empty":
+    "No part of {from}–{to} is a working hour in every region. Widen the times above, or drop a region.",
   "create.tz.label": "Timezone",
   "create.tz.hint":
     "This is the poll's home timezone. Respondents paint in their own.",

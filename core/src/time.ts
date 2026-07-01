@@ -7,13 +7,18 @@ export function toMinutes(t: string): number {
   return h * 60 + m;
 }
 
+// Minutes-after-midnight -> "HH:MM".
+export function minutesToTime(min: number): string {
+  return `${pad(Math.floor(min / 60))}:${pad(min % 60)}`;
+}
+
 // Start times of each slot block within [from, to), stepping by slotMin.
 export function timeSlots(from: string, to: string, slotMin: number): string[] {
   const start = toMinutes(from);
   const end = toMinutes(to);
   const out: string[] = [];
   for (let t = start; t + slotMin <= end; t += slotMin) {
-    out.push(`${pad(Math.floor(t / 60))}:${pad(t % 60)}`);
+    out.push(minutesToTime(t));
   }
   return out;
 }

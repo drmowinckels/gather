@@ -50,6 +50,8 @@ interface MonthCalendarProps {
   lockedDays?: Set<string>;
   /** "Now" — injectable so tests are deterministic. Defaults to the real date. */
   today?: Date;
+  /** How many consecutive months to show side by side. Defaults to 1. */
+  months?: number;
 }
 
 export function MonthCalendar({
@@ -58,6 +60,7 @@ export function MonthCalendar({
   minDate,
   lockedDays,
   today: nowProp,
+  months = 1,
 }: MonthCalendarProps) {
   const t = useT();
   const [locale] = useLocale();
@@ -88,36 +91,60 @@ export function MonthCalendar({
   const target = useRef(false); // true = selecting, false = deselecting
   const lastPainted = useRef<string | null>(null);
 
-  const weeks = useMemo(() => {
-    const first = new Date(view.year, view.month, 1);
-    const lead = (first.getDay() - firstDay + 7) % 7; // offset to locale's first weekday
-    const start = new Date(view.year, view.month, 1 - lead);
-    return Array.from({ length: 6 }, (_, w) =>
-      Array.from({ length: 7 }, (_, d) => {
-        const date = new Date(
-          start.getFullYear(),
-          start.getMonth(),
-          start.getDate() + w * 7 + d,
-        );
-        return { iso: isoOf(date), date };
+  // The `months` consecutive months to show, the first being `view`.
+  const panels = useMemo(
+    () =>
+      Array.from({ length: months }, (_, i) => {
+        const d = new Date(view.year, view.month + i, 1);
+        return { year: d.getFullYear(), month: d.getMonth() };
       }),
-    );
-  }, [view, firstDay]);
+    [view, months],
+  );
+
+  // The 6-week frame (locale-aligned) for each panel.
+  const weeksByPanel = useMemo(
+    () =>
+      panels.map((pv) => {
+        const first = new Date(pv.year, pv.month, 1);
+        const lead = (first.getDay() - firstDay + 7) % 7;
+        const start = new Date(pv.year, pv.month, 1 - lead);
+        return Array.from({ length: 6 }, (_, w) =>
+          Array.from({ length: 7 }, (_, d) => {
+            const date = new Date(
+              start.getFullYear(),
+              start.getMonth(),
+              start.getDate() + w * 7 + d,
+            );
+            return { iso: isoOf(date), date };
+          }),
+        );
+      }),
+    [panels, firstDay],
+  );
 
   const atFloor = isoOf(new Date(currentMonth.year, currentMonth.month, 1));
   const viewFirst = isoOf(new Date(view.year, view.month, 1));
   const canGoPrev = viewFirst > atFloor;
 
+  // Months currently on screen, as year*12+month keys, for the adjacent-day test.
+  const shownMonths = useMemo(
+    () => new Set(panels.map((p) => p.year * 12 + p.month)),
+    [panels],
+  );
+
   function locked(iso: string): boolean {
     return lockedDays?.has(iso) ?? false;
   }
-  // A day from an adjacent month, shown to fill the 6-week frame.
-  function outOfView(iso: string): boolean {
+  function inMonth(date: Date, pv: { year: number; month: number }): boolean {
+    return date.getFullYear() === pv.year && date.getMonth() === pv.month;
+  }
+  // A day that belongs to none of the shown months (frame filler).
+  function adjacent(iso: string): boolean {
     const [y, m] = iso.split("-").map(Number);
-    return y !== view.year || m !== view.month + 1;
+    return !shownMonths.has(y * 12 + (m - 1));
   }
   function disabled(iso: string): boolean {
-    return iso < floor || locked(iso) || outOfView(iso);
+    return iso < floor || locked(iso) || adjacent(iso);
   }
 
   function paint(iso: string) {
@@ -175,126 +202,123 @@ export function MonthCalendar({
     });
   }
 
+  const monthTitle = (pv: { year: number; month: number }) =>
+    localizedDateFormat(MONTH_TITLE_OPTS).format(
+      new Date(pv.year, pv.month, 1),
+    );
+
   return (
     <div
-      className="calendar"
-      style={{ userSelect: "none", maxWidth: 340 }}
+      className="calendar calendar-cols"
+      style={{ userSelect: "none" }}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerLeave={endDrag}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 10,
-        }}
-      >
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={() => shiftMonth(-1)}
-          disabled={!canGoPrev}
-          aria-label={t("calendar.prevMonth")}
-        >
-          ‹
-        </button>
-        <strong style={{ fontSize: 14 }} aria-live="polite">
-          {localizedDateFormat(MONTH_TITLE_OPTS).format(
-            new Date(view.year, view.month, 1),
-          )}
-        </strong>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={() => shiftMonth(1)}
-          aria-label={t("calendar.nextMonth")}
-        >
-          ›
-        </button>
-      </div>
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 4,
-          fontSize: 11,
-          fontWeight: 700,
-          color: "var(--fg-subtle)",
-          marginBottom: 4,
-        }}
-      >
-        {weekdayHeaders.map((w, i) => (
-          <div key={i} style={{ textAlign: "center" }}>
-            {w}
+      {panels.map((pv, panelIndex) => (
+        <div className="calendar-col" key={`${pv.year}-${pv.month}`}>
+          <div className="calendar-col-head">
+            {panelIndex === 0 ? (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => shiftMonth(-1)}
+                disabled={!canGoPrev}
+                aria-label={t("calendar.prevMonth")}
+              >
+                ‹
+              </button>
+            ) : (
+              <span className="calendar-arrow-spacer" />
+            )}
+            <strong style={{ fontSize: 14 }} aria-live="polite">
+              {monthTitle(pv)}
+            </strong>
+            {panelIndex === panels.length - 1 ? (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => shiftMonth(1)}
+                aria-label={t("calendar.nextMonth")}
+              >
+                ›
+              </button>
+            ) : (
+              <span className="calendar-arrow-spacer" />
+            )}
           </div>
-        ))}
-      </div>
 
-      <div
-        role="group"
-        aria-label={t("calendar.chooseDatesIn", {
-          month: localizedDateFormat(MONTH_TITLE_OPTS).format(
-            new Date(view.year, view.month, 1),
-          ),
-        })}
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(7, 1fr)",
-          gap: 4,
-        }}
-      >
-        {weeks.flat().map(({ iso, date }) => {
-          const inMonth = date.getMonth() === view.month;
-          const isSelected = value.has(iso);
-          const isLocked = locked(iso);
-          const isDisabled = disabled(iso);
-          const isToday = iso === today;
-          return (
-            <button
-              key={iso}
-              type="button"
-              data-iso={iso}
-              aria-pressed={isSelected}
-              aria-hidden={!inMonth}
-              aria-label={localizedDateFormat(FULL_DATE_OPTS).format(date)}
-              disabled={isDisabled && !isLocked}
-              title={isLocked ? t("calendar.lockedDay") : undefined}
-              onPointerDown={(e) => start(iso, e)}
-              onKeyDown={(e) => {
-                if (e.key === " " || e.key === "Enter") {
-                  e.preventDefault();
-                  toggle(iso);
-                }
-              }}
-              style={{
-                aspectRatio: "1 / 1",
-                border: "none",
-                borderRadius: 8,
-                fontSize: 13,
-                cursor: isDisabled ? "default" : "pointer",
-                touchAction: "none",
-                opacity: inMonth
-                  ? isDisabled && !isSelected
-                    ? 0.35
-                    : 1
-                  : 0.25,
-                color: isSelected ? "var(--on-brand)" : "var(--fg)",
-                background: isSelected ? "var(--brand)" : "var(--bg-elev-1)",
-                boxShadow: isToday
-                  ? "inset 0 0 0 2px var(--brand)"
-                  : isSelected
-                    ? "none"
-                    : "inset 0 0 0 1px var(--border-subtle)",
-              }}
-            >
-              {date.getDate()}
-            </button>
-          );
-        })}
-      </div>
+          <div className="calendar-weekdays">
+            {weekdayHeaders.map((w, i) => (
+              <div key={i} style={{ textAlign: "center" }}>
+                {w}
+              </div>
+            ))}
+          </div>
+
+          <div
+            role="group"
+            aria-label={t("calendar.chooseDatesIn", { month: monthTitle(pv) })}
+            className="calendar-grid"
+          >
+            {weeksByPanel[panelIndex].flat().map(({ iso, date }) => {
+              const own = inMonth(date, pv);
+              // In a multi-month view, frame-filler days belong to a neighbouring
+              // visible month — render a blank cell instead of a duplicate button.
+              if (!own && months > 1) {
+                return <div key={`${panelIndex}-${iso}`} aria-hidden="true" />;
+              }
+              const isSelected = value.has(iso);
+              const isLocked = locked(iso);
+              const isDisabled = disabled(iso);
+              const isToday = iso === today;
+              return (
+                <button
+                  key={`${panelIndex}-${iso}`}
+                  type="button"
+                  data-iso={iso}
+                  aria-pressed={isSelected}
+                  aria-hidden={!own}
+                  aria-label={localizedDateFormat(FULL_DATE_OPTS).format(date)}
+                  disabled={isDisabled && !isLocked}
+                  title={isLocked ? t("calendar.lockedDay") : undefined}
+                  onPointerDown={(e) => start(iso, e)}
+                  onKeyDown={(e) => {
+                    if (e.key === " " || e.key === "Enter") {
+                      e.preventDefault();
+                      toggle(iso);
+                    }
+                  }}
+                  style={{
+                    aspectRatio: "1 / 1",
+                    border: "none",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    cursor: isDisabled ? "default" : "pointer",
+                    touchAction: "none",
+                    opacity: own
+                      ? isDisabled && !isSelected
+                        ? 0.35
+                        : 1
+                      : 0.25,
+                    color: isSelected ? "var(--on-brand)" : "var(--fg)",
+                    background: isSelected
+                      ? "var(--brand)"
+                      : "var(--bg-elev-1)",
+                    boxShadow: isToday
+                      ? "inset 0 0 0 2px var(--brand)"
+                      : isSelected
+                        ? "none"
+                        : "inset 0 0 0 1px var(--border-subtle)",
+                  }}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
